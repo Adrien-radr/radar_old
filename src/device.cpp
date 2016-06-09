@@ -352,7 +352,7 @@ bool Device::Init(SceneInitFunc sceneInitFunc, SceneUpdateFunc sceneUpdateFunc, 
     glfwWindowHint(GLFW_SAMPLES, config.MSAA_samples);
 
 	std::stringstream window_name;
-	window_name << "Radar v" << X4_2525_MAJOR << "." << X4_2525_MINOR << "." << X4_2525_PATCH;
+	window_name << "Radar v" << RADAR_MAJOR << "." << RADAR_MINOR << "." << RADAR_PATCH;
     window = glfwCreateWindow(window_size.x, window_size.y, window_name.str().c_str(),
                               config.fullscreen ? glfwGetPrimaryMonitor() : NULL, NULL);
 	if (!window) {
@@ -478,9 +478,7 @@ render_error:
 	Render::Destroy();
 em_error:
 	delete em;
-glfw_window_error:
 	glfwDestroyWindow(window);
-glfw_error:
 	glfwTerminate();
 	return false;
 }

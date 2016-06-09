@@ -35,7 +35,7 @@ void Log::Init() {
 		std::string dastr(da);
 		std::string tistr(ti);
 		std::string dt = dastr + " - " + tistr;
-		LogInfo("\t    Radar Log v", X4_2525_MAJOR, ".", X4_2525_MINOR, ".", X4_2525_PATCH);
+		LogInfo("\t    Radar Log v", RADAR_MAJOR, ".", RADAR_MINOR, ".", RADAR_PATCH);
 		LogInfo("\t", dt.c_str());
 		LogInfo("================================");
 	}
