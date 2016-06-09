@@ -80,6 +80,7 @@ namespace Render {
 
 			// our texture handle
 			t = new _tex();//
+			t->texels = nullptr;
 
             int rowbytes;
 			// setjmp for any png loading error
@@ -92,7 +93,7 @@ namespace Render {
 			png_read_info(img, img_info);
 
 			//get info
-			//bpp = png_get_bit_depth( img, img_info );
+			bpp = png_get_bit_depth( img, img_info );
 			color_type = png_get_color_type(img, img_info);
 
 			// if indexed, make it RGB
@@ -182,7 +183,7 @@ namespace Render {
 			texture.size = vec2i(t->width, t->height);
 
 			free(t->texels);
-			free(t);
+			delete t;
 
 			return true;
 

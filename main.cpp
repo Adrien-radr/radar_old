@@ -31,7 +31,16 @@ bool initFunc(Scene *scene) {
 		1, 0
 	};
 
-	Render::Mesh::Desc mdesc("TestMesh", 6, pos, NULL, texcoords, colors);
+	f32 normals[] = {
+		0, 1, 0,
+		0, 1, 0,
+		0, 1, 0,
+		0, 1, 0,
+		0, 1, 0,
+		0, 1, 0
+	};
+
+	Render::Mesh::Desc mdesc("TestMesh", 6, pos, normals, texcoords, colors);
 
 	test_mesh = Render::Mesh::Build(mdesc);
 	if(test_mesh < 0) {
@@ -78,7 +87,7 @@ int main() {
 
 	Device &device = GetDevice();
 	if (!device.Init(initFunc, updateFunc, renderFunc)) {
-		LogErr("Error initializing Device. Aborting.");
+		printf("Error initializing Device. Aborting.\n");
 		device.Destroy();
 		return 1;
 	}

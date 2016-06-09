@@ -13,9 +13,6 @@ namespace Render {
 		/// Do not use unless you know why/how
 		struct _tex {
 			_tex() : width(0), height(0), id(0), texels(NULL) {}
-			~_tex() {
-				free(texels);
-			}
 
 			u32         width,
 						height;
@@ -66,8 +63,3 @@ namespace Render {
 		};
 	}
 }
-
-
-
-
-

@@ -477,8 +477,9 @@ bool Device::Init(SceneInitFunc sceneInitFunc, SceneUpdateFunc sceneUpdateFunc, 
 render_error:
 	Render::Destroy();
 em_error:
-	delete em;
+	delete em; em = nullptr;
 	glfwDestroyWindow(window);
+    window = nullptr;
 	glfwTerminate();
 	return false;
 }
@@ -487,8 +488,6 @@ void Device::Destroy() {
     //scene_destroy();
 	if(em) delete em;
 	Render::Destroy();
-
-	D(LogInfo("Device destroyed.");)
 
     if(window) {
         glfwDestroyWindow(window);

@@ -19,16 +19,16 @@ out vec4 frag_color;
 
 void main() {
     // lighting
-    //vec3 L = normalize(vec3(-3,5,2) - position);
-    //float lambert = max(dot(L, normal), 0.0);
+    vec3 L = normalize(vec3(-3,5,2) - v_position);
+    float lambert = max(dot(L, v_normal), 0.0);
 
     //vec3 ambient = vec3(0.2,0.2,0.2);
-    //vec3 diffuse = lambert * vec3(0.6);
+    //vec3 diffuse = lambert;
 
     // texturing
     vec4 tex_color = texture2D(tex0, v_texcoord);
 
-
     // result fragment
-    frag_color = v_color * tex_color;
+    vec4 diffuse = vec4(lambert, lambert, lambert, 1);
+    frag_color =  (0.3 + 0.7 * v_color) * diffuse * tex_color;
 }

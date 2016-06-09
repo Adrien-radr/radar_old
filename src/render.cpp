@@ -198,7 +198,7 @@ namespace Render {
 
 			delete renderer;
 
-			D(LogInfo("Renderer destroyed.");)
+			// D(LogInfo("Renderer destroyed.");)
 		}
 	}
 
