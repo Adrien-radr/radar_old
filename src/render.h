@@ -51,6 +51,8 @@ namespace Render {
 			UNIFORM_TEXTURE1,           // Fragment Uniform, for "tex1", int
 			UNIFORM_TEXTCOLOR,          // Fragment Uniform, for "text_color", vec4
 
+			UNIFORM_EYEPOS,
+
 			UNIFORM_N                   // Do not use
 		};
 

@@ -123,6 +123,7 @@ void Scene::UpdateView() {
 	for(int i = Render::Shader::_SHADER_3D_PROJECTION_START; i < Render::Shader::_SHADER_3D_PROJECTION_END; ++i) {
 		Render::Shader::Bind(i);
 		Render::Shader::SendMat4(Render::Shader::UNIFORM_VIEWMATRIX, view_matrix);
+		Render::Shader::SendVec3(Render::Shader::UNIFORM_EYEPOS, camera.position);
 	}
 	// Render::Shader::Bind(Render::Shader::SHADER_2D_MESH);
 	// Render::Shader::SendMat4(Render::Shader::UNIFORM_VIEWMATRIX, view_matrix);

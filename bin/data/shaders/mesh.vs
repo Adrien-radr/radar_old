@@ -18,7 +18,7 @@ void main() {
     vec4 world_position = ModelMatrix * (vec4(in_position, 1));
 
     v_color = in_color;
-    v_position = vec3(world_position);
+    v_position = world_position.xyz;
     v_normal = normalize(vec3(ModelMatrix * vec4(in_normal, 0)));
     v_texcoord = in_texcoord;
 

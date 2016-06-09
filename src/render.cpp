@@ -150,6 +150,7 @@ namespace Render {
 		sd_mesh.uniforms[1] = Shader::Desc::Uniform("ViewMatrix", Shader::UNIFORM_VIEWMATRIX);
 		sd_mesh.uniforms[2] = Shader::Desc::Uniform("ProjMatrix", Shader::UNIFORM_PROJMATRIX);
 		sd_mesh.uniforms[3] = Shader::Desc::Uniform("tex0", Shader::UNIFORM_TEXTURE0);
+		sd_mesh.uniforms[4] = Shader::Desc::Uniform("eyePosition", Shader::UNIFORM_EYEPOS);
 
 
 		Shader::Handle shader_mesh = Shader::Build(sd_mesh);
