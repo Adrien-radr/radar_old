@@ -1,3 +1,10 @@
-o ImGUI
-o Assimp models
+Important :
+o Sphere mesh
 o Freefly Camera
+
+Normal :
+o ImGUI
+o Prefiltered cubemap for ambient specular
+
+Less :
+o Assimp models
