@@ -1,0 +1,344 @@
+#pragma once
+
+#include "common/common.h"
+
+// Renderer constants
+#define SHADER_MAX_UNIFORMS 64
+#define SHADER_MAX_ATTRIBUTES 6
+
+namespace Render {
+	bool Init();
+	void Destroy();
+	int GetCurrentShader();
+	int GetCurrentMesh();
+	//int GetCurrentTexture(Texture::Target t);
+	void StartTextRendering();
+	void StartPolygonRendering();
+
+	//bool FindResource(const std::vector<RenderResource> &resources, const )
+
+	namespace Shader {
+		/// Available shaders for drawing, sorted by their projection matrix type
+		enum Type {
+            // Use 2D Ortographic Projection
+            SHADER_2D_UI = 0,
+
+            // Use 3D Perspective Projection
+            SHADER_3D_MESH = 1,
+            SHADER_3D_MESH_BONE = 2,
+            SHADER_3D_HEIGHTFIELD = 3,
+
+            _SHADER_END,                                    // Do not use
+
+
+            _SHADER_2D_PROJECTION_START = SHADER_2D_UI,     // Do not use
+            _SHADER_2D_PROJECTION_END = SHADER_3D_MESH,     // Do not use
+            _SHADER_3D_PROJECTION_START = SHADER_3D_MESH,   // Do not use
+            _SHADER_3D_PROJECTION_END = _SHADER_END         // Do not use
+		};
+
+		/// Uniform Locations Descriptors
+		/// When building a shader, we extract and store the uniform locations
+		/// corresponding to a in-shader uniform name.
+		/// When sending a uniform value to a shader from C code, use these
+		/// uniform descriptor to specify which uniform the value is intended for.
+		enum Uniform {
+			UNIFORM_PROJMATRIX,         // for "ProjMatrix", mat4
+			UNIFORM_VIEWMATRIX,         // for "ViewMatrix", mat4
+			UNIFORM_MODELMATRIX,        // for "ModelMatrix", mat4
+
+			UNIFORM_TEXTURE0,           // Fragment Uniform, for "tex0", int
+			UNIFORM_TEXTURE1,           // Fragment Uniform, for "tex1", int
+			UNIFORM_TEXTCOLOR,          // Fragment Uniform, for "text_color", vec4
+
+			UNIFORM_N                   // Do not use
+		};
+
+		/// Shader Descriptor for shader building.
+		struct Desc {
+			Desc() : vertex_file(""), fragment_file(""), vertex_src(""), fragment_src("") {}
+
+			/// Shaders are loaded either from file or from text source directly
+			/// If loading from file, vertex_file & fragment_file must be set
+			std::string vertex_file, fragment_file;
+			/// If loading from source, vertex_src & fragment_src must be set
+			std::string vertex_src, fragment_src;
+
+			/// Attribute Locations in the shader.
+			/// Fill this array with as much (<SHADER_MAX_ATTRIBUTES) attribs before
+			/// calling shader_build[FromFile]
+			/// @param used must be set to true to activate one attribute
+			/// @param name must be set to the in-shader name of the attribute
+			/// @param location must be set to the desired location for this attrib
+			struct Attrib {
+				Attrib() : used(false), name("") {}
+				Attrib(const std::string &n, u32 l)
+					: used(true), name(n), location(l) {}
+
+				bool		used;
+				std::string name;
+				u32			location;
+			} attribs[SHADER_MAX_ATTRIBUTES];
+
+			/// Uniform Locations in the shader.
+			/// Fill this array with as much (<SHADER_MAX_UNIFORMS) uniforms before
+			/// calling shader_build[FromFile]
+			/// @param used must be set to true to activate one uniform
+			/// @param name must be given (name of the uniform in shader)
+			/// @param desc is the wanted uniform descriptor
+			///     ex: name = "ProjMatrix", and desc = UNIFORM_PROJMATRIX
+			struct Uniform {
+				Uniform() : used(false), name("") {}
+				Uniform(const std::string &n, Shader::Uniform d)
+					: used(true), name(n), desc(d) {}
+
+				bool			used;
+				std::string		name;
+				Shader::Uniform	desc;
+			} uniforms[SHADER_MAX_UNIFORMS];
+		};
+
+		/// Shader Handle.
+		/// Shaders are stored and worked on internally.
+		/// Outside of render.c, Shaders are referred by those handles
+		typedef int Handle;
+
+		/// Build a GL Shader Program from one Vertex Shader and one Fragment Shader, from files
+		//bool shader_buildFromFile(Shader *shader, char const *v_src, char const *f_src);
+
+		/// Build a GL Shader Program from a Shader Description.
+		/// Read the ShaderDesc comments above to understand what to give to this function
+		/// Returns the handle of the created shader. Or -1 if an error occured.
+		Handle Build(const Desc &desc);
+
+		/// Deallocate GL data
+		void Destroy(Handle h);
+
+		/// Bind the given Shader Program as Current GL Program
+		/// if @param shader is -1, all GL shader programs will be unbound
+		void Bind(Handle h);
+
+		/// Returns true if the given shader exists in renderer
+		bool Exists(Handle h);
+
+		// Function Collection to send uniform variables to currently bound GL shader
+		void SendVec2(Uniform target, vec2f value);
+		void SendVec3(Uniform target, vec3f value);
+		void SendVec4(Uniform target, vec4f value);
+		//void SendMat3(Uniform target, mat3 value);
+		void SendMat4(Uniform target, mat4f value);
+		void SendInt(Uniform target, int value);
+		void SendFloat(Uniform target, f32 value);
+
+		// Same but by designating them as strings (less performant)
+		void SendVec2(const std::string &target, vec2f value);
+		void SendVec3(const std::string &target, vec3f value);
+		void SendVec4(const std::string &target, vec4f value);
+		//void SendMat3(const std::string &target, mat3f value);
+		void SendMat4(const std::string &target, mat4f value);
+		void SendInt(const std::string &target, int value);
+		void SendFloat(const std::string &target, f32 value);
+	}
+
+	namespace Texture {
+		/// Descriptor for Texture creation
+		/// If texture_file is given, load texture from given file (supported: PNG)
+		/// Else, return an empty texture of the given size, registered in the renderer,
+		/// for use elsewhere
+		struct Desc {
+			Desc(const std::string &tname = "") : name(tname), from_file(true) {}
+			std::string name;	//!< Texture name
+			vec2i size;         //!< Used only if texture_file is not given
+			bool from_file;		//!< True if the given name is a image file
+		};
+
+		enum Target {
+			TexTarget0 = 0,
+			TexTarget1 = 1,
+
+			TexTarget_N // Do Not Use !!
+		};
+
+		/// Texture Handle
+		/// Textures are stored and worked on internally by the renderer.
+		/// Outside of render.c, Textures are referred by those handles
+		typedef int Handle;
+
+		/// Build a Texture from the given Texture Descriptor. See the above TextureDesc.
+		/// If asked to load from a texture file(PNG,..), see first if already loaded.
+		/// If not, load it, store it, and return it.
+		/// @return : the Texture Handle if successful. -1 otherwise
+		Handle Build(const Desc &desc);
+
+		/// Deallocate GL data for the given Texture
+		void Destroy(Handle h);
+
+		/// Bind given Texture as current target's texture
+		/// If -1 is given, unbind all textures for the given target
+		void Bind(Handle h, Target t);
+
+		/// Returns true if the given texture exists in renderer
+		bool Exists(Handle h);
+	}
+
+
+
+
+	namespace Font {
+		struct Desc {
+			Desc(const std::string &fname = "", u32 fsize = 0) :
+				name(fname), size(fsize) {}
+
+			std::string name; //!< TTF font file
+			u32			size; //!< Wanted font size
+		};
+
+		/// Font Handle
+		/// Fonts are stored and worked on internally by the renderer.
+		/// Outside of render.c, Fonts are referred by those handles
+		typedef int Handle;
+
+		/// Build a Font Atlas from a TTF font file, at the wanted size.
+		Handle Build(Desc &desc);
+
+		// Free all font data allocated by font_build
+		void Destroy(Handle h);
+
+		/// Returns true if the given font exists in the renderer
+		bool Exists(Handle h);
+
+		/// Binds the font's atlas texture as current texture for given target
+		void Bind(Handle h, Texture::Target target);
+
+	}
+
+	namespace Mesh {
+		enum Attribute {
+			MESH_POSITIONS = 1,
+			MESH_NORMALS = 2,
+			MESH_TEXCOORDS = 4,
+			MESH_COLORS = 8
+		};
+
+		enum AnimType {
+			ANIM_NONE,      // static mesh, no bone animation
+			ANIM_IDLE,
+
+			ANIM_N // Do not Use
+		};
+
+		struct AnimState {
+			int curr_frame;
+			f32 curr_time;
+			f32 duration;
+
+			AnimType type;
+		};
+
+
+		/// Mesh Description
+		/// param vertices_n : number of vertices the mesh has.    NECESSARY
+		/// @param positions : array of vertex positions.          NECESSARY
+		/// @param normals : array of vertex normals.
+		/// @param texcoords : array of vertex texture UV coords
+		/// @param colors : array of vertex colors.
+		struct Desc {
+			Desc(const std::string &resource_name, int vcount, f32 *pos_arr,
+				f32 *normal_arr = NULL, f32 *texcoord_arr = NULL, f32 *col_arr = NULL) :
+				name(resource_name), vertices_n(vcount), positions(pos_arr),
+				normals(normal_arr), texcoords(texcoord_arr), colors(col_arr) {}
+
+
+			std::string name;	//!< name of the mesh for resource managment
+			int vertices_n;		//!< number of vertices the mesh has
+			f32 *positions;     //!< format vec3
+			f32 *normals;       //!< format vec3
+			f32 *texcoords;     //!< format vec2
+			f32 *colors;        //!< format vec4
+		};
+
+		/// Mesh Handle.
+		/// Meshes are stored and worked on internally by the renderer.
+		/// Outside of render.c, Meshes are referred by those handles
+		typedef int Handle;
+
+		/// Build a Mesh from the given Mesh Description. See above to understand what is needed.
+		/// @return : the Mesh Handle if creation successful. -1 if error occured.
+		Handle Build(const Desc &desc);
+
+		/// Deallocate GL data for the given mesh handle
+		void Destroy(Handle h);
+
+		/// Bind given Mesh as current VAO for drawing
+		/// If -1 is given, unbind all VAOs
+		void Bind(Handle h);
+
+		/// Returns true if the given mesh exists in renderer
+		bool Exists(Handle h);
+
+		/// Renders the given mesh, binding it if not currently bound as GL Current VAO.
+		/// The given animation state is used to transmit bone-matrix data to the shader
+		/// before drawing the mesh. If NULL, an identity bonematrix is used
+		void Render(Handle h, const AnimState &state);
+
+		/// Sets the current played animation of state. Reset it at the beginning of 1st frame
+		void SetAnimation(Handle h, AnimState &state, AnimType type);
+
+		/// Update the given animation state so that it continues playing its current animation
+		/// with the added delta time, thus updating its bone matrices
+		/// @param state : the animation to update
+		/// @param mesh_i : the mesh resource handle from which the animation is taken
+		/// @param dt : delta time to advance animation
+		void UpdateAnimation(Handle h, AnimState &state, float dt);
+	}
+
+	namespace TextMesh {
+		struct Desc {
+			Desc(Font::Handle font, const std::string &str, const vec4f &strcolor) :
+				font_handle(font), string(str), color(strcolor) {}
+
+			Font::Handle font_handle;
+			std::string string;
+			vec4f color;
+		};
+
+		/// TextMesh Handle.
+		/// TextMeshes are stored and worked on internally by the renderer.
+		/// Outside of render.c, TextMeshes are referred by those handles
+		typedef int Handle;
+
+		// Creates the TextMesh with the given descriptor
+		Handle Build(Desc &desc);
+
+		/// Deallocate GL data for the given textmesh handle
+		void Destroy(Handle h);
+
+		/// Binds the given textmesh's VBO as current
+		void Bind(Handle h);
+
+		/// Render the given textmesh. Binds it if not currently bound
+		void Render(Handle h);
+
+		/// Returns true if the given mesh exists in renderer
+		bool Exists(Handle h);
+
+		/// Change the string displayed by a TextMesh
+		/// @param h : handle of the text mesh to be modified. -1 for a new handle
+		/// @param mesh : Handle of the used font
+		/// @param str : new string to be displayed
+		/// @return : h if it is >= 0, or a new handle if h is -1
+		Handle SetString(Handle h, Font::Handle fh, const std::string &str);
+	}
+
+	namespace SpriteSheet {
+		/// Spritesheet Handle.
+		/// Spritesheets are stored and worked on internally by the renderer.
+		/// Outside of render.c, Spritesheets are referred by those handles
+		typedef int Handle;
+
+		/// Loads a spritesheet and all its sprites from a JSON spritesheet
+		/// file. Returns a handle to the spritesheet
+		Handle LoadFromFile(const std::string &filename);
+		void Destroy(Handle h);
+	}
+}
