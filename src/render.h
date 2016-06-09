@@ -219,7 +219,8 @@ namespace Render {
 			MESH_POSITIONS = 1,
 			MESH_NORMALS = 2,
 			MESH_TEXCOORDS = 4,
-			MESH_COLORS = 8
+			MESH_COLORS = 8,
+			MESH_INDICES = 16
 		};
 
 		enum AnimType {
@@ -245,14 +246,22 @@ namespace Render {
 		/// @param texcoords : array of vertex texture UV coords
 		/// @param colors : array of vertex colors.
 		struct Desc {
-			Desc(const std::string &resource_name, int vcount, f32 *pos_arr,
-				f32 *normal_arr = NULL, f32 *texcoord_arr = NULL, f32 *col_arr = NULL) :
-				name(resource_name), vertices_n(vcount), positions(pos_arr),
-				normals(normal_arr), texcoords(texcoord_arr), colors(col_arr) {}
+			Desc(const std::string &resource_name, bool empty_mesh, int icount, u32 *idx_arr,
+				int vcount, f32 *pos_arr, f32 *normal_arr = nullptr, f32 *texcoord_arr = nullptr,
+				f32 *col_arr = nullptr) :
+				name(resource_name), empty_mesh(empty_mesh), vertices_n(vcount), indices_n(icount),
+				indices(idx_arr), positions(pos_arr), normals(normal_arr), texcoords(texcoord_arr),
+				colors(col_arr) {}
 
 
 			std::string name;	//!< name of the mesh for resource managment
+			bool empty_mesh;
+
 			int vertices_n;		//!< number of vertices the mesh has
+			int indices_n;		//!< number of indices
+
+			u32 *indices;
+
 			f32 *positions;     //!< format vec3
 			f32 *normals;       //!< format vec3
 			f32 *texcoords;     //!< format vec2

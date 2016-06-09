@@ -12,21 +12,17 @@ bool initFunc(Scene *scene) {
 		-30, 0, -30,
 		-30, 0, 30,
 		30, 0, 30,
-		-30, 0, -30,
-		30, 0, 30,
-		30, 0, -30 };
+		30, 0, -30
+	};
 	f32 colors[] = {
 		1, 0, 0, 1,
 		0, 1, 0, 1,
 		0, 0, 1, 1,
-		1, 0, 0, 1,
-		0, 0, 1, 1,
-		1, 1, 1, 1 };
+		1, 1, 1, 1
+	};
 	f32 texcoords[] = {
 		0, 0,
 		0, 1,
-		1, 1,
-		0, 0,
 		1, 1,
 		1, 0
 	};
@@ -35,20 +31,36 @@ bool initFunc(Scene *scene) {
 		0, 1, 0,
 		0, 1, 0,
 		0, 1, 0,
-		0, 1, 0,
-		0, 1, 0,
 		0, 1, 0
 	};
 
-	Render::Mesh::Desc mdesc("TestMesh", 6, pos, normals, texcoords, colors);
+	u32 idx[] = {
+		0, 1, 2, 0, 2, 3
+	};
+
+	Render::Mesh::Desc mdesc("TestMesh", false, 6, idx, 4, pos, normals, texcoords, colors);
 
 	test_mesh = Render::Mesh::Build(mdesc);
 	if(test_mesh < 0) {
 		LogErr("Error creating test mesh");
 		return false;
 	}
-
+/*
+	Render::Mesh::Handle sphere = Render::Mesh::BuildSphere();
+	if(sphere < 0) {
+		LogErr("Error creating sphere mesh");
+		return false;
+	}
+*/
 	Render::Texture::Desc tdesc;
+
+	tdesc.name = "data/dummy.png";
+	Render::Texture::Handle dummy_texture = Render::Texture::Build(tdesc);
+	if(dummy_texture < 0) {
+		LogErr("Error creating dummy texture");
+		return false;
+	}
+
 	tdesc.name = "data/scout_body.png";
 	scout_texture = Render::Texture::Build(tdesc);
 	if(scout_texture < 0) {
@@ -56,12 +68,21 @@ bool initFunc(Scene *scene) {
 		return false;
 	}
 
-	Object::Desc odesc(test_mesh, Render::Mesh::ANIM_NONE, Render::Shader::SHADER_3D_MESH, scout_texture);
+	Object::Desc odesc(test_mesh, Render::Mesh::ANIM_NONE, Render::Shader::SHADER_3D_MESH, dummy_texture);
 	Object::Handle oh = scene->Add(odesc);
 	if(oh < 0) {
 		LogErr("Error registering object to scene");
 		return false;
 	}
+
+/*
+	odesc.mesh = sphere;
+	odesc.texture = dummy_texture;
+	Object::Handle sphere_object = scene->Add(odesc);
+	if(sphere_object < 0) {
+		LogErr("Error registering sphere to scene");
+		return false;
+	}*/
 
 // Render::SpriteSheet::Handle ssh = Render::SpriteSheet::LoadFromFile("data/ships_spritesheet.json");
 

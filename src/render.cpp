@@ -108,7 +108,7 @@ namespace Render {
 		renderer->spritesheets_resources.reserve(10);
 
 		// Create TextVao, it occupies the 1st vao slot
-		Mesh::Desc text_vao_desc("TextVAO", 0, NULL);
+		Mesh::Desc text_vao_desc("TextVAO", true, 0, nullptr, 0, nullptr);
 		renderer->text_vao = Mesh::Build(text_vao_desc);
 
 		if (renderer->text_vao < 0) {
@@ -609,8 +609,8 @@ namespace Render {
 
 	namespace Mesh {
 		Handle Build(const Desc &desc) {
-			f32 *vp = NULL, *vn = NULL, *vt = NULL, *vc = NULL;
-			int face_count = 0;
+			f32 *vp = nullptr, *vn = nullptr, *vt = nullptr, *vc = nullptr;
+			u32 *idx = nullptr;
 
 			int free_index;
 			bool found_resource = FindResource(renderer->mesh_resources, desc.name, free_index);
@@ -622,34 +622,36 @@ namespace Render {
 
 			Mesh::Data mesh;
 
-			if (desc.vertices_n > 0 && desc.positions) {
-				face_count = desc.vertices_n / 3;
-				vp = (f32*)desc.positions;
+			if(!desc.empty_mesh) {
+				if (desc.indices_n > 0 && desc.indices && desc.vertices_n > 0 && desc.positions) {
+					vp = (f32*)desc.positions;
+					idx = (u32*)desc.indices;
 
-				if (desc.normals)
-					vn = (f32*)desc.normals;
-				if (desc.texcoords)
-					vt = (f32*)desc.texcoords;
-				if (desc.colors)
-					vc = (f32*)desc.colors;
-				// Create empty mesh (i.e. only a vao, used to create the text vao for example)
+					if (desc.normals)
+						vn = (f32*)desc.normals;
+					if (desc.texcoords)
+						vt = (f32*)desc.texcoords;
+					if (desc.colors)
+						vc = (f32*)desc.colors;
+					// Create empty mesh (i.e. only a vao, used to create the text vao for example)
+				}
+				else {
+					// TODO : Here we allow mesh creation without data
+					// It is used for TextMeshes VAO, so for now, no error
+					LogErr("Tried to create a Mesh without giving indices or positions array.");
+					return -1;
+				}
 			}
-			else {
-				// TODO : Here we allow mesh creation without data
-				// It is used for TextMeshes VAO, so for now, no error
-				//LogErr("Tried to create a Mesh without giving vertices_n or positions array.");
-				//return -1;
-			}
 
 
-			mesh.vertices_n = 3 * face_count;
+			mesh.vertices_n = desc.vertices_n;
+			mesh.indices_n = desc.indices_n;
 
 			glGenVertexArrays(1, &mesh.vao);
 			// Disallow 0-Vao. If given VAO with index 0, ask for another one
 			// this should never happen because VAO-0 is already constructed for the text
 			if (!mesh.vao) glGenVertexArrays(1, &mesh.vao);
 			glBindVertexArray(mesh.vao);
-
 
 			if (vp) {
 				mesh.attrib_flags = MESH_POSITIONS;
@@ -663,6 +665,15 @@ namespace Render {
 
 				// add it to the vao
 				glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (GLubyte*)NULL);
+			}
+
+			// Check for indices
+			if(idx) {
+				mesh.attrib_flags |= MESH_INDICES;
+				glGenBuffers(1, &mesh.ibo);
+				glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh.ibo);
+				glBufferData(GL_ELEMENT_ARRAY_BUFFER, mesh.indices_n * sizeof(u32),
+							 idx, GL_STATIC_DRAW);
 			}
 
 			// check for normals
@@ -710,6 +721,8 @@ namespace Render {
 				glVertexAttribPointer(3, 4, GL_FLOAT, GL_FALSE, 0, (GLubyte*)NULL);
 			}
 
+			glBindVertexArray(0);
+
 			int mesh_i = (int)renderer->meshes.size();
 			renderer->meshes.push_back(mesh);
 
@@ -719,13 +732,25 @@ namespace Render {
 			return mesh_i;
 		}
 
+		void BuildSphere() {
+			//Mesh::Desc desc;
+
+			int nLong = 24, nLat = 16;
+
+			vec3f pos[(nLong+1) * nLat + 2];
+
+			// pos[]
+		}
+
 		void Destroy(Handle h) {
 			if (Exists(h)) {
 				Data &mesh = renderer->meshes[h];
 				glDeleteBuffers(4, mesh.vbo);
+				glDeleteBuffers(1, &mesh.ibo);
 				glDeleteVertexArrays(1, &mesh.vao);
 				mesh.attrib_flags = MESH_POSITIONS;
 				mesh.vertices_n = 0;
+				mesh.indices_n = 0;
 
 
 				// Remove it as a loaded resource
@@ -751,8 +776,10 @@ namespace Render {
 
 		void Render(Handle h, const AnimState &state) {
 			if (Exists(h)) {
+				const Mesh::Data &md = renderer->meshes[h];
+
 				Bind(h);
-				glDrawArrays(GL_TRIANGLES, 0, renderer->meshes[h].vertices_n);
+				glDrawElements(GL_TRIANGLES, md.indices_n, GL_UNSIGNED_INT, 0);
 			}
 				//if (state && state.type > ANIM_NONE) {
 				//}

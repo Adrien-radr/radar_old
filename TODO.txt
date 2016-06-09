@@ -1,8 +1,10 @@
 Important :
+x Index rendering instead of vertex rendering
 o Sphere mesh
 o Freefly Camera
 
 Normal :
+x GGX
 o ImGUI
 o Prefiltered cubemap for ambient specular
 

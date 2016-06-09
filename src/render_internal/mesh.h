@@ -79,16 +79,19 @@ namespace Render {
 
 		/// Can use animation or not.
 		struct Data {
-			Data() : vao(0), vertices_n(0), attrib_flags(MESH_POSITIONS), animation_n(0) {
+			Data() : vao(0), indices_n(0), attrib_flags(MESH_POSITIONS), animation_n(0) {
 				vbo[0] = vbo[1] = vbo[2] = vbo[3] = 0;
+				ibo = 0;
 			}
 
 			// Model
 			u32 vao;                //!< GL VAO ID
 			u32 vbo[4];             //!< 0: positions, 1: normals, 2: texcoords,
 			//!< 3: colors
+			u32 ibo;				//!< Element buffer
 
 			u32			vertices_n;      //!< Number of vertices the mesh has
+			u32			indices_n;		//!< Number of indices it has
 			int			attrib_flags;	 //!< OR'ed enum defining which vertex attribs it has
 
 			// Animations
