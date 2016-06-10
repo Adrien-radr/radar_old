@@ -1,10 +1,11 @@
 Important :
 x Index rendering instead of vertex rendering
-o Sphere mesh
+x Sphere mesh
+o Per-object material (texture ? uniform ?) --> start with uniform buffer per-obj for ease
 o Freefly Camera
 
 Normal :
-x GGX
+x GGX -- fixed (smith DFG + burley's disney diffuse)
 o ImGUI
 o Prefiltered cubemap for ambient specular
 

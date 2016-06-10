@@ -548,6 +548,15 @@ public:
 		return r;
 	}
 
+	static mat4<T> Scale(vec3<T> xyz) {
+		mat4<T> s;
+		s.Identity();
+		s[0].x = xyz.x;
+		s[1].y = xyz.y;
+		s[2].z = xyz.z;
+		return s;
+	}
+
 	void FromVec3Mult(const vec3<T> &a, const vec3<T> &b) {
 		for (int i = 0; i < 4; ++i)
 			for (int j = 0; j < 4; ++j)

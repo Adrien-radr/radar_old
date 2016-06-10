@@ -9,16 +9,24 @@
 #define SCENE_MAX_TEXTS 64
 
 namespace Object {
-	void Desc::SetPosition(const vec2f &pos) {
-		model_matrix = mat4f::Translation(vec3f(pos.x, pos.y, 0.f));
+	void Desc::Translate(const vec3f &t) {
+		model_matrix *= mat4f::Translation(t);
 	}
 
-	void Desc::SetRotation(float angle) {
-		vec3f curr_pos(model_matrix[3].x, model_matrix[3].y, model_matrix[3].z);
-		model_matrix.Identity();
-		model_matrix.RotateZ(angle);
-		model_matrix *= mat4f::Translation(curr_pos);
+	void Desc::Scale(const vec3f &s) {
+		model_matrix *= mat4f::Scale(s);
 	}
+		
+	// void Desc::SetPosition(const vec2f &pos) {
+	// 	model_matrix = mat4f::Translation(vec3f(pos.x, pos.y, 0.f));
+	// }
+
+	// void Desc::SetRotation(float angle) {
+	// 	vec3f curr_pos(model_matrix[3].x, model_matrix[3].y, model_matrix[3].z);
+	// 	model_matrix.Identity();
+	// 	model_matrix.RotateZ(angle);
+	// 	model_matrix *= mat4f::Translation(curr_pos);
+	// }
 }
 
 namespace Text {
@@ -55,7 +63,8 @@ bool Scene::Init(SceneInitFunc initFunc, SceneUpdateFunc updateFunc, SceneRender
     camera.dist = 7.5f;
     camera.mov_speed = 50.f;
     camera.rot_speed = 0.2f;
-    camera.position = vec3f(45,15,35);//vec3f(camera.dist * 1.5f, camera.dist, camera.dist * 1.5f);
+    camera.position = vec3f(45,15,35);
+    camera.position = vec3f(5,5,5);
     camera.target = vec3f(0, 0.5f, 0);
     camera.up = vec3f(0,1,0);
     camera.forward = camera.target - camera.position;
@@ -302,7 +311,7 @@ Object::Handle Scene::Add(const Object::Desc &d) {
 
 	Object::Desc &object = objects[index];
 	Render::Mesh::SetAnimation(object.mesh, object.animation_state, object.animation);
-	object.model_matrix.Identity();
+	object.model_matrix = d.model_matrix;
 
 	return (Object::Handle)index;
 }

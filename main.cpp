@@ -45,13 +45,13 @@ bool initFunc(Scene *scene) {
 		LogErr("Error creating test mesh");
 		return false;
 	}
-/*
+
 	Render::Mesh::Handle sphere = Render::Mesh::BuildSphere();
 	if(sphere < 0) {
 		LogErr("Error creating sphere mesh");
 		return false;
 	}
-*/
+
 	Render::Texture::Desc tdesc;
 
 	tdesc.name = "data/dummy.png";
@@ -69,20 +69,28 @@ bool initFunc(Scene *scene) {
 	}
 
 	Object::Desc odesc(test_mesh, Render::Mesh::ANIM_NONE, Render::Shader::SHADER_3D_MESH, dummy_texture);
-	Object::Handle oh = scene->Add(odesc);
-	if(oh < 0) {
-		LogErr("Error registering object to scene");
-		return false;
-	}
+	// Object::Handle oh = scene->Add(odesc);
+	// if(oh < 0) {
+		// LogErr("Error registering object to scene");
+		// return false;
+	// }
 
-/*
+
 	odesc.mesh = sphere;
 	odesc.texture = dummy_texture;
-	Object::Handle sphere_object = scene->Add(odesc);
-	if(sphere_object < 0) {
-		LogErr("Error registering sphere to scene");
-		return false;
-	}*/
+
+	for(int j = 0; j < 4; ++j) {
+		for(int i = 0; i < 4; ++i) {
+			odesc.model_matrix.Identity();
+			odesc.Translate(vec3f(2 - i * 3.f, 0.f, 2 -j * 3.f));
+
+			Object::Handle sphere_object = scene->Add(odesc);
+			if(sphere_object < 0) {
+				LogErr("Error registering sphere ", i, ", ", j, ".");
+				return false;
+			}
+		}
+	}
 
 // Render::SpriteSheet::Handle ssh = Render::SpriteSheet::LoadFromFile("data/ships_spritesheet.json");
 

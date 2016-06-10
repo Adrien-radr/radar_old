@@ -1,0 +1,6 @@
+*.a
+*.o
+*.log
+bin/data
+bin/radar
+.vscode

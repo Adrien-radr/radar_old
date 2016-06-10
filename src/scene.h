@@ -38,10 +38,16 @@ namespace Object {
 	using namespace Render;
 	struct Desc {
 		Desc(Mesh::Handle mh, Mesh::AnimType anim, Shader::Handle sh, Texture::Handle th)
-		: mesh(mh), animation(anim), shader(sh), texture(th) {}
+		: mesh(mh), animation(anim), shader(sh), texture(th) {
+			model_matrix.Identity();
+		}
 
-		void SetPosition(const vec2f &pos);
-		void SetRotation(float angle);
+		// void SetPosition(const vec3f &pos);
+		// void SetRotation(float angle);
+		// void SetScale(const vec3f &scale);
+
+		void Translate(const vec3f &t);
+		void Scale(const vec3f &s);
 
 		Mesh::Handle	mesh;
 		Mesh::AnimType  animation;

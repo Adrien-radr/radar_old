@@ -277,6 +277,9 @@ namespace Render {
 		/// @return : the Mesh Handle if creation successful. -1 if error occured.
 		Handle Build(const Desc &desc);
 
+		/// Build a radius 1 sphere
+		Handle BuildSphere();
+
 		/// Deallocate GL data for the given mesh handle
 		void Destroy(Handle h);
 
@@ -286,6 +289,7 @@ namespace Render {
 
 		/// Returns true if the given mesh exists in renderer
 		bool Exists(Handle h);
+		bool Exists(const std::string &resourceName, Handle &h); // returns the resource in h if it exists as a resource
 
 		/// Renders the given mesh, binding it if not currently bound as GL Current VAO.
 		/// The given animation state is used to transmit bone-matrix data to the shader

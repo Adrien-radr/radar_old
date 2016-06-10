@@ -435,7 +435,7 @@ bool Device::Init(SceneInitFunc sceneInitFunc, SceneUpdateFunc sceneUpdateFunc, 
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-    glClearColor(0.8f, 0.8f, 0.8f, 1.f);
+    glClearColor(0.1f, 0.1f, 0.1f, 1.f);
 
 	// Initialize EventManager
 	if (!em) {
