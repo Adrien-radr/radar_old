@@ -81,16 +81,31 @@ float diffuse_Lambert(float NdotL) {
     return NdotL * M_INV_PI;
 }
 
+float smoothDistanceAttenuation(float sqrDist, float invSqrAttRadius) {
+    float factor = sqrDist * invSqrAttRadius;
+    float smoothFactor = clamp(1.0 - factor * factor, 0.0, 1.0);
+    return smoothFactor * smoothFactor;
+}
+
+float getDistanceAttenuation(vec3 light_vec, float invSqrAttRadius) {
+    float sqrDist = dot(light_vec, light_vec);
+    float attenuation = 1.0 / (max(sqrDist, 0.0001));
+    attenuation *= smoothDistanceAttenuation(sqrDist, invSqrAttRadius);
+
+    return attenuation;
+}
+
 void main() {
     vec3 light_vec = vec3(-3,5,-2) - v_position;
     float light_dist = length(light_vec);
+    float light_radius = 20.0;
 
-    vec3 light_color = vec3(10,10,10) / (light_dist * light_dist);
-    vec3 diffuse_color = vec3(2.0, 0.5, 0);
+    vec3 light_color = vec3(40,40,40);
+    vec3 diffuse_color = vec3(1.0, 0.3, 0.6);
     float specular_power = 30.0;
-    float roughness = 0.1;// / specular_power;
-    // float F0 = fresnel_F0(1.0, IOR_GOLD);
+    float roughness = 0.025;// / specular_power;
     vec3 F0 = SCOLOR_COPPER;
+
 
     vec3 N = normalize(v_normal);
     vec3 V = normalize(eyePosition - v_position);
@@ -99,6 +114,7 @@ void main() {
 
     float NdotL = max(dot(L, N), 0.0);
 
+
     vec3 light_contrib = vec3(0);
     if(NdotL > 0.0)
     {
@@ -106,10 +122,16 @@ void main() {
         float NdotH = max(0, dot(N, H));
         float LdotH = max(0, dot(L, H));
 
+        float att = 1;
+        att *= getDistanceAttenuation(light_vec, 1.0/(light_radius*light_radius));
+
         vec3 Fd = diffuse_color * diffuse_Burley(NdotL, NdotV, LdotH, roughness);
         vec3 Fr = GGX(NdotL, NdotV, NdotH, LdotH, roughness, F0);
+        // vec3 Fd = diffuse_color * diffuse_Lambert(NdotL);
+        // vec3 R = 2.0 * NdotL * N - L;
+        // vec3 Fr = F0 * NdotL * pow(max(0, dot(V, R)), (1.0/(roughness*roughness)));
 
-        light_contrib = light_color * (Fd + Fr);
+        light_contrib = light_color * att * (Fd + Fr) * NdotL;
     }
 
     // texturing
