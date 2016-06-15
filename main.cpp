@@ -68,7 +68,7 @@ bool initFunc(Scene *scene) {
 		return false;
 	}
 
-	Material::Desc mat_desc(col3f(1,0,0), col3f(0,1,1), 0.4f);
+	Material::Desc mat_desc(col3f(1,0.1,0), col3f(1.000000, 0.765557, 0.336057), 0.8f);
 
 	Material::Handle mat = scene->Add(mat_desc);
 	if(mat < 0) {
@@ -99,6 +99,8 @@ bool initFunc(Scene *scene) {
 }
 
 void updateFunc(Scene *scene, float dt) {
+	// const Device &device = GetDevice();
+	// vec2i mouse_coord = vec2i(device.GetMouseX(), device.GetMouseY());
 
 }
 

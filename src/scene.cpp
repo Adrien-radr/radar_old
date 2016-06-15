@@ -8,6 +8,90 @@
 #define SCENE_MAX_OBJECTS 2048
 #define SCENE_MAX_TEXTS 64
 
+
+void Camera::Update(float dt) {
+	static Device &device = GetDevice();
+
+	vec3f posDiff;
+
+	// Translation
+	if(device.IsKeyHit(K_LShift))
+		speedMode = true;
+	if(device.IsKeyUp(K_LShift))
+		speedMode = false;
+
+	if(device.IsKeyDown(K_D))
+		posDiff += right;
+	if(device.IsKeyDown(K_A))
+		posDiff -= right;
+	if(device.IsKeyDown(K_W))
+		posDiff += forward;
+	if(device.IsKeyDown(K_S))
+		posDiff -= forward;
+
+	float len = posDiff.Len();
+	if(len > 0.f) {
+		posDiff /= len;
+		hasMoved = true;
+		posDiff *= dt * translationSpeed * (speedMode ? speedMult : 1.f);
+
+		position += posDiff;
+	}
+
+	if(device.IsMouseHit(MB_Right)) {
+		freeflyMode = true;
+		device.SetMouseX(device.windowCenter.x);
+		device.SetMouseY(device.windowCenter.y);
+		device.mousePosition = device.windowCenter;
+		device.ShowCursor(false);
+	}
+	
+	if(device.IsMouseUp(MB_Right)) {
+		freeflyMode = false;
+		device.SetMouseX(device.windowCenter.x);
+		device.SetMouseY(device.windowCenter.y);
+		device.mousePosition = device.windowCenter;
+		device.ShowCursor(true);
+	}
+	
+	// Freefly mouse mode
+	if(freeflyMode) {
+		// Rotation
+		vec2i mouseOffset = device.mousePosition - device.windowCenter;
+		// LogInfo("", mouseOffset.x, " ", mouseOffset.y);
+		{
+			//reposition mouse at the center of the screen
+			device.SetMouseX(device.windowCenter.x);
+			device.SetMouseY(device.windowCenter.y);
+			device.mousePosition = device.windowCenter;
+		}
+
+		if(mouseOffset.x != 0 || mouseOffset.y != 0) {
+			phi += mouseOffset.x * dt * rotationSpeed;
+			theta -= mouseOffset.y * dt * rotationSpeed;
+
+			if(phi > M_TWO_PI)
+				phi -= M_TWO_PI;
+			if(phi < 0.f)
+				phi += M_TWO_PI;
+
+			theta = std::max(-M_PI_OVER_TWO, std::min(M_PI_OVER_TWO, theta));
+
+			const f32 cosTheta = std::cos(theta);
+			forward.x = cosTheta * std::cos(phi);
+			forward.y = std::sin(theta);
+			forward.z = cosTheta * std::sin(phi);
+
+			right = forward.Cross(vec3f(0,1,0));
+			right.Normalize();
+			up = right.Cross(forward);
+			up.Normalize();
+
+			hasMoved = true;
+		}
+	}
+}
+
 namespace Object {
 	void Desc::Translate(const vec3f &t) {
 		model_matrix *= mat4f::Translation(t);
@@ -46,6 +130,7 @@ Scene::Scene() : customInitFunc(nullptr), customUpdateFunc(nullptr) {
 
 bool Scene::Init(SceneInitFunc initFunc, SceneUpdateFunc updateFunc, SceneRenderFunc renderFunc) {
 	const Device &device = GetDevice();
+	const Config &config = device.GetConfig();
 
 	customInitFunc = initFunc;
 	customUpdateFunc = updateFunc;
@@ -60,10 +145,13 @@ bool Scene::Init(SceneInitFunc initFunc, SceneUpdateFunc updateFunc, SceneRender
 	//camera.center = device.window_center;
 	//camera.position = vec2f(0, 0);
 
+	camera.hasMoved = false;
+	camera.speedMode = false;
+	camera.freeflyMode = false;
     camera.dist = 7.5f;
-    camera.mov_speed = 50.f;
-    camera.rot_speed = 0.2f;
-    camera.position = vec3f(45,15,35);
+	camera.speedMult = config.cameraSpeedMult;
+    camera.translationSpeed = config.cameraBaseSpeed;
+    camera.rotationSpeed = 0.05f;
     camera.position = vec3f(5,5,5);
     camera.target = vec3f(0, 0.5f, 0);
     camera.up = vec3f(0,1,0);
@@ -75,7 +163,7 @@ bool Scene::Init(SceneInitFunc initFunc, SceneUpdateFunc updateFunc, SceneRender
     camera.up = camera.right.Cross(camera.forward);
     camera.up.Normalize();
 
-    vec2f azimuth(camera.target[0] - camera.position[0], camera.target[2] - camera.position[2]);
+    vec2f azimuth(camera.forward[0], camera.forward[2]);
     azimuth.Normalize();
     camera.phi = std::atan2(azimuth[1], azimuth[0]);
     camera.theta = std::atan2(camera.forward[1], std::sqrt(azimuth.Dot(azimuth)));
@@ -129,85 +217,28 @@ void Scene::Clean() {
 void Scene::UpdateView() {
 	camera.target = camera.position + camera.forward;
 	view_matrix = mat4f::LookAt(camera.position, camera.target, camera.up);
-	// view_matrix = mat4f::Translation(vec3f(-camera.position.x, -camera.position.y, 1));
 
 	for(int i = Render::Shader::_SHADER_3D_PROJECTION_START; i < Render::Shader::_SHADER_3D_PROJECTION_END; ++i) {
 		Render::Shader::Bind(i);
 		Render::Shader::SendMat4(Render::Shader::UNIFORM_VIEWMATRIX, view_matrix);
 		Render::Shader::SendVec3(Render::Shader::UNIFORM_EYEPOS, camera.position);
 	}
-	// Render::Shader::Bind(Render::Shader::SHADER_2D_MESH);
-	// Render::Shader::SendMat4(Render::Shader::UNIFORM_VIEWMATRIX, view_matrix);
 }
 
 void Scene::Update(float dt) {
 	const Device &device = GetDevice();
-	vec2i mouse_coord = vec2i(device.GetMouseX(), device.GetMouseY());
-	vec2i mouse_diff = mouse_coord - device.window_center;
 
-/*
-	if (device.IsKeyHit(K_LShift))
-		camera.pan_fast = true;
-	if (device.IsKeyUp(K_LShift))
-		camera.pan_fast = false;
-
-	vec2f mov(0, 0);
-	int wheel_diff = 0;
-	bool pan_change = false;
-
-	if (device.IsKeyDown(K_W)) {
-		vec2f speed(0, -1);
-		mov += speed;
-		pan_change = true;
-	}
-	if (device.IsKeyDown(K_S)) {
-		vec2f speed(0, 1);
-		mov += speed;
-		pan_change = true;
-	}
-	if (device.IsKeyDown(K_A)) {
-		vec2f speed(-1, 0);
-		mov += speed;
-		pan_change = true;
-	}
-	if (device.IsKeyDown(K_D)) {
-		vec2f speed(1, 0);
-		mov += speed;
-		pan_change = true;
-	}
-
-	if (device.IsWheelDown())
-		++wheel_diff;
-	if (device.IsWheelUp())
-		--wheel_diff;
-
-	if (wheel_diff) {
-		camera.zoom_level += wheel_diff * dt * camera.zoom_speed;
-		if (camera.zoom_level > 0.1f) {
-			camera.center.x += mouse_diff.x * -wheel_diff * dt * camera.zoom_speed;
-			camera.center.y += mouse_diff.y * -wheel_diff * dt * camera.zoom_speed;
-		}
-		else
-			camera.zoom_level = 0.1f;
-
-
-		UpdateProjection(device.window_size);
-	}
-
-	if (pan_change) {
-		f32 mov_speed = camera.pan_fast ? camera.pan_fast_speed : camera.pan_speed;
-		mov.Normalize();
-		mov *= dt * mov_speed;
-		camera.position += mov;
-
+	// Real-time camera updating
+	camera.Update(dt);
+	if(camera.hasMoved) {
+		camera.hasMoved = false;
 		UpdateView();
 	}
-	*/
-
 
 	static f32 ai_timer = 0.f, one_sec = 0.f;
 	ai_timer += dt; one_sec += dt;
 
+	// Updates 100 times per second
 	if (ai_timer >= 0.01f) {
 		ai_timer = 0.f;
 
@@ -225,6 +256,7 @@ void Scene::Update(float dt) {
 		SetTextString(camera_text, cam_str.str());
 	}
 
+	// Update every second
 	if (one_sec >= 1.f) {
 		one_sec = 0.f;
 

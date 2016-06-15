@@ -8,6 +8,16 @@
 #include "GL/glew.h"
 #include "GLFW/glfw3.h"
 
+struct Config {
+    vec2i   windowSize;
+    bool    fullscreen;
+    u32     MSAASamples;
+    f32     fov;
+    bool    vSync;
+
+	f32		cameraBaseSpeed;
+	f32		cameraSpeedMult;
+};
 
 /// The Device encompass :
 ///     - Context Creation
@@ -31,11 +41,13 @@ public:
 
 	void UpdateProjection();
 
+	void SetMouseX(int x) const;
+	void SetMouseY(int y) const;
+	void ShowCursor(bool flag) const;
+
 	// Input querying functions. EventManaget needs to be initialized
 	u32  GetMouseX() const;
 	u32  GetMouseY() const;
-	void SetMouseX(int x) const;
-	void SetMouseY(int y) const;
 
 	bool IsKeyUp(Key k) const;
 	bool IsKeyHit(Key k) const;
@@ -52,19 +64,25 @@ public:
 
 	const mat4f &Get3DProjectionMatrix() const { return projection_matrix_3d; }
 	const mat4f &Get2DProjectionMatrix() const { return projection_matrix_2d; }
+
+	const Config &GetConfig() const { return config; }
 public:
-	vec2i       window_size;
-	vec2i       window_center;
+	vec2i       windowSize;
+	vec2i       windowCenter;
+
+	vec2i		mousePosition;
+	vec2i		mouseLastPosition;
 
 private:
     GLFWwindow  *window;
+	Config		config;
 
 	bool		wireframe;		//!< True for wireframe mode activated
 	mat4f		projection_matrix_2d;
 	mat4f		projection_matrix_3d;
 	float 		fov;
 
-    f64         engine_time;    //!< Time since the device has started
+    f64         engineTime;    //!< Time since the device has started
 
 	Scene		scene;			//!< Game scene
 };

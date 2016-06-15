@@ -6,17 +6,24 @@
 
 /// Camera
 struct Camera {
-    vec3f    position,
+	void Update(float dt);
+    vec3f	position,
             target,
             up,
             forward,
             right;
 
-    f32  mov_speed,
-         rot_speed;
+    f32  translationSpeed,
+         rotationSpeed;
+	f32  speedMult;
+	
     f32  dist;
     f32  theta,
          phi;
+
+	bool hasMoved;
+	bool speedMode;
+	bool freeflyMode;
 };
 
 namespace Light {
@@ -125,6 +132,7 @@ public:
 	void UpdateView();
 
 	const mat4f& GetViewMatrix() const { return view_matrix; }
+	Camera &GetCamera() { return camera; }
 
 	Object::Handle Add(const Object::Desc &d);
 	Light::Handle Add(const Light::Desc &d);

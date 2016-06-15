@@ -199,7 +199,7 @@ bool Device::IsMouseDown(MouseButton pK) const {
 }
 
 bool Device::IsMouseUp(MouseButton pK) const {
-	return em->curr_state.mouse[pK] && !em->prev_state.mouse[pK];
+	return !em->curr_state.mouse[pK] && em->prev_state.mouse[pK];
 }
 
 bool Device::IsMouseHit(MouseButton pK) const {
@@ -284,26 +284,20 @@ bool Device::IsWheelDown() const {
     }
 
 //////////////////////
-struct Config {
-    vec2i   window_size;
-    bool    fullscreen;
-    u32     MSAA_samples;
-    f32     fov;
-    bool    vsync;
-};
-
 static bool LoadConfig(Config &config) {
 	Json conf_file;
 	if (!conf_file.Open("config.json")) {
 		return false;
 	}
 
-    config.window_size.x = Json::ReadInt(conf_file.root, "WindowWidth", 1024);
-    config.window_size.y = Json::ReadInt(conf_file.root, "WindowHeight", 768);
-	config.MSAA_samples = Json::ReadInt(conf_file.root, "MSAA", 0);
+    config.windowSize.x = Json::ReadInt(conf_file.root, "WindowWidth", 1024);
+    config.windowSize.y = Json::ReadInt(conf_file.root, "WindowHeight", 768);
+	config.MSAASamples = Json::ReadInt(conf_file.root, "MSAA", 0);
 	config.fullscreen = Json::ReadInt(conf_file.root, "FullScreen", 0) != 0;
 	config.fov = Json::ReadFloat(conf_file.root, "FOV", 75.f);
-	config.vsync = Json::ReadInt(conf_file.root, "VSync", 0) != 0;
+	config.vSync = Json::ReadInt(conf_file.root, "VSync", 0) != 0;
+	config.cameraBaseSpeed = Json::ReadFloat(conf_file.root, "CameraSpeedBase", 10.f);
+	config.cameraSpeedMult = Json::ReadFloat(conf_file.root, "CameraSpeedMult", 2.f);
 
 	conf_file.Close();
     return true;
@@ -312,10 +306,10 @@ static bool LoadConfig(Config &config) {
 
 static void DeviceResizeEventListener(const Event &event, void *data) {
 	Device *d = static_cast<Device*>(data);
-	d->window_size[0] = event.v[0];
-	d->window_size[1] = event.v[1];
-	d->window_center[0] = event.v[0] / 2;
-	d->window_center[1] = event.v[1] / 2;
+	d->windowSize[0] = event.v[0];
+	d->windowSize[1] = event.v[1];
+	d->windowCenter[0] = event.v[0] / 2;
+	d->windowCenter[1] = event.v[1] / 2;
 
 	d->UpdateProjection();
 }
@@ -333,15 +327,16 @@ bool Device::Init(SceneInitFunc sceneInitFunc, SceneUpdateFunc sceneUpdateFunc, 
     int v;
 
     // Open and parse config file
-    Config config;
 	if (!LoadConfig(config)) {
 		LogErr("Error loading config file.");
 		return false;
 	}
 
-	window_size = config.window_size;
-	window_center = window_size / 2;
+	windowSize = config.windowSize;
+	windowCenter = windowSize / 2;
     fov = config.fov;
+	mouseLastPosition = windowCenter;
+	mousePosition = windowCenter;
 
     // Initialize GLFW and callbacks
 	if (!glfwInit()) {
@@ -349,11 +344,11 @@ bool Device::Init(SceneInitFunc sceneInitFunc, SceneUpdateFunc sceneUpdateFunc, 
 		return false;
 	}
 
-    glfwWindowHint(GLFW_SAMPLES, config.MSAA_samples);
+    glfwWindowHint(GLFW_SAMPLES, config.MSAASamples);
 
 	std::stringstream window_name;
 	window_name << "Radar v" << RADAR_MAJOR << "." << RADAR_MINOR << "." << RADAR_PATCH;
-    window = glfwCreateWindow(window_size.x, window_size.y, window_name.str().c_str(),
+    window = glfwCreateWindow(windowSize.x, windowSize.y, window_name.str().c_str(),
                               config.fullscreen ? glfwGetPrimaryMonitor() : NULL, NULL);
 	if (!window) {
 		LogErr("Error initializing GLFW window.");
@@ -361,7 +356,7 @@ bool Device::Init(SceneInitFunc sceneInitFunc, SceneUpdateFunc sceneUpdateFunc, 
         return false;
 	}
 
-    glfwSwapInterval((int)config.vsync);
+    glfwSwapInterval((int)config.vSync);
 
     if(!config.fullscreen)
         glfwSetWindowPos(gDevice->window, 100, 100);
@@ -451,7 +446,7 @@ bool Device::Init(SceneInitFunc sceneInitFunc, SceneUpdateFunc sceneUpdateFunc, 
     UpdateProjection();
 
 	wireframe = 0;
-    engine_time = 0.0;
+    engineTime = 0.0;
 
     // Initialize Game Scene
 	if (!scene.Init(sceneInitFunc, sceneUpdateFunc, sceneRenderFunc)) {
@@ -500,26 +495,30 @@ bool Device::AddEventListener(ListenerType type, ListenerFunc func, void *data) 
 }
 
 void Device::SetMouseX(int x) const {
-    x = std::min(x, window_size.x - 1);
+    x = std::min(x, windowSize.x - 1);
     x = std::max(x, 0);
     em->curr_state.mouse_pos.x = x;
     glfwSetCursorPos(window, em->curr_state.mouse_pos.x, em->curr_state.mouse_pos.y);
 }
 
 void Device::SetMouseY(int y) const {
-    y = std::min(y, window_size.y - 1);
+    y = std::min(y, windowSize.y - 1);
     y = std::max(y, 0);
     em->curr_state.mouse_pos.y = y;
     glfwSetCursorPos(window, em->curr_state.mouse_pos.x, em->curr_state.mouse_pos.y);
 }
 
+void Device::ShowCursor(bool flag) const {
+	glfwSetInputMode(window, GLFW_CURSOR, flag ? GLFW_CURSOR_NORMAL : GLFW_CURSOR_HIDDEN);
+}
+
 void Device::UpdateProjection() {
-	glViewport(0, 0, window_size.x, window_size.y);
-    projection_matrix_3d = mat4f::Perspective(fov, window_size[0]/(f32)window_size[1],
+	glViewport(0, 0, windowSize.x, windowSize.y);
+    projection_matrix_3d = mat4f::Perspective(fov, windowSize[0]/(f32)windowSize[1],
                                               .1f, 1000.f);
-	projection_matrix_2d = mat4f::Ortho(0, (f32)window_size.x,
-								        (f32)window_size.y, 0,
-								        0.f, 100.f);
+	projection_matrix_2d = mat4f::Ortho(0, 	(f32)windowSize.x,
+								        	(f32)windowSize.y, 0,
+								        	0.f, 100.f);
 
     for(int i = Render::Shader::_SHADER_3D_PROJECTION_START; i < Render::Shader::_SHADER_3D_PROJECTION_END; ++i) {
         Render::Shader::Bind(i);
@@ -539,7 +538,7 @@ void Device::Run() {
         t = glfwGetTime();
         dt = t - last_t;
         last_t = t;
-        engine_time += dt;
+        engineTime += dt;
 
         // Keyboard inputs for Device
         if(IsKeyUp(K_Escape))
@@ -555,10 +554,12 @@ void Device::Run() {
 				}*/
         }
 
+		// register mouse position
+		mouseLastPosition = em->prev_state.mouse_pos;
+		mousePosition = em->curr_state.mouse_pos;
 		scene.Update((f32)dt);
-
+		
         em->Update();
-
 
         // Render Scene
         glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
