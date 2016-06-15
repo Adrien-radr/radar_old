@@ -95,6 +95,9 @@ sample: lib
 	@$(CC) $(CFLAGS) main.cpp -Lbin/ -lradar $(LIBS) -o $(TARGET)
 
 clean:
+	rm $(LIB_OBJECTS)
+
+cleanall:
 	rm -rf build
 
 install: all

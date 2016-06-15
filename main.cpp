@@ -68,14 +68,15 @@ bool initFunc(Scene *scene) {
 		return false;
 	}
 
-	Object::Desc odesc(test_mesh, Render::Mesh::ANIM_NONE, Render::Shader::SHADER_3D_MESH, dummy_texture);
-	// Object::Handle oh = scene->Add(odesc);
-	// if(oh < 0) {
-		// LogErr("Error registering object to scene");
-		// return false;
-	// }
+	Material::Desc mat_desc(col3f(1,0,0), col3f(0,1,1), 0.4f);
 
+	Material::Handle mat = scene->Add(mat_desc);
+	if(mat < 0) {
+		LogErr("Error adding material");
+		return false;
+	}
 
+	Object::Desc odesc(test_mesh, Render::Mesh::ANIM_NONE, Render::Shader::SHADER_3D_MESH, dummy_texture, mat);
 	odesc.mesh = sphere;
 	odesc.texture = dummy_texture;
 

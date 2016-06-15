@@ -56,6 +56,13 @@ namespace Render {
 			UNIFORM_N                   // Do not use
 		};
 
+		// Uniform Block Locations Descriptors
+		enum UniformBlock {
+			UNIFORMBLOCK_MATERIAL,
+
+			UNIFORMBLOCK_N				// Do not use 
+		};
+
 		/// Shader Descriptor for shader building.
 		struct Desc {
 			Desc() : vertex_file(""), fragment_file(""), vertex_src(""), fragment_src("") {}
@@ -90,14 +97,23 @@ namespace Render {
 			/// @param desc is the wanted uniform descriptor
 			///     ex: name = "ProjMatrix", and desc = UNIFORM_PROJMATRIX
 			struct Uniform {
-				Uniform() : used(false), name("") {}
+				Uniform() : name("") {}
 				Uniform(const std::string &n, Shader::Uniform d)
-					: used(true), name(n), desc(d) {}
+					: name(n), desc(d) {}
 
-				bool			used;
 				std::string		name;
 				Shader::Uniform	desc;
-			} uniforms[SHADER_MAX_UNIFORMS];
+			};
+
+			struct UniformBlock {
+				UniformBlock(const std::string &n, Shader::UniformBlock d)
+					: name(n), desc(d) {}
+				std::string 			name;
+				Shader::UniformBlock 	desc;
+			};
+
+			std::vector<Uniform> uniforms;
+			std::vector<UniformBlock> uniformblocks;
 		};
 
 		/// Shader Handle.
@@ -140,6 +156,22 @@ namespace Render {
 		void SendMat4(const std::string &target, mat4f value);
 		void SendInt(const std::string &target, int value);
 		void SendFloat(const std::string &target, f32 value);
+	}
+
+	namespace UBO {
+		struct Desc {
+			Desc(f32 *data, u32 data_size) : data(data), size(data_size) {}
+
+			f32 *data;			//!< pointer on the data to register in the UBO
+			u32 size;			//!< size in bytes of this data
+		};
+
+		typedef int Handle;
+
+		Handle Build(const Desc &desc);
+		void Destroy(Handle h);
+		void Bind(Shader::UniformBlock loc, Handle h);
+		bool Exists(Handle h);
 	}
 
 	namespace Texture {

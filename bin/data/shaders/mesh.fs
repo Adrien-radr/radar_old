@@ -24,7 +24,13 @@ struct Light {
     float radius;
 };
 
-uniform Light lights[10];
+layout (std140) uniform Material {
+    vec3 Kd;
+    vec3 Ks;
+    float shininess;
+};
+
+uniform Light lights[8];
 uniform sampler2D tex0;
 uniform vec3 eyePosition;
 
@@ -101,10 +107,9 @@ void main() {
     float light_radius = 20.0;
 
     vec3 light_color = vec3(40,40,40);
-    vec3 diffuse_color = vec3(1.0, 0.3, 0.6);
-    float specular_power = 30.0;
-    float roughness = 0.025;// / specular_power;
-    vec3 F0 = SCOLOR_COPPER;
+    vec3 diffuse_color = Kd;
+    vec3 specular_color = Ks;
+    float roughness = 1.0 - shininess;
 
 
     vec3 N = normalize(v_normal);
@@ -126,7 +131,7 @@ void main() {
         att *= getDistanceAttenuation(light_vec, 1.0/(light_radius*light_radius));
 
         vec3 Fd = diffuse_color * diffuse_Burley(NdotL, NdotV, LdotH, roughness);
-        vec3 Fr = GGX(NdotL, NdotV, NdotH, LdotH, roughness, F0);
+        vec3 Fr = GGX(NdotL, NdotV, NdotH, LdotH, roughness, specular_color);
         // vec3 Fd = diffuse_color * diffuse_Lambert(NdotL);
         // vec3 R = 2.0 * NdotL * N - L;
         // vec3 Fr = F0 * NdotL * pow(max(0, dot(V, R)), (1.0/(roughness*roughness)));

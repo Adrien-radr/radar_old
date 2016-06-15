@@ -1,13 +1,14 @@
 Important :
 x Index rendering instead of vertex rendering
 x Sphere mesh
-o Per-object material (texture ? uniform ?) --> start with uniform buffer per-obj for ease
+x Per-object material (texture ? uniform ?) --> start with uniform buffer per-obj for ease
 o Freefly Camera
 
 Normal :
 x GGX -- fixed (smith DFG + burley's disney diffuse)
 o ImGUI
 o Prefiltered cubemap for ambient specular
+o Assimp models
 
 Less :
-o Assimp models
+o Material Resources & Manager to avoid having duplicated materials and allow per-material sorting

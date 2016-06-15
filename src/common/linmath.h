@@ -261,8 +261,22 @@ public:
 	T z;
 };
 
+template<typename T>
+class col3 : vec3<T> {
+public:
+	col3(T r, T g, T b) : vec3<T>(r,g,b) {}
+	const T &r() const { return this->x; }
+	const T &g() const { return this->y; }
+	const T &b() const { return this->z; }
+
+	T &r() { return this->x; }
+	T &g() { return this->y; }
+	T &b() { return this->z; }
+};
+
 typedef vec3<f32> vec3f;
 typedef vec3<int> vec3i;
+typedef col3<f32> col3f;
 
 /*
 

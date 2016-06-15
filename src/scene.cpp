@@ -83,10 +83,11 @@ bool Scene::Init(SceneInitFunc initFunc, SceneUpdateFunc updateFunc, SceneRender
 	// initialize shader matrices
 	UpdateView();
 
-	texts.reserve(8);
-	lights.reserve(8);
+	texts.reserve(256);
+	lights.reserve(32);
 	active_lights.reserve(8);
-	objects.reserve(64);
+	objects.reserve(1024);
+	materials.reserve(64);
 
 	// Fps text
 	Render::Font::Desc fdesc("data/DejaVuSans.ttf", 12);
@@ -122,6 +123,7 @@ void Scene::Clean() {
 	lights.clear();
 	objects.clear();
 	texts.clear();
+	materials.clear();
 }
 
 void Scene::UpdateView() {
@@ -259,6 +261,9 @@ void Scene::Render() {
 			Render::Shader::SendVec3(uniform_name.str(), light.position);
 		}
 
+		// send material parameters
+		Render::UBO::Bind(Render::Shader::UNIFORMBLOCK_MATERIAL, materials[object.material].ubo);
+
 		Render::Texture::Bind(object.texture, Render::Texture::TexTarget0);
 		Render::Shader::SendMat4(Render::Shader::UNIFORM_MODELMATRIX, object.model_matrix);
 		Render::Mesh::Render(object.mesh, object.animation_state);
@@ -293,6 +298,10 @@ Object::Handle Scene::Add(const Object::Desc &d) {
 	}
 	if (!Render::Texture::Exists(d.texture)) {
 		LogErr("Given texture is not registered in renderer.");
+		return -1;
+	}
+	if(!MaterialExists(d.material)) {
+		LogErr("Given material is not registered in the scene.");
 		return -1;
 	}
 	if (d.animation >= Render::Mesh::ANIM_N) {
@@ -354,6 +363,30 @@ Text::Handle Scene::Add(const Text::Desc &d) {
 	SetTextString((Text::Handle)index, text.str);
 
 	return (Text::Handle)index;
+}
+
+
+Material::Handle Scene::Add(const Material::Desc &d) {
+	size_t index = materials.size();
+
+	Material::Data mat;
+	mat.desc = d;
+
+	// Create UBO to accomodate it on GPU
+	// TODO : Add some kind of material library to ease using same material on several objects
+	Render::UBO::Desc ubo_desc((f32*)&d.Kd, sizeof(Material::Desc));
+	mat.ubo = Render::UBO::Build(ubo_desc);
+	if(mat.ubo < 0) {
+		LogErr("Error creating Material");
+		return -1;
+	}
+
+	materials.push_back(mat);
+	return (Material::Handle)index;
+}
+
+bool Scene::MaterialExists(Material::Handle h) const {
+	return h >= 0 && h < (int)materials.size() && Render::UBO::Exists(materials[h].ubo);
 }
 
 void Scene::SetTextString(Text::Handle h, const std::string &str) {

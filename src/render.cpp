@@ -28,15 +28,22 @@ namespace Render {
 		int				handle;
 	};
 
+	namespace UBO {
+		struct Data {
+			Data() : id(0) {}
+			u32 id;
+		};
+	}
+
 	namespace Shader {
 		struct Data {
-			Data() : id(0), proj_matrix_type(0) {}
+			Data() : id(0) {}
 			u32 id;                             //!< GL Shader Program ID
-			bool proj_matrix_type;              //!< Type of projection matrix used in shader
+			// bool proj_matrix_type;              //!< Type of projection matrix used in shader
 
-			int uniform_locations[Shader::UNIFORM_N];   //!< Locations for the possible uniforms
-			//!< Ordered as the Shader::Uniform enum
-
+			// Arrays of uniforms{blocks}, ordered as the Shader::Uniform{Block} enum
+			GLint  uniform_locations[Shader::UNIFORM_N];   //!< Locations for the possible uniforms
+			GLuint uniformblock_locations[Shader::UNIFORMBLOCK_N];
 		};
 	}
 
@@ -45,6 +52,7 @@ namespace Render {
 		// GL id.
 		// a value of -1 mean that nothing is currently bound.
 		GLint           curr_GL_program;
+		GLint			curr_GL_ubo;
 		GLint           curr_GL_vao;
 		GLint           curr_GL_texture[Texture::TexTarget_N];
 		Texture::Target curr_GL_texture_target;
@@ -55,6 +63,7 @@ namespace Render {
 		// Those arrays contain the GL-loaded resources and contains no explicit
 		// duplicates.
 		std::vector<Shader::Data> shaders;
+		std::vector<UBO::Data> ubos;
 		std::vector<Mesh::Data> meshes;
 		std::vector<TextMesh::Data> textmeshes;
 		std::vector<Texture::Data> textures;
@@ -78,6 +87,7 @@ namespace Render {
 	static void Clean() {
 		renderer->curr_GL_program = -1;
 		renderer->curr_GL_vao = -1;
+		renderer->curr_GL_ubo = -1;
 		for (int i = 0; i < Texture::TexTarget_N; ++i)
 			renderer->curr_GL_texture[i] = -1;
 		renderer->curr_GL_texture_target = Texture::TexTarget0;
@@ -88,6 +98,7 @@ namespace Render {
 		renderer->texture_resources.clear();
 		renderer->spritesheets_resources.clear();
 
+		renderer->ubos.clear();
 		renderer->shaders.clear();
 		renderer->meshes.clear();
 		renderer->textmeshes.clear();
@@ -102,10 +113,10 @@ namespace Render {
 		renderer = new Renderer();
 		Clean();
 
-		renderer->mesh_resources.reserve(10);
-		renderer->texture_resources.reserve(5);
-		renderer->font_resources.reserve(5);
-		renderer->spritesheets_resources.reserve(10);
+		renderer->mesh_resources.reserve(64);
+		renderer->texture_resources.reserve(64);
+		renderer->font_resources.reserve(8);
+		renderer->spritesheets_resources.reserve(8);
 
 		// Create TextVao, it occupies the 1st vao slot
 		Mesh::Desc text_vao_desc("TextVAO", true, 0, nullptr, 0, nullptr);
@@ -125,10 +136,10 @@ namespace Render {
 		sd_ui_shader.attribs[0] = Shader::Desc::Attrib("in_position", 0);
 		sd_ui_shader.attribs[1] = Shader::Desc::Attrib("in_texcoord", 2);
 
-		sd_ui_shader.uniforms[0] = Shader::Desc::Uniform("ProjMatrix", Shader::UNIFORM_PROJMATRIX);
-		sd_ui_shader.uniforms[1] = Shader::Desc::Uniform("ModelMatrix", Shader::UNIFORM_MODELMATRIX);
-		sd_ui_shader.uniforms[2] = Shader::Desc::Uniform("tex0", Shader::UNIFORM_TEXTURE0);
-		sd_ui_shader.uniforms[3] = Shader::Desc::Uniform("text_color", Shader::UNIFORM_TEXTCOLOR);
+		sd_ui_shader.uniforms.push_back(Shader::Desc::Uniform("ProjMatrix", Shader::UNIFORM_PROJMATRIX));
+		sd_ui_shader.uniforms.push_back(Shader::Desc::Uniform("ModelMatrix", Shader::UNIFORM_MODELMATRIX));
+		sd_ui_shader.uniforms.push_back(Shader::Desc::Uniform("tex0", Shader::UNIFORM_TEXTURE0));
+		sd_ui_shader.uniforms.push_back(Shader::Desc::Uniform("text_color", Shader::UNIFORM_TEXTCOLOR));
 
 
 		Shader::Handle shader_ui = Shader::Build(sd_ui_shader);
@@ -146,11 +157,13 @@ namespace Render {
 		sd_mesh.attribs[1] = Shader::Desc::Attrib("in_normal", 1);
 		sd_mesh.attribs[2] = Shader::Desc::Attrib("in_texcoord", 2);
 		sd_mesh.attribs[3] = Shader::Desc::Attrib("in_color", 3);
-		sd_mesh.uniforms[0] = Shader::Desc::Uniform("ModelMatrix", Shader::UNIFORM_MODELMATRIX);
-		sd_mesh.uniforms[1] = Shader::Desc::Uniform("ViewMatrix", Shader::UNIFORM_VIEWMATRIX);
-		sd_mesh.uniforms[2] = Shader::Desc::Uniform("ProjMatrix", Shader::UNIFORM_PROJMATRIX);
-		sd_mesh.uniforms[3] = Shader::Desc::Uniform("tex0", Shader::UNIFORM_TEXTURE0);
-		sd_mesh.uniforms[4] = Shader::Desc::Uniform("eyePosition", Shader::UNIFORM_EYEPOS);
+
+		sd_mesh.uniforms.push_back(Shader::Desc::Uniform("ModelMatrix", Shader::UNIFORM_MODELMATRIX));
+		sd_mesh.uniforms.push_back(Shader::Desc::Uniform("ViewMatrix", Shader::UNIFORM_VIEWMATRIX));
+		sd_mesh.uniforms.push_back(Shader::Desc::Uniform("ProjMatrix", Shader::UNIFORM_PROJMATRIX));
+		sd_mesh.uniforms.push_back(Shader::Desc::Uniform("tex0", Shader::UNIFORM_TEXTURE0));
+		sd_mesh.uniforms.push_back(Shader::Desc::Uniform("eyePosition", Shader::UNIFORM_EYEPOS));
+		sd_mesh.uniformblocks.push_back(Shader::Desc::UniformBlock("Material", Shader::UNIFORMBLOCK_MATERIAL));
 
 
 		Shader::Handle shader_mesh = Shader::Build(sd_mesh);
@@ -246,6 +259,49 @@ namespace Render {
 		D(LogInfo("Adding ", name, " to render resources.");)
 		resources[index].name = name;
 		resources[index].handle = handle;
+	}
+
+	namespace UBO {
+		Handle Build(const Desc &desc) {
+			Data ubo;
+
+			if(desc.size > 0 && desc.data) {
+				GLint last_ubo = renderer->curr_GL_ubo;
+
+				glGenBuffers(1, &ubo.id);
+				glBindBuffer(GL_UNIFORM_BUFFER, ubo.id);
+				glBufferData(GL_UNIFORM_BUFFER, desc.size, desc.data, GL_STATIC_DRAW);
+				glBindBuffer(GL_UNIFORM_BUFFER, last_ubo);
+
+				int ubo_i = (int)renderer->ubos.size();
+				renderer->ubos.push_back(ubo);
+
+				return ubo_i;
+			} else {
+				return -1;
+			}
+		}
+
+		void Destroy(Handle h) {
+			if(Exists(h)) {
+				Data &ubo = renderer->ubos[h];
+				glDeleteBuffers(1, &ubo.id);
+				ubo.id = 0;
+			}
+		}
+
+		bool Exists(Handle h) {
+			return h >= 0 && h< (int)renderer->ubos.size() && renderer->ubos[h].id > 0;
+		}
+
+		void Bind(Shader::UniformBlock loc, Handle h) {
+			GLint ubo = (h >= 0 && h < (int)renderer->ubos.size()) ? h : -1;
+
+			if(renderer->curr_GL_ubo != ubo) {
+				renderer->curr_GL_ubo = ubo;
+				glBindBufferBase(GL_UNIFORM_BUFFER, loc, ubo >= 0 ? renderer->ubos[ubo].id : 0);
+			}
+		}
 	}
 
 	namespace Shader {
@@ -366,9 +422,10 @@ namespace Render {
 			}
 
 			// Find out Uniform Locations
-			memset(shader.uniform_locations, 0, sizeof(int)*UNIFORM_N); // blank all
-			for (u32 i = 0; desc.uniforms[i].used && i < SHADER_MAX_UNIFORMS; ++i) {
-				int loc = glGetUniformLocation(shader.id, desc.uniforms[i].name.c_str());
+			memset(shader.uniform_locations, 0, sizeof(int)*UNIFORM_N);
+			memset(shader.uniformblock_locations, 0, sizeof(int)*UNIFORMBLOCK_N);
+			for (u32 i = 0; i < desc.uniforms.size(); ++i) {
+				GLint loc = glGetUniformLocation(shader.id, desc.uniforms[i].name.c_str());
 				if (loc < 0) {
 					LogErr("While parsing Shader", desc.vertex_file, ", Uniform variable '",
 						desc.uniforms[i].name, "' gave no location!");
@@ -376,6 +433,17 @@ namespace Render {
 				else {
 					// get the uniform location descriptor from the name
 					shader.uniform_locations[desc.uniforms[i].desc] = loc;
+				}
+			}
+
+			for(u32 i = 0; i < desc.uniformblocks.size(); ++i) {
+				GLuint loc = glGetUniformBlockIndex(shader.id, desc.uniformblocks[i].name.c_str());
+				if(loc == GL_INVALID_INDEX) {
+					LogErr("While parsing Shader ", desc.vertex_file, ", UniformBlock variable '",
+						desc.uniformblocks[i].name, "' gave no location!");
+				} else {
+					shader.uniformblock_locations[desc.uniformblocks[i].desc] = loc;
+					glUniformBlockBinding(shader.id, loc, desc.uniformblocks[i].desc);
 				}
 			}
 
@@ -606,8 +674,6 @@ namespace Render {
 			return h >= 0 && h < (int)renderer->fonts.size() && renderer->fonts[h].handle >= 0;
 		}
 	}
-
-
 
 	namespace Mesh {
 		Handle Build(const Desc &desc) {

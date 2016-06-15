@@ -34,11 +34,35 @@ namespace Light {
 	typedef int Handle;
 }
 
+namespace Material {
+	struct Desc {
+		Desc() : Kd(1,0,1), Ks(0,1,1), shininess(0.8f) {}	// Default debug material	
+		Desc(const col3f &kd, const col3f &ks, float s) : Kd(kd), Ks(ks), shininess(s) {}
+
+		//----
+		col3f 	Kd;			//!< diffuse color
+		float dummy1;
+		//----
+		col3f 	Ks;			//!< specular color
+		f32		shininess; 	//!< between 0.0 and 1.0, inverse of roughness
+		//----
+	};
+
+	struct Data {
+		Data() : ubo(-1) {}
+		Desc desc;
+		Render::UBO::Handle ubo;
+	};
+
+	typedef int Handle;
+}
+
 namespace Object {
 	using namespace Render;
 	struct Desc {
-		Desc(Mesh::Handle mh, Mesh::AnimType anim, Shader::Handle sh, Texture::Handle th)
-		: mesh(mh), animation(anim), shader(sh), texture(th) {
+		Desc(Mesh::Handle mesh_h, Mesh::AnimType anim, Shader::Handle shader_h,
+			 Texture::Handle tex_h, Material::Handle mat_h)
+		: mesh(mesh_h), animation(anim), shader(shader_h), texture(tex_h), material(mat_h) {
 			model_matrix.Identity();
 		}
 
@@ -49,11 +73,12 @@ namespace Object {
 		void Translate(const vec3f &t);
 		void Scale(const vec3f &s);
 
-		Mesh::Handle	mesh;
-		Mesh::AnimType  animation;
-		Mesh::AnimState	animation_state;
-		Shader::Handle  shader;
-		Texture::Handle texture;
+		Mesh::Handle	 mesh;
+		Mesh::AnimType   animation;
+		Mesh::AnimState  animation_state;
+		Shader::Handle   shader;
+		Texture::Handle  texture;
+		Material::Handle material;
 
 		mat4f					model_matrix;
 	};
@@ -104,19 +129,19 @@ public:
 	Object::Handle Add(const Object::Desc &d);
 	Light::Handle Add(const Light::Desc &d);
 	Text::Handle Add(const Text::Desc &d);
+	Material::Handle Add(const Material::Desc &d);
+	bool MaterialExists(Material::Handle h) const;
 
 	void SetTextString(Text::Handle h, const std::string &str);
 
 private:
-	//u32 text_n;			//!< Number of registered texts
 	std::vector<Text::Desc> texts;
 
-	//u32 light_n;		//!< Number of registered lights
 	std::vector<Light::Desc> lights;
 	std::vector<int> active_lights;
 
-	//u32 object_n;		//!< Number of registered objects
 	std::vector<Object::Desc> objects;
+	std::vector<Material::Data> materials;
 
 	mat4f view_matrix;
 	Camera camera;
