@@ -3,6 +3,7 @@
 #include "render.h"
 #include "common/event.h"
 
+class Scene;
 
 /// Camera
 struct Camera {
@@ -43,12 +44,15 @@ namespace Light {
 
 namespace Material {
 	struct Desc {
-		Desc() : Kd(1,0,1), Ks(0,1,1), shininess(0.8f) {}	// Default debug material	
-		Desc(const col3f &kd, const col3f &ks, float s) : Kd(kd), Ks(ks), shininess(s) {}
+		Desc() : Ka(0.3, 0.0, 0.3), Kd(0.51,0.4,0.51), Ks(0.7,0.04,0.7), shininess(0.25f) {}	// Default debug material	
+		Desc(const col3f &ka, const col3f &kd, const col3f &ks, float s) : Ka(ka), Kd(kd), Ks(ks), shininess(s) {}
 
 		//----
+		col3f 	Ka;			//!< ambient color
+		f32 	dummy0;
+		//----
 		col3f 	Kd;			//!< diffuse color
-		float dummy1;
+		f32		dummy1;
 		//----
 		col3f 	Ks;			//!< specular color
 		f32		shininess; 	//!< between 0.0 and 1.0, inverse of roughness
@@ -62,13 +66,15 @@ namespace Material {
 	};
 
 	typedef int Handle;
+
+	extern Handle DEFAULT_MATERIAL;	//!< Default material (pink diffuse), defined in scene.cpp Init()
 }
 
 namespace Object {
 	using namespace Render;
 	struct Desc {
 		Desc(Mesh::Handle mesh_h, Mesh::AnimType anim, Shader::Handle shader_h,
-			 Texture::Handle tex_h, Material::Handle mat_h)
+			 Texture::Handle tex_h, Material::Handle mat_h = Material::DEFAULT_MATERIAL)
 		: mesh(mesh_h), animation(anim), shader(shader_h), texture(tex_h), material(mat_h) {
 			model_matrix.Identity();
 		}
@@ -94,6 +100,25 @@ namespace Object {
 	/// This can be used to modify or delete the object after creation.
 	typedef int Handle;
 }
+
+class aiNode;
+class aiScene;
+class aiMesh;
+
+class ModelResource {
+public:
+    ModelResource() : resourceName("UNNAMED") {}
+    bool LoadFromFile(const std::string &fileName);
+
+private:
+    std::vector<Render::Mesh::Handle> subMeshes;
+	std::vector<Material::Handle> materials;
+	// TODO : relative matrices
+    std::string resourceName;
+
+    void ProcessAssimpNode(aiNode *node, const aiScene *scene);
+    bool ProcessAssimpMesh(aiMesh *mesh, const aiScene *scene);
+};
 
 namespace Text {
 	struct Desc {

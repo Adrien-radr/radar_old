@@ -1,5 +1,6 @@
 #include "texture.h"
 #include "../common/resource.h"
+#include "device.h"
 #include "GL/glew.h"
 
 // PNG loading (header in ext/ directory)
@@ -148,6 +149,7 @@ namespace Render {
 		}
 
 		bool Load(Data &texture, const std::string &filename) {
+			const Config &deviceConfig = GetDevice().GetConfig();
 			_tex *t = NULL;
 
 			if (Resource::CheckExtension(filename, "png"))
@@ -163,10 +165,9 @@ namespace Render {
 			glGenTextures(1, &t->id);
 			glBindTexture(GL_TEXTURE_2D, t->id);
 
-			// Nearest Mipmapping for minification
-			// Nearest for magnification
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_NEAREST);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+			glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, deviceConfig.anisotropicFiltering);
 
 			//    GLint curr_alignment;
 			//    glGetIntegerv(GL_UNPACK_ALIGNMENT, &curr_alignment);

@@ -272,14 +272,14 @@ namespace Render {
 
 
 		/// Mesh Description
-		/// param vertices_n : number of vertices the mesh has.    NECESSARY
-		/// @param positions : array of vertex positions.          NECESSARY
+		/// param vertices_n : number of vertices the mesh has.    
+		/// @param positions : array of vertex positions.          
 		/// @param normals : array of vertex normals.
 		/// @param texcoords : array of vertex texture UV coords
 		/// @param colors : array of vertex colors.
 		struct Desc {
-			Desc(const std::string &resource_name, bool empty_mesh, int icount, u32 *idx_arr,
-				int vcount, f32 *pos_arr, f32 *normal_arr = nullptr, f32 *texcoord_arr = nullptr,
+			Desc(const std::string &resource_name, bool empty_mesh, u32 icount, u32 *idx_arr,
+				u32 vcount, f32 *pos_arr, f32 *normal_arr = nullptr, f32 *texcoord_arr = nullptr,
 				f32 *col_arr = nullptr) :
 				name(resource_name), empty_mesh(empty_mesh), vertices_n(vcount), indices_n(icount),
 				indices(idx_arr), positions(pos_arr), normals(normal_arr), texcoords(texcoord_arr),
@@ -289,8 +289,8 @@ namespace Render {
 			std::string name;	//!< name of the mesh for resource managment
 			bool empty_mesh;
 
-			int vertices_n;		//!< number of vertices the mesh has
-			int indices_n;		//!< number of indices
+			u32 vertices_n;		//!< number of vertices the mesh has
+			u32 indices_n;		//!< number of indices
 
 			u32 *indices;
 

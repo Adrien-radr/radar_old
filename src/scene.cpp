@@ -8,6 +8,7 @@
 #define SCENE_MAX_OBJECTS 2048
 #define SCENE_MAX_TEXTS 64
 
+Material::Handle Material::DEFAULT_MATERIAL = -1;
 
 void Camera::Update(float dt) {
 	static Device &device = GetDevice();
@@ -152,8 +153,8 @@ bool Scene::Init(SceneInitFunc initFunc, SceneUpdateFunc updateFunc, SceneRender
 	camera.speedMult = config.cameraSpeedMult;
     camera.translationSpeed = config.cameraBaseSpeed;
     camera.rotationSpeed = 0.05f;
-    camera.position = vec3f(5,5,5);
-    camera.target = vec3f(0, 0.5f, 0);
+    camera.position = vec3f(-27.6, 2.52, -2.44);
+    camera.target = vec3f(-23.5, 1.f, 0);
     camera.up = vec3f(0,1,0);
     camera.forward = camera.target - camera.position;
     camera.forward.Normalize();
@@ -201,10 +202,18 @@ bool Scene::Init(SceneInitFunc initFunc, SceneUpdateFunc updateFunc, SceneRender
 		return false;
 	}
 
-	if(customInitFunc)
-		customInitFunc(this);
+	Material::Desc mat_desc;
+	Material::DEFAULT_MATERIAL = Add(mat_desc);
+	if(Material::DEFAULT_MATERIAL < 0) {
+		LogErr("Error adding Default Material");
+		return false;
+	}
 
-	return true;
+	bool customInitResult = true;
+	if(customInitFunc)
+		customInitResult = customInitFunc(this);
+
+	return customInitResult;
 }
 
 void Scene::Clean() {
@@ -405,8 +414,7 @@ Material::Handle Scene::Add(const Material::Desc &d) {
 	mat.desc = d;
 
 	// Create UBO to accomodate it on GPU
-	// TODO : Add some kind of material library to ease using same material on several objects
-	Render::UBO::Desc ubo_desc((f32*)&d.Kd, sizeof(Material::Desc));
+	Render::UBO::Desc ubo_desc((f32*)&d, sizeof(Material::Desc));
 	mat.ubo = Render::UBO::Build(ubo_desc);
 	if(mat.ubo < 0) {
 		LogErr("Error creating Material");

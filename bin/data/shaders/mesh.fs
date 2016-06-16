@@ -25,6 +25,7 @@ struct Light {
 };
 
 layout (std140) uniform Material {
+    vec3 Ka;
     vec3 Kd;
     vec3 Ks;
     float shininess;
@@ -102,11 +103,12 @@ float getDistanceAttenuation(vec3 light_vec, float invSqrAttRadius) {
 }
 
 void main() {
-    vec3 light_vec = vec3(-3,5,-2) - v_position;
+    vec3 light_vec = vec3(-9.5, 10, -15) - v_position;
     float light_dist = length(light_vec);
-    float light_radius = 20.0;
+    float light_radius = 1000.0;
+    float light_power = 300;
 
-    vec3 light_color = vec3(40,40,40);
+    vec3 light_color = vec3(light_power);
     vec3 diffuse_color = Kd;
     vec3 specular_color = Ks;
     float roughness = 1.0 - shininess;
@@ -123,7 +125,7 @@ void main() {
     vec3 light_contrib = vec3(0);
     if(NdotL > 0.0)
     {
-        float NdotV = abs(dot(N, V)) + 1e-5;
+        float NdotV = max(0, dot(N, V));//abs(dot(N, V)) + 1e-5;
         float NdotH = max(0, dot(N, H));
         float LdotH = max(0, dot(L, H));
 
@@ -142,10 +144,7 @@ void main() {
     // texturing
     vec4 tex_color = texture2D(tex0, v_texcoord);
 
-    vec4 ambient = vec4(0.2, 0.2, 0.2, 1) * vec4(diffuse_color,1) ;
-
-
-    frag_color = (ambient + vec4(light_contrib, 1)) *      // lighting
-                 1 * //(0.3 + 0.7 * v_color) *    // color
-                 tex_color;                 // texture
+    frag_color = vec4(Ka + light_contrib, 1) *  // lighting
+                 1 * //(0.3 + 0.7 * v_color) *  // color
+                 tex_color;                     // texture
 }

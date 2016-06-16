@@ -2,13 +2,18 @@ Important :
 x Index rendering instead of vertex rendering
 x Sphere mesh
 x Per-object material (texture ? uniform ?) --> start with uniform buffer per-obj for ease
-o Freefly Camera
+x Freefly Camera
+o Default Texture
 
 Normal :
 x GGX -- fixed (smith DFG + burley's disney diffuse)
 o ImGUI
 o Prefiltered cubemap for ambient specular
 o Assimp models
+o Envmaps (cubemaps)
+o Directional light
 
 Less :
 o Material Resources & Manager to avoid having duplicated materials and allow per-material sorting
+o Shader Hot reload
+o Visualisation for point light sources (debug object)

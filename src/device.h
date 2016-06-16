@@ -14,6 +14,7 @@ struct Config {
     u32     MSAASamples;
     f32     fov;
     bool    vSync;
+	u32		anisotropicFiltering;
 
 	f32		cameraBaseSpeed;
 	f32		cameraSpeedMult;

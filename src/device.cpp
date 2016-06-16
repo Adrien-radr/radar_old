@@ -290,14 +290,15 @@ static bool LoadConfig(Config &config) {
 		return false;
 	}
 
-    config.windowSize.x = Json::ReadInt(conf_file.root, "WindowWidth", 1024);
-    config.windowSize.y = Json::ReadInt(conf_file.root, "WindowHeight", 768);
-	config.MSAASamples = Json::ReadInt(conf_file.root, "MSAA", 0);
-	config.fullscreen = Json::ReadInt(conf_file.root, "FullScreen", 0) != 0;
-	config.fov = Json::ReadFloat(conf_file.root, "FOV", 75.f);
-	config.vSync = Json::ReadInt(conf_file.root, "VSync", 0) != 0;
-	config.cameraBaseSpeed = Json::ReadFloat(conf_file.root, "CameraSpeedBase", 10.f);
-	config.cameraSpeedMult = Json::ReadFloat(conf_file.root, "CameraSpeedMult", 2.f);
+    config.windowSize.x = Json::ReadInt(conf_file.root, "iWindowWidth", 1024);
+    config.windowSize.y = Json::ReadInt(conf_file.root, "iWindowHeight", 768);
+	config.MSAASamples = Json::ReadInt(conf_file.root, "iMSAA", 0);
+	config.fullscreen = Json::ReadInt(conf_file.root, "bFullScreen", 0) != 0;
+	config.vSync = Json::ReadInt(conf_file.root, "bVSync", 0) != 0;
+	config.fov = Json::ReadFloat(conf_file.root, "fFOV", 75.f);
+	config.anisotropicFiltering = Json::ReadInt(conf_file.root, "iAnisotropicFiltering", 0);
+	config.cameraBaseSpeed = Json::ReadFloat(conf_file.root, "fCameraSpeedBase", 10.f);
+	config.cameraSpeedMult = Json::ReadFloat(conf_file.root, "fCameraSpeedMult", 2.f);
 
 	conf_file.Close();
     return true;
@@ -418,6 +419,13 @@ bool Device::Init(SceneInitFunc sceneInitFunc, SceneUpdateFunc sceneUpdateFunc, 
 	}
 
 	LogInfo("Maximum Fragment Uniforms: ", v);
+
+	f32 largest_aniso = 0;
+	glGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &largest_aniso);
+	LogInfo("Max Anisotropic Filtering : ", (int)largest_aniso);
+
+	config.anisotropicFiltering = std::min(config.anisotropicFiltering, (u32)largest_aniso);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, (GLfloat)config.anisotropicFiltering);
 
     // Set GL States
     glEnable(GL_CULL_FACE);

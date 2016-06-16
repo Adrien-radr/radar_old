@@ -256,7 +256,7 @@ namespace Render {
 
 	static void AddResource(std::vector<RenderResource> &resources, int index,
 							const std::string &name, int handle) {
-		D(LogInfo("Adding ", name, " to render resources.");)
+		D(LogInfo("[DEBUG] Adding ", name, " to render resources.");)
 		resources[index].name = name;
 		resources[index].handle = handle;
 	}
@@ -645,7 +645,7 @@ namespace Render {
 				return -1;
 			}
 
-			LogInfo("Loaded font ", desc.name, ".");
+			D(LogInfo("[DEBUG] Loaded font ", desc.name, ".");)
 
 			u32 font_i = (int)renderer->fonts.size();
 			renderer->fonts.push_back(font);
