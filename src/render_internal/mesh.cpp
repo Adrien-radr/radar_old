@@ -124,6 +124,95 @@ namespace Render {
 			return true;
 		}
 	}
+	namespace Mesh {
+		Handle BuildSphere() {
+			// Test resource existence before recreating it
+			{
+				Handle h;
+				if(Exists("Sphere1", h)) {
+					return h;
+				}
+			}
+
+			const f32 radius = 1.f;
+			const u32 nLon = 32, nLat = 24;
+
+			const u32 nVerts = (nLon+1) * nLat + 2;
+			const u32 nTriangles = nVerts * 2;
+			const u32 nIndices = nTriangles * 3;
+
+			// Positions
+			vec3f pos[nVerts];
+			pos[0] = vec3f(0, 1, 0) * radius;
+			for(u32 lat = 0; lat < nLat; ++lat) {
+				f32 a1 = M_PI * (f32)(lat + 1) / (nLat + 1);
+				f32 sin1 = std::sin(a1);
+				f32 cos1 = std::cos(a1);
+
+				for(u32 lon = 0; lon <= nLon; ++lon) {
+					f32 a2 = M_TWO_PI * (f32)(lon == nLon ? 0 : lon) / nLon;
+					f32 sin2 = std::sin(a2);
+					f32 cos2 = std::cos(a2);
+
+					pos[lon + lat * (nLon + 1) + 1] = vec3f(sin1 * cos2, cos1, sin1 * sin2) * radius;
+				}
+			}
+			pos[nVerts - 1] = vec3f(0,1,0) * -radius;
+
+			// Normals
+			vec3f nrm[nVerts];
+			for(u32 i = 0; i < nVerts; ++i) {
+				nrm[i] = pos[i];
+				nrm[i].Normalize();
+			}
+
+			// UVs
+			vec2f uv[nVerts];
+			for(u32 i = 0; i < nVerts; ++i) {
+				uv[i] = vec2f(0,0);	// TODO
+			}
+
+			// Triangles/Indices
+			u32 indices[nIndices];
+			{
+				// top
+				u32 i = 0;
+				for(u32 lon = 0; lon < nLon; ++lon) {
+					indices[i++]  = lon + 2;
+					indices[i++]  = lon + 1;
+					indices[i++]  = 0;
+				}
+
+				// middle
+				for(u32 lat = 0; lat < nLat - 1; ++lat) {
+					for(u32 lon = 0; lon < nLon; ++lon) {
+						u32 curr = lon + lat * (nLon + 1) + 1;
+						u32 next = curr + nLon + 1;
+
+						indices[i++] = curr;
+						indices[i++] = curr + 1;
+						indices[i++] = next + 1;
+
+						indices[i++] = curr;
+						indices[i++] = next + 1;
+						indices[i++] = next;
+					}
+				}
+
+				// bottom
+				for(u32 lon = 0; lon < nLon; ++lon) {
+					indices[i++] = nVerts - 1;
+					indices[i++] = nVerts - (lon + 2) - 1;
+					indices[i++] = nVerts - (lon + 1) - 1;
+				}
+			}
+
+			Desc desc("Sphere1", false, nIndices, indices, nVerts, (f32*)pos, (f32*)nrm, (f32*)uv);
+			return Build(desc);
+		}
+
+
+	}
 }
 
 

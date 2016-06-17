@@ -44,7 +44,7 @@ namespace Light {
 
 namespace Material {
 	struct Desc {
-		Desc() : Ka(0.3, 0.0, 0.3), Kd(0.51,0.4,0.51), Ks(0.7,0.04,0.7), shininess(0.25f) {}	// Default debug material	
+		Desc() : Ka(0.3, 0.0, 0.3), Kd(0.51,0.4,0.51), Ks(0.7,0.04,0.7), shininess(0.95f) {}	// Default debug material	
 		Desc(const col3f &ka, const col3f &kd, const col3f &ks, float s) : Ka(ka), Kd(kd), Ks(ks), shininess(s) {}
 
 		//----
@@ -73,9 +73,9 @@ namespace Material {
 namespace Object {
 	using namespace Render;
 	struct Desc {
-		Desc(Mesh::Handle mesh_h, Mesh::AnimType anim, Shader::Handle shader_h,
+		Desc(Shader::Handle shader_h, Mesh::Handle mesh_h, 
 			 Texture::Handle tex_h, Material::Handle mat_h = Material::DEFAULT_MATERIAL)
-		: mesh(mesh_h), animation(anim), shader(shader_h), texture(tex_h), material(mat_h) {
+		: shader(shader_h), mesh(mesh_h), texture(tex_h), material(mat_h) {
 			model_matrix.Identity();
 		}
 
@@ -85,13 +85,15 @@ namespace Object {
 
 		void Translate(const vec3f &t);
 		void Scale(const vec3f &s);
+		void Rotate(const vec3f &r);
+
+		Shader::Handle   shader;
 
 		Mesh::Handle	 mesh;
-		Mesh::AnimType   animation;
-		Mesh::AnimState  animation_state;
-		Shader::Handle   shader;
 		Texture::Handle  texture;
 		Material::Handle material;
+		// Mesh::AnimType   animation;
+		// Mesh::AnimState  animation_state;
 
 		mat4f					model_matrix;
 	};
@@ -105,19 +107,25 @@ class aiNode;
 class aiScene;
 class aiMesh;
 
-class ModelResource {
-public:
-    ModelResource() : resourceName("UNNAMED") {}
-    bool LoadFromFile(const std::string &fileName);
+namespace ModelResource {
+	typedef int Handle;
 
-private:
-    std::vector<Render::Mesh::Handle> subMeshes;
-	std::vector<Material::Handle> materials;
-	// TODO : relative matrices
-    std::string resourceName;
+	struct Data {
+		Data() : resourceName("UNNAMED"), numSubMeshes(0) {}
 
-    void ProcessAssimpNode(aiNode *node, const aiScene *scene);
-    bool ProcessAssimpMesh(aiMesh *mesh, const aiScene *scene);
+		std::vector<Render::Mesh::Handle> subMeshes;
+		std::vector<Render::Texture::Handle> textures;
+		std::vector<Material::Handle> materials;
+
+		// TODO : relative matrices
+
+
+		std::string resourceName;
+		u32			numSubMeshes;
+	};
+
+    bool _ProcessAssimpNode(Scene *gameScene, Data &model, aiNode *node, const aiScene *scene);
+    bool _ProcessAssimpMesh(Scene *gameScene, Data &model, aiMesh *mesh, const aiScene *scene);
 };
 
 namespace Text {
@@ -159,13 +167,17 @@ public:
 	const mat4f& GetViewMatrix() const { return view_matrix; }
 	Camera &GetCamera() { return camera; }
 
+	bool MaterialExists(Material::Handle h) const;
+	void SetTextString(Text::Handle h, const std::string &str);
+
+	ModelResource::Handle GetModelResource(const std::string &modelName);
+
+	ModelResource::Handle LoadModelResource(const std::string &fileName);
+	Object::Handle AddFromModel(const ModelResource::Handle &h);
 	Object::Handle Add(const Object::Desc &d);
 	Light::Handle Add(const Light::Desc &d);
 	Text::Handle Add(const Text::Desc &d);
 	Material::Handle Add(const Material::Desc &d);
-	bool MaterialExists(Material::Handle h) const;
-
-	void SetTextString(Text::Handle h, const std::string &str);
 
 private:
 	std::vector<Text::Desc> texts;
@@ -175,6 +187,8 @@ private:
 
 	std::vector<Object::Desc> objects;
 	std::vector<Material::Data> materials;
+
+	std::vector<ModelResource::Data> models;
 
 	mat4f view_matrix;
 	Camera camera;

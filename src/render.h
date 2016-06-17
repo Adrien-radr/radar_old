@@ -213,6 +213,9 @@ namespace Render {
 
 		/// Returns true if the given texture exists in renderer
 		bool Exists(Handle h);
+
+		// Default 1x1 white texture
+		extern Handle DEFAULT_TEXTURE;
 	}
 
 
@@ -326,17 +329,17 @@ namespace Render {
 		/// Renders the given mesh, binding it if not currently bound as GL Current VAO.
 		/// The given animation state is used to transmit bone-matrix data to the shader
 		/// before drawing the mesh. If NULL, an identity bonematrix is used
-		void Render(Handle h, const AnimState &state);
+		void Render(Handle h);
 
 		/// Sets the current played animation of state. Reset it at the beginning of 1st frame
-		void SetAnimation(Handle h, AnimState &state, AnimType type);
+		// void SetAnimation(Handle h, AnimState &state, AnimType type);
 
 		/// Update the given animation state so that it continues playing its current animation
 		/// with the added delta time, thus updating its bone matrices
 		/// @param state : the animation to update
 		/// @param mesh_i : the mesh resource handle from which the animation is taken
 		/// @param dt : delta time to advance animation
-		void UpdateAnimation(Handle h, AnimState &state, float dt);
+		// void UpdateAnimation(Handle h, AnimState &state, float dt);
 	}
 
 	namespace TextMesh {

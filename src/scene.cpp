@@ -101,6 +101,10 @@ namespace Object {
 	void Desc::Scale(const vec3f &s) {
 		model_matrix *= mat4f::Scale(s);
 	}
+
+	void Desc::Rotate(const vec3f &r) {
+		model_matrix = model_matrix.RotateX(r.x).RotateY(r.y).RotateZ(r.z);
+	}
 		
 	// void Desc::SetPosition(const vec2f &pos) {
 	// 	model_matrix = mat4f::Translation(vec3f(pos.x, pos.y, 0.f));
@@ -307,7 +311,7 @@ void Scene::Render() {
 
 		Render::Texture::Bind(object.texture, Render::Texture::TexTarget0);
 		Render::Shader::SendMat4(Render::Shader::UNIFORM_MODELMATRIX, object.model_matrix);
-		Render::Mesh::Render(object.mesh, object.animation_state);
+		Render::Mesh::Render(object.mesh);
 	}
 
 	if(customRenderFunc)
@@ -327,6 +331,39 @@ void Scene::Render() {
 	}
 }
 
+bool Scene::MaterialExists(Material::Handle h) const {
+	return h >= 0 && h < (int)materials.size() && Render::UBO::Exists(materials[h].ubo);
+}
+
+void Scene::SetTextString(Text::Handle h, const std::string &str) {
+	if (h >= 0 && h < (int)texts.size()) {
+		Text::Desc &text = texts[h];
+		text.str = str;
+		text.mesh = Render::TextMesh::SetString(text.mesh, text.font, text.str);
+	}
+}
+
+
+Object::Handle Scene::AddFromModel(const ModelResource::Handle &h) {
+	size_t index = objects.size();
+	ModelResource::Data &model = models[h];
+
+		Material::Desc mat_desc(col3f(0.181,0.1,0.01), col3f(.9,.5,.5), col3f(1,.8,0.2), 0.8);
+		Material::Handle mat = Add(mat_desc);
+
+	Object::Desc odesc(Render::Shader::SHADER_3D_MESH, model.subMeshes[0], Render::Texture::DEFAULT_TEXTURE, mat);
+	odesc.Translate(vec3f(-25,0,0));
+	odesc.Rotate(vec3f(0,-2.f*M_PI/2.3f,0));
+	// odesc.Scale(vec3f(15,15,15));
+	// odesc.model_matrix *= mat4f::Scale(10,10,10);
+	Object::Handle obj_h = Add(odesc);
+	if(obj_h < 0) {
+		LogErr("Error creating Object from Model.");
+		return -1;
+	}
+
+	return obj_h;
+}
 
 Object::Handle Scene::Add(const Object::Desc &d) {
 	if (!Render::Mesh::Exists(d.mesh)) {
@@ -345,10 +382,6 @@ Object::Handle Scene::Add(const Object::Desc &d) {
 		LogErr("Given material is not registered in the scene.");
 		return -1;
 	}
-	if (d.animation >= Render::Mesh::ANIM_N) {
-		LogErr("Given animation is not valid.");
-		return -1;
-	}
 
 	size_t index = objects.size();
 
@@ -360,7 +393,7 @@ Object::Handle Scene::Add(const Object::Desc &d) {
 	objects.push_back(d);
 
 	Object::Desc &object = objects[index];
-	Render::Mesh::SetAnimation(object.mesh, object.animation_state, object.animation);
+	// Render::Mesh::SetAnimation(object.mesh, object.animation_state, object.animation);
 	object.model_matrix = d.model_matrix;
 
 	return (Object::Handle)index;
@@ -423,16 +456,4 @@ Material::Handle Scene::Add(const Material::Desc &d) {
 
 	materials.push_back(mat);
 	return (Material::Handle)index;
-}
-
-bool Scene::MaterialExists(Material::Handle h) const {
-	return h >= 0 && h < (int)materials.size() && Render::UBO::Exists(materials[h].ubo);
-}
-
-void Scene::SetTextString(Text::Handle h, const std::string &str) {
-	if (h >= 0 && h < (int)texts.size()) {
-		Text::Desc &text = texts[h];
-		text.str = str;
-		text.mesh = Render::TextMesh::SetString(text.mesh, text.font, text.str);
-	}
 }

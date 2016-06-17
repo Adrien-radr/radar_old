@@ -3,7 +3,7 @@ x Index rendering instead of vertex rendering
 x Sphere mesh
 x Per-object material (texture ? uniform ?) --> start with uniform buffer per-obj for ease
 x Freefly Camera
-o Default Texture
+o Default Texture in Render::
 
 Normal :
 x GGX -- fixed (smith DFG + burley's disney diffuse)

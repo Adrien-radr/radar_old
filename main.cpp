@@ -1,6 +1,5 @@
 #include "src/device.h"
 #include "src/render.h"
-#include "src/model.h"
 
 #define SWIDTH 1024
 #define SHEIGHT 768
@@ -40,12 +39,6 @@ bool initFunc(Scene *scene) {
 		0, 1, 2, 0, 2, 3
 	};
 
-	// Model bunny;
-	// if(!bunny.LoadFromFile("data/bunny.ply")) {
-	// 	LogErr("Error loading bunny");
-	// 	return false;
-	// }
-
 	Render::Mesh::Desc mdesc("TestMesh", false, 6, idx, 4, pos, normals, texcoords, colors);
 
 	test_mesh = Render::Mesh::Build(mdesc);
@@ -53,6 +46,14 @@ bool initFunc(Scene *scene) {
 		LogErr("Error creating test mesh");
 		return false;
 	}
+
+	ModelResource::Handle bunny_h = scene->LoadModelResource("data/bunny.obj");
+	if(bunny_h < 0) {
+		LogErr("Error loading bunny");
+		return false;
+	}
+
+	Object::Handle bunny_obj = scene->AddFromModel(bunny_h);
 
 	Render::Mesh::Handle sphere = Render::Mesh::BuildSphere();
 	if(sphere < 0) {
@@ -62,13 +63,6 @@ bool initFunc(Scene *scene) {
 
 	Render::Texture::Desc tdesc;
 
-	tdesc.name = "data/dummy.png";
-	Render::Texture::Handle dummy_texture = Render::Texture::Build(tdesc);
-	if(dummy_texture < 0) {
-		LogErr("Error creating dummy texture");
-		return false;
-	}
-
 	tdesc.name = "data/asphalt.png";
 	Render::Texture::Handle asphalt_texture = Render::Texture::Build(tdesc);
 	if(asphalt_texture < 0) {
@@ -77,7 +71,7 @@ bool initFunc(Scene *scene) {
 	}
 
 
-	Object::Desc odesc(test_mesh, Render::Mesh::ANIM_NONE, Render::Shader::SHADER_3D_MESH, dummy_texture, Material::DEFAULT_MATERIAL);
+	Object::Desc odesc(Render::Shader::SHADER_3D_MESH, test_mesh, Render::Texture::DEFAULT_TEXTURE, Material::DEFAULT_MATERIAL);
 
 	{
 		Material::Desc mat_desc(col3f(0.1,0.1,0.1), col3f(.5,.5,.5), col3f(1,1,1), 0.4);
@@ -100,7 +94,7 @@ bool initFunc(Scene *scene) {
 	}
 
 	odesc.mesh = sphere;
-	odesc.texture = dummy_texture;
+	odesc.texture = Render::Texture::DEFAULT_TEXTURE;
 
 	const int sphere_n = 10;
 	for(int j = 0; j < 1; ++j) {
