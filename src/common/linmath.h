@@ -262,7 +262,7 @@ public:
 };
 
 template<typename T>
-class col3 : vec3<T> {
+class col3 : public vec3<T> {
 public:
 	col3(T r, T g, T b) : vec3<T>(r,g,b) {}
 	const T &r() const { return this->x; }

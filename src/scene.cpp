@@ -157,8 +157,8 @@ bool Scene::Init(SceneInitFunc initFunc, SceneUpdateFunc updateFunc, SceneRender
 	camera.speedMult = config.cameraSpeedMult;
     camera.translationSpeed = config.cameraBaseSpeed;
     camera.rotationSpeed = 0.05f;
-    camera.position = vec3f(-27.6, 2.52, -2.44);
-    camera.target = vec3f(-23.5, 1.f, 0);
+    camera.position = vec3f(-21.2, 13.9, -4.1);
+    camera.target = vec3f(-21.889,13.9405,-3.3768);
     camera.up = vec3f(0,1,0);
     camera.forward = camera.target - camera.position;
     camera.forward.Normalize();
@@ -265,7 +265,7 @@ void Scene::Update(float dt) {
 
 		std::stringstream cam_str;
 		cam_str << "Camera : <" << camera.position.x << ", " << camera.position.y << ", "
-			<< camera.position.z << ">";
+			<< camera.position.z << "> <" << camera.target.x << ", " << camera.target.y << ", " << camera.target.z << ">";
 		SetTextString(camera_text, cam_str.str());
 	}
 
@@ -348,21 +348,22 @@ Object::Handle Scene::AddFromModel(const ModelResource::Handle &h) {
 	size_t index = objects.size();
 	ModelResource::Data &model = models[h];
 
-		Material::Desc mat_desc(col3f(0.181,0.1,0.01), col3f(.9,.5,.5), col3f(1,.8,0.2), 0.8);
-		Material::Handle mat = Add(mat_desc);
+		// Material::Desc mat_desc(col3f(0.181,0.1,0.01), col3f(.9,.5,.5), col3f(1,.8,0.2), 0.8);
 
-	Object::Desc odesc(Render::Shader::SHADER_3D_MESH, model.subMeshes[0], Render::Texture::DEFAULT_TEXTURE, mat);
-	odesc.Translate(vec3f(-25,0,0));
-	odesc.Rotate(vec3f(0,-2.f*M_PI/2.3f,0));
-	// odesc.Scale(vec3f(15,15,15));
-	// odesc.model_matrix *= mat4f::Scale(10,10,10);
-	Object::Handle obj_h = Add(odesc);
-	if(obj_h < 0) {
-		LogErr("Error creating Object from Model.");
-		return -1;
+	for(u32 i = 0; i < model.numSubMeshes; ++i) {
+		Object::Desc odesc(Render::Shader::SHADER_3D_MESH, model.subMeshes[i], model.textures[i], model.materials[i]);
+		odesc.Translate(vec3f(-25,0,0));
+		odesc.Rotate(vec3f(0,-2.f*M_PI/2.3f,0));
+		// odesc.Scale(vec3f(15,15,15));
+		// odesc.model_matrix *= mat4f::Scale(10,10,10);
+		Object::Handle obj_h = Add(odesc);
+		if(obj_h < 0) {
+			LogErr("Error creating Object from Model.");
+			return -1;
+		}
+
 	}
-
-	return obj_h;
+	return 1;//obj_h;
 }
 
 Object::Handle Scene::Add(const Object::Desc &d) {

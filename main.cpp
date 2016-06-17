@@ -47,9 +47,9 @@ bool initFunc(Scene *scene) {
 		return false;
 	}
 
-	ModelResource::Handle bunny_h = scene->LoadModelResource("data/bunny.obj");
+	ModelResource::Handle bunny_h = scene->LoadModelResource("data/nanosuit/nanosuit.obj");
 	if(bunny_h < 0) {
-		LogErr("Error loading bunny");
+		LogErr("Error loading nanosuit");
 		return false;
 	}
 

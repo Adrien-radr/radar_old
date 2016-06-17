@@ -111,7 +111,7 @@ namespace ModelResource {
 	typedef int Handle;
 
 	struct Data {
-		Data() : resourceName("UNNAMED"), numSubMeshes(0) {}
+		Data() : resourceName("UNNAMED"), pathName(""), numSubMeshes(0) {}
 
 		std::vector<Render::Mesh::Handle> subMeshes;
 		std::vector<Render::Texture::Handle> textures;
@@ -121,6 +121,7 @@ namespace ModelResource {
 
 
 		std::string resourceName;
+		std::string pathName;
 		u32			numSubMeshes;
 	};
 

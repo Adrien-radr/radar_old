@@ -104,11 +104,11 @@ float getDistanceAttenuation(vec3 light_vec, float invSqrAttRadius) {
 
 const int nLights = 2;
 const vec3 lightpos[nLights] = vec3[](
-    vec3(-9.5, 10, -15),
-    vec3(-20, 15, 10)
+    vec3(-9.5, 15, -10),
+    vec3(-21, 13, -4)
 );
 const vec3 lightcol[nLights] = vec3[](
-    vec3(1,0.8,0.4),
+    vec3(0.8,0.2,1),
     vec3(1, 0.05, 0.1)
 );
 
@@ -116,7 +116,7 @@ void main() {
 
     vec3 light_contrib = vec3(0);
 
-    float light_power = 200;
+    float light_power = 500;
     float light_radius = 1000.0;
 
     vec3 diffuse_color = Kd;
@@ -129,7 +129,7 @@ void main() {
 
     for(int i = 0; i < nLights; ++i) {
         vec3 light_vec = lightpos[i] - v_position;
-        vec3 light_color = lightcol[i] * light_power;
+        vec3 light_color = vec3(1) * light_power;
         float light_dist = length(light_vec);
 
         vec3 L = light_vec / light_dist;
@@ -155,8 +155,10 @@ void main() {
 
     // texturing
     vec4 tex_color = texture2D(tex0, v_texcoord);
+    tex_color.a = 1;
+    vec3 finalcol = light_contrib *0.001+ vec3(1);//Ka * 1;
 
-    frag_color = vec4(Ka + light_contrib, 1) *  // lighting
+    frag_color = vec4(finalcol, 1) *  // lighting
                  1 * //(0.3 + 0.7 * v_color) *  // color
                  tex_color;                     // texture
 }
