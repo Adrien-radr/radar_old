@@ -143,7 +143,7 @@ namespace Render {
 
 		sd_ui_shader.uniforms.push_back(Shader::Desc::Uniform("ProjMatrix", Shader::UNIFORM_PROJMATRIX));
 		sd_ui_shader.uniforms.push_back(Shader::Desc::Uniform("ModelMatrix", Shader::UNIFORM_MODELMATRIX));
-		sd_ui_shader.uniforms.push_back(Shader::Desc::Uniform("tex0", Shader::UNIFORM_TEXTURE0));
+		sd_ui_shader.uniforms.push_back(Shader::Desc::Uniform("DiffuseTex", Shader::UNIFORM_TEXTURE0));
 		sd_ui_shader.uniforms.push_back(Shader::Desc::Uniform("text_color", Shader::UNIFORM_TEXTCOLOR));
 
 
@@ -166,7 +166,8 @@ namespace Render {
 		sd_mesh.uniforms.push_back(Shader::Desc::Uniform("ModelMatrix", Shader::UNIFORM_MODELMATRIX));
 		sd_mesh.uniforms.push_back(Shader::Desc::Uniform("ViewMatrix", Shader::UNIFORM_VIEWMATRIX));
 		sd_mesh.uniforms.push_back(Shader::Desc::Uniform("ProjMatrix", Shader::UNIFORM_PROJMATRIX));
-		sd_mesh.uniforms.push_back(Shader::Desc::Uniform("tex0", Shader::UNIFORM_TEXTURE0));
+		sd_mesh.uniforms.push_back(Shader::Desc::Uniform("DiffuseTex", Shader::UNIFORM_TEXTURE0));
+		sd_mesh.uniforms.push_back(Shader::Desc::Uniform("SpecularTex", Shader::UNIFORM_TEXTURE1));
 		sd_mesh.uniforms.push_back(Shader::Desc::Uniform("eyePosition", Shader::UNIFORM_EYEPOS));
 		sd_mesh.uniformblocks.push_back(Shader::Desc::UniformBlock("Material", Shader::UNIFORMBLOCK_MATERIAL));
 
@@ -178,6 +179,7 @@ namespace Render {
 		}
 		Shader::Bind(shader_mesh);
 		Shader::SendInt(Shader::UNIFORM_TEXTURE0, Texture::TexTarget0);
+		Shader::SendInt(Shader::UNIFORM_TEXTURE1, Texture::TexTarget1);
 
 		// Create Default white texture 
 		Texture::Desc t_desc;
@@ -441,7 +443,7 @@ namespace Render {
 			for (u32 i = 0; i < desc.uniforms.size(); ++i) {
 				GLint loc = glGetUniformLocation(shader.id, desc.uniforms[i].name.c_str());
 				if (loc < 0) {
-					LogErr("While parsing Shader", desc.vertex_file, ", Uniform variable '",
+					LogErr("While parsing Shader ", desc.vertex_file, ", Uniform variable '",
 						desc.uniforms[i].name, "' gave no location!");
 				}
 				else {

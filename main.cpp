@@ -61,27 +61,15 @@ bool initFunc(Scene *scene) {
 		return false;
 	}
 
-	Render::Texture::Desc tdesc;
-
-	tdesc.name = "data/asphalt.png";
-	Render::Texture::Handle asphalt_texture = Render::Texture::Build(tdesc);
-	if(asphalt_texture < 0) {
-		LogErr("Error creating asphalt_texture");
-		return false;
-	}
-
-
-	Object::Desc odesc(Render::Shader::SHADER_3D_MESH, test_mesh, Render::Texture::DEFAULT_TEXTURE, Material::DEFAULT_MATERIAL);
-
+	Object::Desc odesc(Render::Shader::SHADER_3D_MESH, test_mesh, Material::DEFAULT_MATERIAL);
 	{
-		Material::Desc mat_desc(col3f(0.1,0.1,0.1), col3f(.5,.5,.5), col3f(1,1,1), 0.4);
+		Material::Desc mat_desc(col3f(0.1,0.1,0.1), col3f(.5,.5,.5), col3f(1,1,1), 0.4, "data/asphalt.png");
 		Material::Handle mat = scene->Add(mat_desc);
 		if(mat < 0) {
 			LogErr("Error adding material");
 			return false;
 		}
 
-		odesc.texture = asphalt_texture;
 		odesc.material = mat;
 		odesc.model_matrix.Identity();
 		odesc.Translate(vec3f(0,-1.5f,0));
@@ -94,7 +82,6 @@ bool initFunc(Scene *scene) {
 	}
 
 	odesc.mesh = sphere;
-	odesc.texture = Render::Texture::DEFAULT_TEXTURE;
 
 	const int sphere_n = 10;
 	for(int j = 0; j < 1; ++j) {

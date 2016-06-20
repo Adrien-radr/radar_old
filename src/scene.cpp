@@ -306,10 +306,13 @@ void Scene::Render() {
 			Render::Shader::SendVec3(uniform_name.str(), light.position);
 		}
 
-		// send material parameters
-		Render::UBO::Bind(Render::Shader::UNIFORMBLOCK_MATERIAL, materials[object.material].ubo);
+		const Material::Data &material = materials[object.material];
 
-		Render::Texture::Bind(object.texture, Render::Texture::TexTarget0);
+		// send material parameters
+		Render::UBO::Bind(Render::Shader::UNIFORMBLOCK_MATERIAL, material.ubo);
+
+		Render::Texture::Bind(material.diffuseTex, Render::Texture::TexTarget0);
+		Render::Texture::Bind(material.specularTex, Render::Texture::TexTarget1);
 		Render::Shader::SendMat4(Render::Shader::UNIFORM_MODELMATRIX, object.model_matrix);
 		Render::Mesh::Render(object.mesh);
 	}
@@ -351,7 +354,8 @@ Object::Handle Scene::AddFromModel(const ModelResource::Handle &h) {
 		// Material::Desc mat_desc(col3f(0.181,0.1,0.01), col3f(.9,.5,.5), col3f(1,.8,0.2), 0.8);
 
 	for(u32 i = 0; i < model.numSubMeshes; ++i) {
-		Object::Desc odesc(Render::Shader::SHADER_3D_MESH, model.subMeshes[i], model.textures[i], model.materials[i]);
+		u32 matIdx = model.materialIdx[i];
+		Object::Desc odesc(Render::Shader::SHADER_3D_MESH, model.subMeshes[i], model.materials[matIdx]);
 		odesc.Translate(vec3f(-25,0,0));
 		odesc.Rotate(vec3f(0,-2.f*M_PI/2.3f,0));
 		// odesc.Scale(vec3f(15,15,15));
@@ -373,10 +377,6 @@ Object::Handle Scene::Add(const Object::Desc &d) {
 	}
 	if (!Render::Shader::Exists(d.shader)) {
 		LogErr("Given shader is not registered in renderer.");
-		return -1;
-	}
-	if (!Render::Texture::Exists(d.texture)) {
-		LogErr("Given texture is not registered in renderer.");
 		return -1;
 	}
 	if(!MaterialExists(d.material)) {
@@ -448,11 +448,44 @@ Material::Handle Scene::Add(const Material::Desc &d) {
 	mat.desc = d;
 
 	// Create UBO to accomodate it on GPU
-	Render::UBO::Desc ubo_desc((f32*)&d, sizeof(Material::Desc));
+	Render::UBO::Desc ubo_desc((f32*)&d.uniform, sizeof(Material::Desc::UniformBufferData));
 	mat.ubo = Render::UBO::Build(ubo_desc);
 	if(mat.ubo < 0) {
 		LogErr("Error creating Material");
 		return -1;
+	}
+
+	// Load textures if present
+	if(d.diffuseTexPath != "") {	// Diffuse
+		Render::Texture::Desc t_desc(d.diffuseTexPath);
+        Render::Texture::Handle t_h = Render::Texture::Build(t_desc);
+        if(t_h < 0) {
+        	LogErr("Error loading diffuse texture ", d.diffuseTexPath);
+        	return -1;
+        }
+		mat.diffuseTex = t_h;
+	} else {
+		// Default diffuse texture
+		mat.diffuseTex = Render::Texture::DEFAULT_TEXTURE;
+	}
+
+	if(d.specularTexPath != "") {
+		Render::Texture::Desc t_desc(d.specularTexPath);
+        Render::Texture::Handle t_h = Render::Texture::Build(t_desc);
+        if(t_h < 0) {
+        	LogErr("Error loading specular texture ", d.specularTexPath);
+        	return -1;
+        }
+		LogDebug("Loaded specular texture at idx ", t_h);
+		mat.specularTex = t_h;
+	} else {
+		mat.specularTex = Render::Texture::DEFAULT_TEXTURE;	 // 1 specular, multiplied by the mat.shininess
+	}
+
+	if(d.normalTexPath != "") {
+		// TODO
+	} else {
+		// TODO
 	}
 
 	materials.push_back(mat);

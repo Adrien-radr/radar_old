@@ -47,8 +47,9 @@ namespace Render {
 			UNIFORM_VIEWMATRIX,         // for "ViewMatrix", mat4
 			UNIFORM_MODELMATRIX,        // for "ModelMatrix", mat4
 
-			UNIFORM_TEXTURE0,           // Fragment Uniform, for "tex0", int
-			UNIFORM_TEXTURE1,           // Fragment Uniform, for "tex1", int
+			UNIFORM_TEXTURE0,           // Fragment Uniform, for "tex0", int	Usually diffuse texture
+			UNIFORM_TEXTURE1,           // Fragment Uniform, for "tex1", int	Usually specular texture
+			UNIFORM_TEXTURE2,           // Fragment Uniform, for "tex2", int	Usually normal texture
 			UNIFORM_TEXTCOLOR,          // Fragment Uniform, for "text_color", vec4
 
 			UNIFORM_EYEPOS,
@@ -187,8 +188,9 @@ namespace Render {
 		};
 
 		enum Target {
-			TexTarget0 = 0,
-			TexTarget1 = 1,
+			TexTarget0 = 0,		// Usually Diffuse Texture
+			TexTarget1 = 1,		// Usually Specular Texture
+			TexTarget2 = 2,		// Usually Normal Texture
 
 			TexTarget_N // Do Not Use !!
 		};

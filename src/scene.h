@@ -43,26 +43,43 @@ namespace Light {
 }
 
 namespace Material {
+	using namespace Render;
 	struct Desc {
-		Desc() : Ka(0.3, 0.0, 0.3), Kd(0.51,0.4,0.51), Ks(0.7,0.04,0.7), shininess(0.95f) {}	// Default debug material	
-		Desc(const col3f &ka, const col3f &kd, const col3f &ks, float s) : Ka(ka), Kd(kd), Ks(ks), shininess(s) {}
+		Desc() :	// Default debug material
+			uniform(col3f(0.3, 0.0, 0.3), col3f(0.51,0.4,0.51), col3f(0.7,0.04,0.7), 0.95f), 
+			diffuseTexPath(""), specularTexPath(""), normalTexPath("") {}
 
-		//----
-		col3f 	Ka;			//!< ambient color
-		f32 	dummy0;
-		//----
-		col3f 	Kd;			//!< diffuse color
-		f32		dummy1;
-		//----
-		col3f 	Ks;			//!< specular color
-		f32		shininess; 	//!< between 0.0 and 1.0, inverse of roughness
-		//----
+		Desc(const col3f &ka, const col3f &kd, const col3f &ks, float s, const std::string diffuse = "") : 
+			uniform(ka, kd, ks, s), diffuseTexPath(diffuse), specularTexPath(""), normalTexPath("") {}
+
+		struct UniformBufferData {
+			UniformBufferData(const col3f &ka, const col3f &kd, const col3f &ks, float s) : Ka(ka), Kd(kd), Ks(ks), shininess(s) {}
+			//----
+			col3f 	Ka;			//!< ambient color
+			f32 	dummy0;
+			//----
+			col3f 	Kd;			//!< diffuse color
+			f32		dummy1;
+			//----
+			col3f 	Ks;			//!< specular color
+			f32		shininess; 	//!< between 0.0 and 1.0, inverse of roughness
+			//----
+		};
+
+		UniformBufferData uniform;
+		std::string diffuseTexPath;
+		std::string specularTexPath;
+		std::string normalTexPath;
 	};
 
 	struct Data {
-		Data() : ubo(-1) {}
+		Data() : ubo(-1), diffuseTex(-1), specularTex(-1), normalTex(-1) {}
 		Desc desc;
-		Render::UBO::Handle ubo;
+		UBO::Handle ubo;
+
+		Texture::Handle diffuseTex;
+		Texture::Handle specularTex;
+		Texture::Handle normalTex;
 	};
 
 	typedef int Handle;
@@ -73,9 +90,8 @@ namespace Material {
 namespace Object {
 	using namespace Render;
 	struct Desc {
-		Desc(Shader::Handle shader_h, Mesh::Handle mesh_h, 
-			 Texture::Handle tex_h, Material::Handle mat_h = Material::DEFAULT_MATERIAL)
-		: shader(shader_h), mesh(mesh_h), texture(tex_h), material(mat_h) {
+		Desc(Shader::Handle shader_h, Mesh::Handle mesh_h, Material::Handle mat_h = Material::DEFAULT_MATERIAL)
+		: shader(shader_h), mesh(mesh_h), material(mat_h) {
 			model_matrix.Identity();
 		}
 
@@ -90,7 +106,6 @@ namespace Object {
 		Shader::Handle   shader;
 
 		Mesh::Handle	 mesh;
-		Texture::Handle  texture;
 		Material::Handle material;
 		// Mesh::AnimType   animation;
 		// Mesh::AnimState  animation_state;
@@ -113,10 +128,13 @@ namespace ModelResource {
 	struct Data {
 		Data() : resourceName("UNNAMED"), pathName(""), numSubMeshes(0) {}
 
-		std::vector<Render::Mesh::Handle> subMeshes;
-		std::vector<Render::Texture::Handle> textures;
+		// Loaded resources 
+		// std::vector<Render::Texture::Handle> textures;
 		std::vector<Material::Handle> materials;
 
+		// Per-submesh data
+		std::vector<Render::Mesh::Handle> subMeshes;
+		std::vector<u32> materialIdx;	// indexes the materials arrays
 		// TODO : relative matrices
 
 
@@ -127,6 +145,7 @@ namespace ModelResource {
 
     bool _ProcessAssimpNode(Scene *gameScene, Data &model, aiNode *node, const aiScene *scene);
     bool _ProcessAssimpMesh(Scene *gameScene, Data &model, aiMesh *mesh, const aiScene *scene);
+	bool _ProcessAssimpMaterials(Scene *gameScene, Data &model, const aiScene *scene);
 };
 
 namespace Text {

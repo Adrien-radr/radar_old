@@ -1,4 +1,6 @@
 #version 400
+
+// ######################################################
 #define M_PI     3.14159265358
 #define M_INV_PI 0.31830988618
 
@@ -11,31 +13,6 @@
 #define SCOLOR_SILVER    vec3(0.971519, 0.959915, 0.915324)
 #define SCOLOR_ALUMINIUM vec3(0.913183, 0.921494, 0.924524)
 #define SCOLOR_COPPER    vec3(0.955008, 0.637427, 0.538163)
-
-in vec4 v_color;
-in vec3 v_position;
-in vec3 v_normal;
-in vec2 v_texcoord;
-
-struct Light {
-    vec3 position;
-    vec4 ambient;
-    vec4 diffuse;
-    float radius;
-};
-
-layout (std140) uniform Material {
-    vec3 Ka;
-    vec3 Kd;
-    vec3 Ks;
-    float shininess;
-};
-
-uniform Light lights[8];
-uniform sampler2D tex0;
-uniform vec3 eyePosition;
-
-out vec4 frag_color;
 
 float fresnel_F0(float n1, float n2) {
     float f0 = (n1 - n2)/(n1 + n2);
@@ -101,6 +78,36 @@ float getDistanceAttenuation(vec3 light_vec, float invSqrAttRadius) {
 
     return attenuation;
 }
+// ######################################################
+
+in vec4 v_color;
+in vec3 v_position;
+in vec3 v_normal;
+in vec2 v_texcoord;
+
+struct Light {
+    vec3 position;
+    vec4 ambient;
+    vec4 diffuse;
+    float radius;
+};
+
+layout (std140) uniform Material {
+    vec3 Ka;
+    vec3 Kd;
+    vec3 Ks;
+    float shininess;
+};
+
+uniform Light lights[8];
+uniform vec3 eyePosition;
+
+// Texture buffers
+uniform sampler2D DiffuseTex;   // index 0
+uniform sampler2D SpecularTex;  // index 1
+
+out vec4 frag_color;
+
 
 const int nLights = 2;
 const vec3 lightpos[nLights] = vec3[](
@@ -112,16 +119,30 @@ const vec3 lightcol[nLights] = vec3[](
     vec3(1, 0.05, 0.1)
 );
 
-void main() {
+vec4 depthBuffer() {
+    float near = 1.0;
+    float far = 100.0;
+    float z = gl_FragCoord.z * 2.0 - 1.0;
+    z = ((2.0 * far * near) / (far + near - z * (far - near))) / far;
 
+    return vec4(vec3(z), 1.0);
+}
+
+void main() {
+    // texturing
+    vec4 diffuseTexColor = texture2D(DiffuseTex, v_texcoord);
+    vec4 specularTexColor = texture2D(SpecularTex, v_texcoord);
+    diffuseTexColor.a = 1; // TODO : remove that and fix nanosuit texture
+
+    // lighting
     vec3 light_contrib = vec3(0);
 
-    float light_power = 500;
+    float light_power = 200;
     float light_radius = 1000.0;
 
     vec3 diffuse_color = Kd;
-    vec3 specular_color = Ks;
-    float roughness = 1.0 - shininess;
+    vec3 specular_color = Ks * specularTexColor.rgb;
+    float roughness = 1.0 - (shininess * specularTexColor.r);
 
     vec3 N = normalize(v_normal);
     vec3 V = normalize(eyePosition - v_position);
@@ -153,12 +174,13 @@ void main() {
         }
     }
 
-    // texturing
-    vec4 tex_color = texture2D(tex0, v_texcoord);
-    tex_color.a = 1;
-    vec3 finalcol = light_contrib *0.001+ vec3(1);//Ka * 1;
+
+    vec3 finalcol = light_contrib + Ka;
 
     frag_color = vec4(finalcol, 1) *  // lighting
                  1 * //(0.3 + 0.7 * v_color) *  // color
-                 tex_color;                     // texture
+                 diffuseTexColor ;                     // texture
+
+    // To visualize depth :
+    // frag_color = frag_color * 0.0001 + depthBuffer();
 }
