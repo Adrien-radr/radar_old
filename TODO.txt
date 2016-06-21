@@ -4,6 +4,8 @@ x Sphere mesh
 x Per-object material (texture ? uniform ?) --> start with uniform buffer per-obj for ease
 x Freefly Camera
 x Default Texture in Render::
+x Specular textures
+x Normal textures
 
 Normal :
 x GGX -- fixed (smith DFG + burley's disney diffuse)

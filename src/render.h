@@ -256,8 +256,10 @@ namespace Render {
 			MESH_POSITIONS = 1,
 			MESH_NORMALS = 2,
 			MESH_TEXCOORDS = 4,
-			MESH_COLORS = 8,
-			MESH_INDICES = 16
+			MESH_TANGENT = 8,
+			MESH_BINORMAL = 16,
+			MESH_COLORS = 32,
+			MESH_INDICES = 64
 		};
 
 		enum AnimType {

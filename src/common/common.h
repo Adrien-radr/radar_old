@@ -3,9 +3,9 @@
 #include "debug.h"
 
 // Code version
-#define RADAR_MAJOR 0
-#define RADAR_MINOR 2
-#define RADAR_PATCH 0
+#define RADAR_MAJOR "0"
+#define RADAR_MINOR "2"
+#define RADAR_PATCH "0a"
 
 // Platform
 #if defined(_WIN32) || defined(_WIN64)
