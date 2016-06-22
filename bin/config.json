@@ -8,5 +8,7 @@
     "iAnisotropicFiltering" : 16,
 
     "fCameraSpeedBase" : 10.0,
-    "fCameraSpeedMult" : 2.0
+    "fCameraSpeedMult" : 2.0,
+    "vCameraPosition" : [10, 8, -15],
+    "vCameraTarget" : [0, 5, -5]
 }

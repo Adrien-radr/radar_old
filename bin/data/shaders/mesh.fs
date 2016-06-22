@@ -1,5 +1,7 @@
 #version 400
+#extension GL_ARB_shading_language_include : require
 
+#include "lighting.glsl"
 // ######################################################
 #define M_PI     3.14159265358
 #define M_INV_PI 0.31830988618
@@ -84,6 +86,7 @@ in vec4 v_color;
 in vec3 v_position;
 in vec3 v_normal;
 in vec2 v_texcoord;
+in mat3 v_TBN;
 
 struct Light {
     vec3 position;
@@ -105,18 +108,19 @@ uniform vec3 eyePosition;
 // Texture buffers
 uniform sampler2D DiffuseTex;   // index 0
 uniform sampler2D SpecularTex;  // index 1
+uniform sampler2D NormalTex;    // index 2
 
 out vec4 frag_color;
 
 
 const int nLights = 2;
 const vec3 lightpos[nLights] = vec3[](
-    vec3(-9.5, 15, -10),
+    vec3(-9.5, 5, -10),
     vec3(-21, 13, -4)
 );
 const vec3 lightcol[nLights] = vec3[](
-    vec3(0.8,0.2,1),
-    vec3(1, 0.05, 0.1)
+    vec3(1.5,1, 0),
+    vec3(1.5, 0.8, 1.2)
 );
 
 vec4 depthBuffer() {
@@ -130,9 +134,16 @@ vec4 depthBuffer() {
 
 void main() {
     // texturing
-    vec4 diffuseTexColor = texture2D(DiffuseTex, v_texcoord);
+    vec3 diffuseTexColor = texture2D(DiffuseTex, v_texcoord).rgb;
     vec4 specularTexColor = texture2D(SpecularTex, v_texcoord);
-    diffuseTexColor.a = 1; // TODO : remove that and fix nanosuit texture
+    vec3 normalTexColor = texture2D(NormalTex, v_texcoord).rgb;
+
+    // Normal vector from Normalmap
+    // vec3 N = normalize(normalTexColor * 2.0 - 1.0);
+    // N = normalize(v_TBN * N);
+    vec3 objN = normalize(normalTexColor * 2.0 - 1.0);
+    objN = normalize(v_TBN * objN);
+    // objN += (v_TBN[1] + 1.0 * 0.5);
 
     // lighting
     vec3 light_contrib = vec3(0);
@@ -144,13 +155,13 @@ void main() {
     vec3 specular_color = Ks * specularTexColor.rgb;
     float roughness = 1.0 - (shininess * specularTexColor.r);
 
-    vec3 N = normalize(v_normal);
+    vec3 N = objN;//normalize(v_normal);
     vec3 V = normalize(eyePosition - v_position);
-    float NdotV = max(0, dot(N, V));//abs(dot(N, V)) + 1e-5;
+    float NdotV = max(0, dot(N, V));
 
     for(int i = 0; i < nLights; ++i) {
         vec3 light_vec = lightpos[i] - v_position;
-        vec3 light_color = vec3(1) * light_power;
+        vec3 light_color = lightcol[i] * light_power;
         float light_dist = length(light_vec);
 
         vec3 L = light_vec / light_dist;
@@ -175,11 +186,11 @@ void main() {
     }
 
 
-    vec3 finalcol = light_contrib + Ka;
+    vec3 finalcol = light_contrib + Ka;// + diffuseTexColor * 0.00001;
 
     frag_color = vec4(finalcol, 1) *  // lighting
                  1 * //(0.3 + 0.7 * v_color) *  // color
-                 diffuseTexColor ;                     // texture
+                 vec4(diffuseTexColor, 1);                     // texture
 
     // To visualize depth :
     // frag_color = frag_color * 0.0001 + depthBuffer();

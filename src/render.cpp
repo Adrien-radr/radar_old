@@ -162,13 +162,16 @@ namespace Render {
 		sd_mesh.attribs[0] = Shader::Desc::Attrib("in_position", 0);
 		sd_mesh.attribs[1] = Shader::Desc::Attrib("in_normal", 1);
 		sd_mesh.attribs[2] = Shader::Desc::Attrib("in_texcoord", 2);
-		sd_mesh.attribs[3] = Shader::Desc::Attrib("in_color", 3);
+		sd_mesh.attribs[3] = Shader::Desc::Attrib("in_tangent", 3);
+		sd_mesh.attribs[4] = Shader::Desc::Attrib("in_binormal", 4);
+		sd_mesh.attribs[5] = Shader::Desc::Attrib("in_color", 5);
 
 		sd_mesh.uniforms.push_back(Shader::Desc::Uniform("ModelMatrix", Shader::UNIFORM_MODELMATRIX));
 		sd_mesh.uniforms.push_back(Shader::Desc::Uniform("ViewMatrix", Shader::UNIFORM_VIEWMATRIX));
 		sd_mesh.uniforms.push_back(Shader::Desc::Uniform("ProjMatrix", Shader::UNIFORM_PROJMATRIX));
 		sd_mesh.uniforms.push_back(Shader::Desc::Uniform("DiffuseTex", Shader::UNIFORM_TEXTURE0));
 		sd_mesh.uniforms.push_back(Shader::Desc::Uniform("SpecularTex", Shader::UNIFORM_TEXTURE1));
+		sd_mesh.uniforms.push_back(Shader::Desc::Uniform("NormalTex", Shader::UNIFORM_TEXTURE2));
 		sd_mesh.uniforms.push_back(Shader::Desc::Uniform("eyePosition", Shader::UNIFORM_EYEPOS));
 		sd_mesh.uniformblocks.push_back(Shader::Desc::UniformBlock("Material", Shader::UNIFORMBLOCK_MATERIAL));
 
@@ -181,6 +184,7 @@ namespace Render {
 		Shader::Bind(shader_mesh);
 		Shader::SendInt(Shader::UNIFORM_TEXTURE0, Texture::TexTarget0);
 		Shader::SendInt(Shader::UNIFORM_TEXTURE1, Texture::TexTarget1);
+		Shader::SendInt(Shader::UNIFORM_TEXTURE2, Texture::TexTarget2);
 
 		// Create Default white texture 
 		Texture::Desc t_desc;
@@ -256,8 +260,7 @@ namespace Render {
 				break;
 			}
 			if (resources[i].name == name) {
-				// found resource by this name, return its handle
-				D(LogInfo("Mesh resource ", name, " found. Returning its handle.");)
+				LogDebug("Mesh resource ", name, " found. Returning its handle.");
 				free_index = resources[i].handle;
 				return true;
 			}
@@ -273,7 +276,7 @@ namespace Render {
 
 	static void AddResource(std::vector<RenderResource> &resources, int index,
 							const std::string &name, int handle) {
-		D(LogInfo("[DEBUG] Adding ", name, " to render resources.");)
+		LogDebug("Adding ", name, " to render resources.");
 		resources[index].name = name;
 		resources[index].handle = handle;
 	}

@@ -94,16 +94,28 @@ void Camera::Update(float dt) {
 }
 
 namespace Object {
-	void Desc::Translate(const vec3f &t) {
-		model_matrix *= mat4f::Translation(t);
+	void Desc::Identity() {
+		model_matrix.Identity();
+		position = vec3f();
+		rotation = vec3f();
+		scale = 1.f;
 	}
 
-	void Desc::Scale(const vec3f &s) {
-		model_matrix *= mat4f::Scale(s);
+	void Desc::Translate(const vec3f &t) {
+		// model_matrix *= mat4f::Translation(t);
+		position += t;
+	}
+
+	void Desc::Scale(f32 s) {
+		// model_matrix *= mat4f::Scale(s);
+		scale *= s;
 	}
 
 	void Desc::Rotate(const vec3f &r) {
-		model_matrix = model_matrix.RotateX(r.x).RotateY(r.y).RotateZ(r.z);
+		// model_matrix = model_matrix.RotateX(r.x);
+		// model_matrix *= mat4f::RotationY(r.y);
+		rotation += r;
+		// model_matrix = model_matrix.RotateZ(r.z);
 	}
 		
 	// void Desc::SetPosition(const vec2f &pos) {
@@ -157,8 +169,8 @@ bool Scene::Init(SceneInitFunc initFunc, SceneUpdateFunc updateFunc, SceneRender
 	camera.speedMult = config.cameraSpeedMult;
     camera.translationSpeed = config.cameraBaseSpeed;
     camera.rotationSpeed = 0.05f;
-    camera.position = vec3f(-21.2, 13.9, -4.1);
-    camera.target = vec3f(-21.889,13.9405,-3.3768);
+    camera.position = config.cameraPosition;// vec3f(-21.2, 13.9, -4.1);
+    camera.target = config.cameraTarget;// vec3f(-21.889,13.9405,-3.3768);
     camera.up = vec3f(0,1,0);
     camera.forward = camera.target - camera.position;
     camera.forward.Normalize();
@@ -306,23 +318,30 @@ void Scene::Render() {
 			Render::Shader::SendVec3(uniform_name.str(), light.position);
 		}
 
-		const Material::Data &material = materials[object.material];
-
-		// send material parameters
-		Render::UBO::Bind(Render::Shader::UNIFORMBLOCK_MATERIAL, material.ubo);
-
-		Render::Texture::Bind(material.diffuseTex, Render::Texture::TexTarget0);
-		Render::Texture::Bind(material.specularTex, Render::Texture::TexTarget1);
+		object.model_matrix.FromTRS(object.position, object.rotation, object.scale);
 		Render::Shader::SendMat4(Render::Shader::UNIFORM_MODELMATRIX, object.model_matrix);
-		Render::Mesh::Render(object.mesh);
+		// Render all submeshes
+		for(u32 m = 0; m < object.numSubmeshes; ++m) {
+			const Material::Data &material = materials[object.materials[m]];
+
+			// send material parameters
+			Render::UBO::Bind(Render::Shader::UNIFORMBLOCK_MATERIAL, material.ubo);
+			Render::Texture::Bind(material.diffuseTex, Render::Texture::TexTarget0);
+			Render::Texture::Bind(material.specularTex, Render::Texture::TexTarget1);
+			Render::Texture::Bind(material.normalTex, Render::Texture::TexTarget2);
+
+			Render::Mesh::Render(object.meshes[m]);
+		}
 	}
 
 	if(customRenderFunc)
 		customRenderFunc(this);
 
 	// non-wireframe mode for text rendering
-	glEnable(GL_CULL_FACE);
-	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+	if (device.IsWireframe()) {
+		glEnable(GL_CULL_FACE);
+		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+	}
 
 	Render::StartTextRendering();
 	for (u32 i = 0; i < texts.size(); ++i) {
@@ -353,35 +372,40 @@ Object::Handle Scene::AddFromModel(const ModelResource::Handle &h) {
 
 		// Material::Desc mat_desc(col3f(0.181,0.1,0.01), col3f(.9,.5,.5), col3f(1,.8,0.2), 0.8);
 
+	Object::Desc odesc(Render::Shader::SHADER_3D_MESH);//, model.subMeshes[i], model.materials[matIdx]);
 	for(u32 i = 0; i < model.numSubMeshes; ++i) {
 		u32 matIdx = model.materialIdx[i];
-		Object::Desc odesc(Render::Shader::SHADER_3D_MESH, model.subMeshes[i], model.materials[matIdx]);
-		odesc.Translate(vec3f(-25,0,0));
-		odesc.Rotate(vec3f(0,-2.f*M_PI/2.3f,0));
+		odesc.AddSubmesh(model.subMeshes[i], model.materials[matIdx]);
+		// odesc.Translate(vec3f(-25,0,0));
+		// odesc.Rotate(vec3f(0,-2.f*M_PI/2.3f,0));
 		// odesc.Scale(vec3f(15,15,15));
 		// odesc.model_matrix *= mat4f::Scale(10,10,10);
-		Object::Handle obj_h = Add(odesc);
-		if(obj_h < 0) {
-			LogErr("Error creating Object from Model.");
-			return -1;
-		}
-
 	}
-	return 1;//obj_h;
+
+	Object::Handle obj_h = Add(odesc);
+	if(obj_h < 0) {
+		LogErr("Error creating Object from Model.");
+		return -1;
+	}
+	return obj_h;
 }
 
 Object::Handle Scene::Add(const Object::Desc &d) {
-	if (!Render::Mesh::Exists(d.mesh)) {
-		LogErr("Given mesh is not registered in renderer.");
-		return -1;
-	}
 	if (!Render::Shader::Exists(d.shader)) {
 		LogErr("Given shader is not registered in renderer.");
 		return -1;
 	}
-	if(!MaterialExists(d.material)) {
-		LogErr("Given material is not registered in the scene.");
-		return -1;
+
+	// Check submesh existence
+	for(u32 i = 0; i < d.numSubmeshes; ++i) {
+		if (!Render::Mesh::Exists(d.meshes[i])) {
+			LogErr("Submesh ", i, " is not registered in renderer.");
+			return -1;
+		}
+		if(!MaterialExists(d.materials[i])) {
+			LogErr("Material ", i, " is not registered in the scene.");
+			return -1;
+		}
 	}
 
 	size_t index = objects.size();
@@ -392,10 +416,6 @@ Object::Handle Scene::Add(const Object::Desc &d) {
 	}
 
 	objects.push_back(d);
-
-	Object::Desc &object = objects[index];
-	// Render::Mesh::SetAnimation(object.mesh, object.animation_state, object.animation);
-	object.model_matrix = d.model_matrix;
 
 	return (Object::Handle)index;
 }
@@ -476,18 +496,41 @@ Material::Handle Scene::Add(const Material::Desc &d) {
         	LogErr("Error loading specular texture ", d.specularTexPath);
         	return -1;
         }
-		LogDebug("Loaded specular texture at idx ", t_h);
+		// LogDebug("Loaded specular texture at idx ", t_h);
 		mat.specularTex = t_h;
 	} else {
 		mat.specularTex = Render::Texture::DEFAULT_TEXTURE;	 // 1 specular, multiplied by the mat.shininess
 	}
 
 	if(d.normalTexPath != "") {
-		// TODO
+		Render::Texture::Desc t_desc(d.normalTexPath);
+		Render::Texture::Handle t_h = Render::Texture::Build(t_desc);
+		if(t_h < 0) {
+			LogErr("Error loading normal texture ", d.normalTexPath);
+			return -1;
+		}
+		mat.normalTex = t_h;
 	} else {
-		// TODO
+		mat.normalTex = Render::Texture::DEFAULT_TEXTURE;
 	}
 
 	materials.push_back(mat);
 	return (Material::Handle)index;
 }
+
+Object::Desc *Scene::GetObject(Object::Handle h) {
+	if(Exists(h))
+		return &objects[h];
+	return nullptr;
+}
+
+// ModelResource::Data *Scene::GetModelInstance(ModelResource::Handle h) {
+// 	if(Exists(h))
+// 		return &models[h];
+// 	return nullptr;
+// }
+
+bool Scene::Exists(Object::Handle h) {
+	return h >= 0 && h < (int)objects.size();
+}
+

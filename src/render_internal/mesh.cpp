@@ -138,8 +138,8 @@ namespace Render {
 			const u32 nLon = 32, nLat = 24;
 
 			const u32 nVerts = (nLon+1) * nLat + 2;
-			const u32 nTriangles = nVerts * 2;
-			const u32 nIndices = nTriangles * 3;
+			// const u32 nTriangles = nVerts * 2;
+			const u32 nIndices = (nLat-1)*nLon*6 + nLon*2*3;//nTriangles * 3;
 
 			// Positions
 			vec3f pos[nVerts];
@@ -168,8 +168,12 @@ namespace Render {
 
 			// UVs
 			vec2f uv[nVerts];
-			for(u32 i = 0; i < nVerts; ++i) {
-				uv[i] = vec2f(0,0);	// TODO
+			uv[0] = vec2f(0,1);
+			uv[nVerts-1] = vec2f(0.f);
+			for(u32 lat = 0; lat < nLat; ++lat) {
+				for(u32 lon = 0; lon <= nLon; ++lon) {
+					uv[lon + lat * (nLon + 1) + 1] = vec2f(lon/(f32)nLon, 1.f - (lat + 1) / (f32)(nLat + 1));
+				} 
 			}
 
 			// Triangles/Indices

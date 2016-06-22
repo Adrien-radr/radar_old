@@ -20,7 +20,7 @@ ModelResource::Handle Scene::LoadModelResource(const std::string &fileName) {
 	ModelResource::Data model;
 
     Assimp::Importer importer;
-    const aiScene *scene = importer.ReadFile(fileName, aiProcess_Triangulate | aiProcess_CalcTangentSpace);
+    const aiScene *scene = importer.ReadFile(fileName, aiProcess_Triangulate);// | aiProcess_CalcTangentSpace);
 
     if(!scene || scene->mFlags == AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode) {
         LogErr("AssimpError : ", importer.GetErrorString());
@@ -31,7 +31,6 @@ ModelResource::Handle Scene::LoadModelResource(const std::string &fileName) {
     model.resourceName = fileName.substr(last_slash+1, fileName.size());
     model.pathName = fileName.substr(0, last_slash+1);
 
-    LogDebug("Loading Model : ", model.resourceName, " (from ", model.pathName, ")");
 
 
     if(!ModelResource::_ProcessAssimpMaterials(this, model, scene)) {
@@ -42,7 +41,8 @@ ModelResource::Handle Scene::LoadModelResource(const std::string &fileName) {
         return -1;
     }
 
-    LogDebug(model.subMeshes.size(), " meshes, ", model.materials.size(), " materials, ");
+    // LogDebug(model.subMeshes.size(), " meshes, ", model.materials.size(), " materials, ");
+    LogDebug("Loaded Model : ", model.pathName, model.resourceName);
 
 	size_t index = models.size();
 	models.push_back(model);
@@ -126,6 +126,9 @@ bool ModelResource::_ProcessAssimpMaterials(Scene *gameScene, Data &model, const
             // Specular Texture
             mat_desc.specularTexPath = GetTexturePath(material, model, aiTextureType_SPECULAR);
 
+            // Normal Texture
+            mat_desc.normalTexPath = GetTexturePath(material, model, aiTextureType_HEIGHT); // HEIGHT for normalmaps on .obj ?!
+
             mat_h = gameScene->Add(mat_desc);
             if(mat_h < 0) {
                 LogErr("Error creating material from subMesh.");
@@ -163,9 +166,11 @@ bool ModelResource::_ProcessAssimpMesh(Scene *gameScene, Data &model, aiMesh *me
     u32 faces_n = mesh->mNumFaces;
     u32 indices_n = faces_n * 3;
 
-    vec3f vp[vertices_n], vn[vertices_n];
+    vec3f vp[vertices_n], vn[vertices_n], vtan[vertices_n], vbit[vertices_n];
     vec2f vt[vertices_n];
     u32 idx[indices_n];
+
+    bool hasTangents = mesh->mTangents != NULL;
 
     if(!mesh->mNormals) {
         LogErr("Mesh has no normals!");
@@ -179,6 +184,10 @@ bool ModelResource::_ProcessAssimpMesh(Scene *gameScene, Data &model, aiMesh *me
         if(mesh->mTextureCoords[0]) {
             vt[i] = aiVector3D_To_vec2f(mesh->mTextureCoords[0][i]);
         }
+        if(hasTangents) {
+            vtan[i] = aiVector3D_To_vec3f(mesh->mTangents[i]);
+            vbit[i] = aiVector3D_To_vec3f(mesh->mBitangents[i]);
+        }
     }
 
     for(u32 i = 0; i < faces_n; ++i) {
@@ -188,10 +197,17 @@ bool ModelResource::_ProcessAssimpMesh(Scene *gameScene, Data &model, aiMesh *me
         }
     }
 
+    f32 *tan_ptr = nullptr, *bit_ptr = nullptr;
+
+    if(hasTangents) {
+        tan_ptr = (f32*) vtan;
+        bit_ptr = (f32*) vbit;
+    }
+
     std::stringstream ss;
     ss << model.resourceName << model.numSubMeshes;
     
-    Render::Mesh::Desc mesh_desc(ss.str(), false, indices_n, idx, vertices_n, (f32*)vp, (f32*)vn, (f32*)vt);
+    Render::Mesh::Desc mesh_desc(ss.str(), false, indices_n, idx, vertices_n, (f32*)vp, (f32*)vn, (f32*)vt, tan_ptr, bit_ptr);
     Render::Mesh::Handle mesh_h = Render::Mesh::Build(mesh_desc);
     if(mesh_h < 0) {
         LogErr("Error creating subMesh.");

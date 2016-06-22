@@ -31,6 +31,7 @@ inline float hfov_to_vfov(float aspect, float hfov_deg) {
 template<typename T>
 class vec2 {
 public:
+	vec2(T v) : x(v), y(v) {}
 	vec2(T ix = 0, T iy = 0) : x(ix), y(iy) {}
 	vec2(const vec2<T> &v) {
 		(*this) = v;
@@ -141,6 +142,7 @@ typedef vec2<int> vec2i;
 template<typename T>
 class vec3 {
 public:
+	vec3(T v) : x(v), y(v), z(v) {}
 	vec3(T ix = 0, T iy = 0, T iz = 0) : x(ix), y(iy), z(iz) {}
 	vec3(const vec3<T> &v) {
 		(*this) = v;
@@ -288,6 +290,7 @@ void vec3_lerp(vec3 r, vec3 a, vec3 b, float t) {
 template<typename T>
 class vec4 {
 public:
+	vec4(T v) : x(v), y(v), z(v), w(v) {}
 	vec4(T ix = 0, T iy = 0, T iz = 0, T iw = 0) : x(ix), y(iy), z(iz), w(iw) {}
 	vec4(const vec4<T> &v) {
 		(*this) = v;
@@ -562,6 +565,18 @@ public:
 		return r;
 	}
 
+	static mat4<T> RotationY(float angle) {
+		float s = sinf(angle);
+		float c = cosf(angle);
+		mat4 R = {
+			{ c, 0, s, 0 },
+			{ 0, 1, 0, 0 },
+			{ -s, 0, c, 0 },
+			{ 0, 0, 0, 1 }
+		};
+		return R;
+	}
+
 	static mat4<T> Scale(vec3<T> xyz) {
 		mat4<T> s;
 		s.Identity();
@@ -575,6 +590,14 @@ public:
 		for (int i = 0; i < 4; ++i)
 			for (int j = 0; j < 4; ++j)
 				M[i][j] = i < 3 && j < 3 ? a[i] * b[j] : 0.f;
+	}
+
+	void FromTRS(const vec3<T> &pos, const vec3<T> &rot, const T scale = 1.0) {
+		*this = mat4<T>::Scale(vec3<T>(scale, scale, scale));
+		*this = this->RotateX(rot.x);
+		*this = this->RotateY(rot.y);
+		*this = this->RotateZ(rot.z);
+		M[3] = vec4<T>(pos.x, pos.y, pos.z, 1.f);
 	}
 
 	mat4<T> Rotate(const vec3<T> &axis, float angle) {

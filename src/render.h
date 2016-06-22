@@ -287,10 +287,10 @@ namespace Render {
 		struct Desc {
 			Desc(const std::string &resource_name, bool empty_mesh, u32 icount, u32 *idx_arr,
 				u32 vcount, f32 *pos_arr, f32 *normal_arr = nullptr, f32 *texcoord_arr = nullptr,
-				f32 *col_arr = nullptr) :
+				f32 *tangent_arr = nullptr, f32 *bitangent_arr = nullptr, f32 *col_arr = nullptr) :
 				name(resource_name), empty_mesh(empty_mesh), vertices_n(vcount), indices_n(icount),
 				indices(idx_arr), positions(pos_arr), normals(normal_arr), texcoords(texcoord_arr),
-				colors(col_arr) {}
+				tangents(tangent_arr), bitangents(bitangent_arr), colors(col_arr) {}
 
 
 			std::string name;	//!< name of the mesh for resource managment
@@ -304,6 +304,8 @@ namespace Render {
 			f32 *positions;     //!< format vec3
 			f32 *normals;       //!< format vec3
 			f32 *texcoords;     //!< format vec2
+			f32 *tangents;		//!< format vec3
+			f32 *bitangents;	//!< format vec3
 			f32 *colors;        //!< format vec4
 		};
 

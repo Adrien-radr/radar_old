@@ -71,3 +71,19 @@ std::string Json::ReadString(cJSON *parent, const std::string &name,
 	return std::string(default_val);
 
 }
+
+vec3f Json::ReadVec3(cJSON *parent, const std::string &name, const vec3f &default_val) {
+	cJSON *item = cJSON_GetObjectItem(parent, name.c_str());
+	if(!item) return default_val;
+
+	// should be a 3-size array
+	u32 arr_size = cJSON_GetArraySize(item);
+	if(arr_size != 3) {
+		LogErr("JSON parse error, ", name, " is not a vec3.");
+		return default_val;
+	}
+
+	return vec3f(	cJSON_GetArrayItem(item, 0)->valuedouble, 
+					cJSON_GetArrayItem(item, 1)->valuedouble, 
+					cJSON_GetArrayItem(item, 2)->valuedouble);
+}

@@ -18,6 +18,9 @@ struct Config {
 
 	f32		cameraBaseSpeed;
 	f32		cameraSpeedMult;
+
+	vec3f 	cameraPosition;
+	vec3f	cameraTarget;
 };
 
 /// The Device encompass :

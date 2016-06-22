@@ -90,27 +90,47 @@ namespace Material {
 namespace Object {
 	using namespace Render;
 	struct Desc {
-		Desc(Shader::Handle shader_h, Mesh::Handle mesh_h, Material::Handle mat_h = Material::DEFAULT_MATERIAL)
-		: shader(shader_h), mesh(mesh_h), material(mat_h) {
+		friend Scene;
+
+		Desc(Shader::Handle shader_h)//, Mesh::Handle mesh_h, Material::Handle mat_h = Material::DEFAULT_MATERIAL)
+		: shader(shader_h), numSubmeshes(0) {
+			position = vec3f();
+			rotation = vec3f();
+			scale = 1.f;
 			model_matrix.Identity();
 		}
 
-		// void SetPosition(const vec3f &pos);
-		// void SetRotation(float angle);
-		// void SetScale(const vec3f &scale);
+		void AddSubmesh(Mesh::Handle mesh_h, Material::Handle mat_h) {
+			meshes.push_back(mesh_h);
+			materials.push_back(mat_h);
+			++numSubmeshes;
+		}
 
+		void ClearSubmeshes() {
+			numSubmeshes = 0;
+			meshes.clear();
+			materials.clear();
+		}
+
+		void Identity();
 		void Translate(const vec3f &t);
-		void Scale(const vec3f &s);
+		void Scale(f32 s);
 		void Rotate(const vec3f &r);
 
 		Shader::Handle   shader;
 
-		Mesh::Handle	 mesh;
-		Material::Handle material;
 		// Mesh::AnimType   animation;
 		// Mesh::AnimState  animation_state;
 
+	private:
+		std::vector<Mesh::Handle>		meshes;
+		std::vector<Material::Handle> 	materials;
 		mat4f					model_matrix;
+		vec3f	position;
+		vec3f	rotation;
+		f32 	scale;
+
+		u32 numSubmeshes;
 	};
 
 	/// Handle representing an object in the scene.
@@ -198,6 +218,11 @@ public:
 	Light::Handle Add(const Light::Desc &d);
 	Text::Handle Add(const Text::Desc &d);
 	Material::Handle Add(const Material::Desc &d);
+
+	// Object functions
+	Object::Desc *GetObject(Object::Handle h);
+	// ModelResource::Data *GetModelInstance(ModelResource::Handle h);
+	inline bool Exists(Object::Handle h);
 
 private:
 	std::vector<Text::Desc> texts;

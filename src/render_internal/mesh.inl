@@ -1,7 +1,84 @@
 
+#include "common/common.h"
+
 namespace Mesh {
+    vec3f CalcTangent(const vec3f &e1, const vec3f &e2, const vec2f &du, const vec2f &dv) {
+        f32 den = 1.f / (du.x * dv.y - dv.x * du.y);
+
+        vec3f tangent = (e1 * dv.y - e2 * du.y) * den;
+        tangent.Normalize();
+
+        return tangent;
+    }
+
+    vec3f CalcBitangent(const vec3f &e1, const vec3f &e2, const vec2f &du, const vec2f &dv) {
+        f32 den = 1.f / (du.x * dv.y - dv.x * du.y);
+
+        vec3f bitangent = (e2 * du.x - e1 * dv.x) * den;
+        bitangent.Normalize();
+
+        return bitangent;
+    }
+
+    static void CalcTangentSpace(vec3f *vtan, vec3f *vbit, u32 indices_n, u32 vertices_n, const vec3f *vp, const vec2f *vt,
+                                 const vec3f *vn, const u32 *idx) {
+        const u32 triangle_n = indices_n / 3;
+        
+        for(u32 i = 0; i < triangle_n; ++i) {
+            for(u32 j = 0; j < 1; ++j) {
+                const u32 i1 = idx[i*3];
+                const u32 i2 = idx[i*3+1];
+                const u32 i3 = idx[i*3+2];
+
+                const vec3f &p1 = vp[i1];
+                const vec3f &p2 = vp[i2];
+                const vec3f &p3 = vp[i3];
+                const vec2f &uv1 = vt[i1];
+                const vec2f &uv2 = vt[i2];
+                const vec2f &uv3 = vt[i3];
+
+                const vec3f e1 = p2 - p1;
+                const vec3f e2 = p3 - p1;
+                const vec2f du = uv2 - uv1;
+                const vec2f dv = uv3 - uv1;
+
+                vec3f tangent = CalcTangent(e1, e2, du, dv);
+                vec3f bitangent = CalcBitangent(e1, e2, du, dv); 
+
+                vtan[i1] = tangent;
+                vtan[i2] = tangent;
+                vtan[i3] = tangent;
+
+                vbit[i1] = bitangent;
+                vbit[i2] = bitangent;
+                vbit[i3] = bitangent;
+            }
+        }
+        // #if 0
+        for(u32 i = 0; i < vertices_n; ++i) {
+            const vec3f &n = vn[i];
+            const vec3f &t = vtan[i];
+            const vec3f &b = vbit[i];
+
+            vec3f tangent = (t - n * n.Dot(t));
+            tangent.Normalize();
+
+            // handedness
+            vec3f nCrossT = n.Cross(tangent);
+            float handedness = nCrossT.Dot(b) < 0.f ? -1.f : 1.f;
+            tangent *= -1.f;
+
+            vec3f binormal = nCrossT * handedness;
+            binormal.Normalize();
+
+            vtan[i] = tangent;
+            vbit[i] = binormal;
+        }
+        // #endif
+    }
+
     Handle Build(const Desc &desc) {
-        f32 *vp = nullptr, *vn = nullptr, *vt = nullptr, *vc = nullptr;
+        f32 *vp = nullptr, *vn = nullptr, *vt = nullptr, *vc = nullptr, *vtan = nullptr, *vbit = nullptr;
         u32 *idx = nullptr;
 
         int free_index;
@@ -11,21 +88,34 @@ namespace Mesh {
             return free_index;
         }
 
+        bool deallocTangents = false;
 
         Mesh::Data mesh;
 
         if(!desc.empty_mesh) {
             if (desc.indices_n > 0 && desc.indices && desc.vertices_n > 0 && desc.positions) {
-                vp = (f32*)desc.positions;
-                idx = (u32*)desc.indices;
+                vp = desc.positions;
+                idx = desc.indices;
 
-                if (desc.normals)
-                    vn = (f32*)desc.normals;
                 if (desc.texcoords)
-                    vt = (f32*)desc.texcoords;
+                    vt = desc.texcoords;
                 if (desc.colors)
-                    vc = (f32*)desc.colors;
-                // Create empty mesh (i.e. only a vao, used to create the text vao for example)
+                    vc = desc.colors;
+
+                if (desc.normals) {
+                    vn = desc.normals;
+                }
+                if(desc.tangents) {
+                    vtan = desc.tangents;
+                    vbit = desc.bitangents;
+                } else if(desc.normals && desc.texcoords) {
+                    // calculate them
+                    deallocTangents = true;
+                    vtan = new f32[3 * desc.vertices_n];
+                    vbit = new f32[3 * desc.vertices_n];
+                    CalcTangentSpace((vec3f*)vtan, (vec3f*)vbit, desc.indices_n, desc.vertices_n, 
+                                        (vec3f*)desc.positions, (vec2f*)desc.texcoords, (vec3f*)desc.normals, idx);
+                }
             }
             else {
                 // TODO : Here we allow mesh creation without data
@@ -98,19 +188,58 @@ namespace Mesh {
             glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 0, (GLubyte*)NULL);
         }
 
+        // check for tangents, should exist if normals exist
+        if(vtan) {
+            if(!vn) {
+                LogErr("Found tangent array but no normal array.");
+                return -1;
+            }
+
+            mesh.attrib_flags |= MESH_TANGENT;
+            glEnableVertexAttribArray(3);
+            glGenBuffers(1, &mesh.vbo[3]);
+            glBindBuffer(GL_ARRAY_BUFFER, mesh.vbo[3]);
+            glBufferData(GL_ARRAY_BUFFER, mesh.vertices_n * sizeof(vec3f),
+                            vtan, GL_STATIC_DRAW);
+
+            glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, 0, (GLubyte*)NULL);
+        }
+
+        // check for tangents, should exist if normals exist
+        if(vbit) {
+            if(!vn) {
+                LogErr("Found binormal array but no normal or tangent array.");
+                return -1;
+            }
+
+            mesh.attrib_flags |= MESH_BINORMAL;
+            glEnableVertexAttribArray(4);
+            glGenBuffers(1, &mesh.vbo[4]);
+            glBindBuffer(GL_ARRAY_BUFFER, mesh.vbo[4]);
+            glBufferData(GL_ARRAY_BUFFER, mesh.vertices_n * sizeof(vec3f),
+                            vbit, GL_STATIC_DRAW);
+
+            glVertexAttribPointer(4, 3, GL_FLOAT, GL_FALSE, 0, (GLubyte*)NULL);
+        }
+
         // check for colors
         if (vc) {
             mesh.attrib_flags |= MESH_COLORS;
-            glEnableVertexAttribArray(3);
+            glEnableVertexAttribArray(5);
 
             // fill normal buffer
-            glGenBuffers(1, &mesh.vbo[3]);
-            glBindBuffer(GL_ARRAY_BUFFER, mesh.vbo[3]);
+            glGenBuffers(1, &mesh.vbo[5]);
+            glBindBuffer(GL_ARRAY_BUFFER, mesh.vbo[5]);
             glBufferData(GL_ARRAY_BUFFER, mesh.vertices_n * sizeof(vec4f),
                             vc, GL_STATIC_DRAW);
 
             // add it to vao
-            glVertexAttribPointer(3, 4, GL_FLOAT, GL_FALSE, 0, (GLubyte*)NULL);
+            glVertexAttribPointer(5, 4, GL_FLOAT, GL_FALSE, 0, (GLubyte*)NULL);
+        }
+
+        if(deallocTangents) {
+            delete[] vtan;
+            delete[] vbit;
         }
 
         glBindVertexArray(0);
@@ -127,7 +256,7 @@ namespace Mesh {
     void Destroy(Handle h) {
         if (Exists(h)) {
             Data &mesh = renderer->meshes[h];
-            glDeleteBuffers(4, mesh.vbo);
+            glDeleteBuffers(6, mesh.vbo);
             glDeleteBuffers(1, &mesh.ibo);
             glDeleteVertexArrays(1, &mesh.vao);
             mesh.attrib_flags = MESH_POSITIONS;

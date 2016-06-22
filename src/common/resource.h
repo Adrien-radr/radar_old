@@ -27,6 +27,7 @@ struct Json {
 	static f32 ReadFloat(cJSON *parent, const std::string &name, f32 default_val);
 	static std::string ReadString(cJSON *parent, const std::string &name,
 								  const std::string &default_val);
+	static vec3f ReadVec3(cJSON *parent, const std::string &name, const vec3f &default_val);
 
 	cJSON *root;
 	std::string	contents;
