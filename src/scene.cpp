@@ -190,9 +190,11 @@ bool Scene::Init(SceneInitFunc initFunc, SceneUpdateFunc updateFunc, SceneRender
 
 	texts.reserve(256);
 	lights.reserve(32);
-	active_lights.reserve(8);
 	objects.reserve(1024);
 	materials.reserve(64);
+	for(u32 i = 0; i < SCENE_MAX_ACTIVE_LIGHTS; ++i) {
+		active_lights.push_back(-1);
+	}
 
 	// Fps text
 	Render::Font::Desc fdesc("data/DejaVuSans.ttf", 12);
@@ -225,6 +227,11 @@ bool Scene::Init(SceneInitFunc initFunc, SceneUpdateFunc updateFunc, SceneRender
 		return false;
 	}
 
+	// Light UBO init 
+	if(!InitLightUniforms()) {
+		return false;
+	}
+
 	bool customInitResult = true;
 	if(customInitFunc)
 		customInitResult = customInitFunc(this);
@@ -251,7 +258,14 @@ void Scene::UpdateView() {
 }
 
 void Scene::Update(float dt) {
-	const Device &device = GetDevice();
+	Device &device = GetDevice();
+
+	// 
+	if(device.IsKeyHit(K_R) & device.IsKeyDown(K_LControl)) {
+		Render::ReloadShaders();
+		camera.hasMoved = true; // to reupload view matrices
+		device.UpdateProjection(); // to reupload projection matrices
+	}
 
 	// Real-time camera updating
 	camera.Update(dt);
@@ -295,6 +309,41 @@ void Scene::Update(float dt) {
 		customUpdateFunc(this, dt);
 }
 
+bool Scene::InitLightUniforms() {
+	Render::UBO::Desc ubo_desc(NULL, SCENE_MAX_ACTIVE_LIGHTS * sizeof(Light::UniformBufferData), Render::UBO::ST_DYNAMIC);
+	lightsUBO = Render::UBO::Build(ubo_desc);
+	if(lightsUBO < 0) {
+		LogErr("Error creating light's UBO.");
+		return false;
+	}
+
+	return true;
+}
+
+u32 Scene::AggregateLightUniforms() {
+	static Light::UniformBufferData fullUBO[SCENE_MAX_ACTIVE_LIGHTS];
+
+	u32 numActiveLights = 0;
+	for (u32 l = 0; l < active_lights.size(); ++l) {
+		if (active_lights[l] < 0) break;
+		const Light::Desc &src = lights[active_lights[l]];
+
+		++numActiveLights;
+
+		fullUBO[l].position = src.position;
+		fullUBO[l].Ld = src.Ld;
+		fullUBO[l].radius = src.radius;
+	}
+	// Update UBO
+	Render::UBO::Desc ubo_desc((f32*)fullUBO, numActiveLights * sizeof(Light::UniformBufferData), Render::UBO::ST_DYNAMIC);
+	Render::UBO::Update(lightsUBO, ubo_desc);
+
+	// Bind it
+	Render::UBO::Bind(Render::Shader::UNIFORMBLOCK_LIGHTS, lightsUBO);
+
+	return numActiveLights;
+}
+
 void Scene::Render() {
 	const Device &device = GetDevice();
 
@@ -305,21 +354,17 @@ void Scene::Render() {
 
 	// Render::StartPolygonRendering();
 
+	// Update light uniform buffer
+	u32 numLights = AggregateLightUniforms();
+
 	for (u32 j = 0; j < objects.size(); ++j) {
 		Object::Desc &object = objects[j];
 		Render::Shader::Bind(object.shader);
-
-		for (u32 l = 0; l < active_lights.size(); ++l) {
-			if (active_lights[l] == -1) break;
-
-			std::stringstream uniform_name;
-			uniform_name << "lights[" << l << "].position";
-			Light::Desc &light = lights[active_lights[l]];
-			Render::Shader::SendVec3(uniform_name.str(), light.position);
-		}
+		Render::Shader::SendInt(Render::Shader::UNIFORM_NLIGHTS, numLights);
 
 		object.model_matrix.FromTRS(object.position, object.rotation, object.scale);
 		Render::Shader::SendMat4(Render::Shader::UNIFORM_MODELMATRIX, object.model_matrix);
+
 		// Render all submeshes
 		for(u32 m = 0; m < object.numSubmeshes; ++m) {
 			const Material::Data &material = materials[object.materials[m]];
@@ -432,6 +477,13 @@ Light::Handle Scene::Add(const Light::Desc &d) {
 
 	Light::Desc &light = lights[index];
 	light.active = true;
+	// look for active slot
+	for(u32 i = 0; i < SCENE_MAX_ACTIVE_LIGHTS; ++i) {
+		if(active_lights[i] < 0) {
+			active_lights[i] = index;
+			break;
+		}
+	}
 
 	return (Light::Handle)index;
 }
@@ -468,7 +520,7 @@ Material::Handle Scene::Add(const Material::Desc &d) {
 	mat.desc = d;
 
 	// Create UBO to accomodate it on GPU
-	Render::UBO::Desc ubo_desc((f32*)&d.uniform, sizeof(Material::Desc::UniformBufferData));
+	Render::UBO::Desc ubo_desc((f32*)&d.uniform, sizeof(Material::Desc::UniformBufferData), Render::UBO::ST_STATIC);
 	mat.ubo = Render::UBO::Build(ubo_desc);
 	if(mat.ubo < 0) {
 		LogErr("Error creating Material");

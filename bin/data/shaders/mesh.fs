@@ -90,9 +90,12 @@ in mat3 v_TBN;
 
 struct Light {
     vec3 position;
-    vec4 ambient;
-    vec4 diffuse;
+    vec3 Ld;
     float radius;
+};
+
+layout (std140) uniform Lights {
+    Light lights[8];
 };
 
 layout (std140) uniform Material {
@@ -102,7 +105,7 @@ layout (std140) uniform Material {
     float shininess;
 };
 
-uniform Light lights[8];
+uniform int nLights;
 uniform vec3 eyePosition;
 
 // Texture buffers
@@ -113,15 +116,17 @@ uniform sampler2D NormalTex;    // index 2
 out vec4 frag_color;
 
 
-const int nLights = 2;
-const vec3 lightpos[nLights] = vec3[](
-    vec3(-9.5, 5, -10),
-    vec3(-21, 13, -4)
-);
-const vec3 lightcol[nLights] = vec3[](
-    vec3(1.5,1, 0),
-    vec3(1.5, 0.8, 1.2)
-);
+// const int nLights = 3;
+// const vec3 lightpos[nLights] = vec3[](
+    // vec3(-9.5, 5, -10),
+    // vec3(-90.5, 15, 3),
+    // vec3(-21, 13, -4)
+// );
+// const vec3 lightcol[nLights] = vec3[](
+    // vec3(1.5,1, 0),
+    // vec3(1.2,1.2, 3),
+    // vec3(1.5, 0.8, 1.2)
+// );
 
 vec4 depthBuffer() {
     float near = 1.0;
@@ -149,7 +154,6 @@ void main() {
     vec3 light_contrib = vec3(0);
 
     float light_power = 200;
-    float light_radius = 1000.0;
 
     vec3 diffuse_color = Kd;
     vec3 specular_color = Ks * specularTexColor.rgb;
@@ -160,9 +164,10 @@ void main() {
     float NdotV = max(0, dot(N, V));
 
     for(int i = 0; i < nLights; ++i) {
-        vec3 light_vec = lightpos[i] - v_position;
-        vec3 light_color = lightcol[i] * light_power;
+        vec3 light_vec = lights[i].position - v_position;
+        vec3 light_color = lights[i].Ld * light_power;
         float light_dist = length(light_vec);
+        float light_radius = lights[i].radius;
 
         vec3 L = light_vec / light_dist;
         vec3 H = normalize(V + L); 

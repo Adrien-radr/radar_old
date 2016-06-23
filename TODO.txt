@@ -6,6 +6,7 @@ x Freefly Camera
 x Default Texture in Render::
 x Specular textures
 x Normal textures
+o Area light
 
 Normal :
 x GGX -- fixed (smith DFG + burley's disney diffuse)
@@ -14,8 +15,9 @@ o ImGUI
 o Prefiltered cubemap for ambient specular
 o Envmaps (cubemaps)
 o Directional light
+o Use quaternions instead of vec3 for rotation info
 
 Less :
+x Shader Hot reload
 o Material Resources & Manager to avoid having duplicated materials and allow per-material sorting
-o Shader Hot reload
 o Visualisation for point light sources (debug object)

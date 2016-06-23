@@ -11,7 +11,8 @@ namespace Render {
 	void Destroy();
 	int GetCurrentShader();
 	int GetCurrentMesh();
-	//int GetCurrentTexture(Texture::Target t);
+	
+	bool ReloadShaders();
 	void StartTextRendering();
 	void StartPolygonRendering();
 
@@ -53,6 +54,7 @@ namespace Render {
 			UNIFORM_TEXTCOLOR,          // Fragment Uniform, for "text_color", vec4
 
 			UNIFORM_EYEPOS,
+			UNIFORM_NLIGHTS,
 
 			UNIFORM_N                   // Do not use
 		};
@@ -60,13 +62,14 @@ namespace Render {
 		// Uniform Block Locations Descriptors
 		enum UniformBlock {
 			UNIFORMBLOCK_MATERIAL,
+			UNIFORMBLOCK_LIGHTS,
 
 			UNIFORMBLOCK_N				// Do not use 
 		};
 
 		/// Shader Descriptor for shader building.
 		struct Desc {
-			Desc() : vertex_file(""), fragment_file(""), vertex_src(""), fragment_src("") {}
+			Desc() : vertex_file(""), fragment_file(""), vertex_src(""), fragment_src(""), shaderSlot(-1) {}
 
 			/// Shaders are loaded either from file or from text source directly
 			/// If loading from file, vertex_file & fragment_file must be set
@@ -115,6 +118,8 @@ namespace Render {
 
 			std::vector<Uniform> uniforms;
 			std::vector<UniformBlock> uniformblocks;
+
+			int shaderSlot;
 		};
 
 		/// Shader Handle.
@@ -160,9 +165,15 @@ namespace Render {
 	}
 
 	namespace UBO {
-		struct Desc {
-			Desc(f32 *data, u32 data_size) : data(data), size(data_size) {}
+		enum StorageType {
+			ST_STATIC,
+			ST_DYNAMIC
+		};
 
+		struct Desc {
+			Desc(f32 *data, u32 data_size, StorageType t) : sType(t), data(data), size(data_size) {}
+
+			StorageType sType;
 			f32 *data;			//!< pointer on the data to register in the UBO
 			u32 size;			//!< size in bytes of this data
 		};
@@ -170,6 +181,7 @@ namespace Render {
 		typedef int Handle;
 
 		Handle Build(const Desc &desc);
+		void Update(Handle h, const Desc &desc);
 		void Destroy(Handle h);
 		void Bind(Shader::UniformBlock loc, Handle h);
 		bool Exists(Handle h);

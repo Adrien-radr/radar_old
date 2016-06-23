@@ -134,57 +134,9 @@ namespace Render {
 			return false;
 		}
 
-
-		// Load standard shaders in right order
-		Shader::Desc sd_ui_shader;
-		sd_ui_shader.vertex_file = "data/shaders/ui.vs";
-		sd_ui_shader.fragment_file = "data/shaders/ui.fs";
-		sd_ui_shader.attribs[0] = Shader::Desc::Attrib("in_position", 0);
-		sd_ui_shader.attribs[1] = Shader::Desc::Attrib("in_texcoord", 2);
-
-		sd_ui_shader.uniforms.push_back(Shader::Desc::Uniform("ProjMatrix", Shader::UNIFORM_PROJMATRIX));
-		sd_ui_shader.uniforms.push_back(Shader::Desc::Uniform("ModelMatrix", Shader::UNIFORM_MODELMATRIX));
-		sd_ui_shader.uniforms.push_back(Shader::Desc::Uniform("DiffuseTex", Shader::UNIFORM_TEXTURE0));
-		sd_ui_shader.uniforms.push_back(Shader::Desc::Uniform("text_color", Shader::UNIFORM_TEXTCOLOR));
-
-
-		Shader::Handle shader_ui = Shader::Build(sd_ui_shader);
-		if (shader_ui != Shader::SHADER_2D_UI) {
-			LogErr("Error loading UI shader.");
+		if(!ReloadShaders()) {
 			return false;
 		}
-		Shader::Bind(shader_ui);
-		Shader::SendInt(Shader::UNIFORM_TEXTURE0, Texture::TexTarget0);
-
-		Shader::Desc sd_mesh;
-		sd_mesh.vertex_file = "data/shaders/mesh.vs";
-		sd_mesh.fragment_file = "data/shaders/mesh.fs";
-		sd_mesh.attribs[0] = Shader::Desc::Attrib("in_position", 0);
-		sd_mesh.attribs[1] = Shader::Desc::Attrib("in_normal", 1);
-		sd_mesh.attribs[2] = Shader::Desc::Attrib("in_texcoord", 2);
-		sd_mesh.attribs[3] = Shader::Desc::Attrib("in_tangent", 3);
-		sd_mesh.attribs[4] = Shader::Desc::Attrib("in_binormal", 4);
-		sd_mesh.attribs[5] = Shader::Desc::Attrib("in_color", 5);
-
-		sd_mesh.uniforms.push_back(Shader::Desc::Uniform("ModelMatrix", Shader::UNIFORM_MODELMATRIX));
-		sd_mesh.uniforms.push_back(Shader::Desc::Uniform("ViewMatrix", Shader::UNIFORM_VIEWMATRIX));
-		sd_mesh.uniforms.push_back(Shader::Desc::Uniform("ProjMatrix", Shader::UNIFORM_PROJMATRIX));
-		sd_mesh.uniforms.push_back(Shader::Desc::Uniform("DiffuseTex", Shader::UNIFORM_TEXTURE0));
-		sd_mesh.uniforms.push_back(Shader::Desc::Uniform("SpecularTex", Shader::UNIFORM_TEXTURE1));
-		sd_mesh.uniforms.push_back(Shader::Desc::Uniform("NormalTex", Shader::UNIFORM_TEXTURE2));
-		sd_mesh.uniforms.push_back(Shader::Desc::Uniform("eyePosition", Shader::UNIFORM_EYEPOS));
-		sd_mesh.uniformblocks.push_back(Shader::Desc::UniformBlock("Material", Shader::UNIFORMBLOCK_MATERIAL));
-
-
-		Shader::Handle shader_mesh = Shader::Build(sd_mesh);
-		if (shader_mesh != Shader::SHADER_3D_MESH) {
-			LogErr("Error loading Mesh shader.");
-			return false;
-		}
-		Shader::Bind(shader_mesh);
-		Shader::SendInt(Shader::UNIFORM_TEXTURE0, Texture::TexTarget0);
-		Shader::SendInt(Shader::UNIFORM_TEXTURE1, Texture::TexTarget1);
-		Shader::SendInt(Shader::UNIFORM_TEXTURE2, Texture::TexTarget2);
 
 		// Create Default white texture 
 		Texture::Desc t_desc;
@@ -235,6 +187,81 @@ namespace Render {
 
 			// D(LogInfo("Renderer destroyed.");)
 		}
+	}
+
+	bool ReloadShaders() {
+		static bool inited = false;
+
+		int shader_slot = -1;
+
+		if(inited && renderer->shaders[Shader::SHADER_2D_UI].id > 0) {
+			Destroy(Shader::SHADER_2D_UI);
+			shader_slot = Shader::SHADER_2D_UI;
+		}
+
+		// Load standard shaders in right order
+		Shader::Desc sd_ui_shader;
+		sd_ui_shader.vertex_file = "data/shaders/ui.vs";
+		sd_ui_shader.fragment_file = "data/shaders/ui.fs";
+		sd_ui_shader.attribs[0] = Shader::Desc::Attrib("in_position", 0);
+		sd_ui_shader.attribs[1] = Shader::Desc::Attrib("in_texcoord", 2);
+
+		sd_ui_shader.uniforms.push_back(Shader::Desc::Uniform("ProjMatrix", Shader::UNIFORM_PROJMATRIX));
+		sd_ui_shader.uniforms.push_back(Shader::Desc::Uniform("ModelMatrix", Shader::UNIFORM_MODELMATRIX));
+		sd_ui_shader.uniforms.push_back(Shader::Desc::Uniform("DiffuseTex", Shader::UNIFORM_TEXTURE0));
+		sd_ui_shader.uniforms.push_back(Shader::Desc::Uniform("text_color", Shader::UNIFORM_TEXTCOLOR));
+		sd_ui_shader.shaderSlot = shader_slot;
+
+		Shader::Handle shader_ui = Shader::Build(sd_ui_shader);
+		if (shader_ui != Shader::SHADER_2D_UI) {
+			LogErr("Error loading UI shader.");
+			return false;
+		}
+		Shader::Bind(shader_ui);
+		Shader::SendInt(Shader::UNIFORM_TEXTURE0, Texture::TexTarget0);
+
+		shader_slot = -1;
+
+		if(inited && renderer->shaders[Shader::SHADER_3D_MESH].id > 0) {
+			Destroy(Shader::SHADER_3D_MESH);
+			shader_slot = Shader::SHADER_3D_MESH;
+		}
+
+		Shader::Desc sd_mesh;
+		sd_mesh.vertex_file = "data/shaders/mesh.vs";
+		sd_mesh.fragment_file = "data/shaders/mesh.fs";
+		sd_mesh.attribs[0] = Shader::Desc::Attrib("in_position", 0);
+		sd_mesh.attribs[1] = Shader::Desc::Attrib("in_normal", 1);
+		sd_mesh.attribs[2] = Shader::Desc::Attrib("in_texcoord", 2);
+		sd_mesh.attribs[3] = Shader::Desc::Attrib("in_tangent", 3);
+		sd_mesh.attribs[4] = Shader::Desc::Attrib("in_binormal", 4);
+		sd_mesh.attribs[5] = Shader::Desc::Attrib("in_color", 5);
+
+		sd_mesh.uniforms.push_back(Shader::Desc::Uniform("ModelMatrix", Shader::UNIFORM_MODELMATRIX));
+		sd_mesh.uniforms.push_back(Shader::Desc::Uniform("ViewMatrix", Shader::UNIFORM_VIEWMATRIX));
+		sd_mesh.uniforms.push_back(Shader::Desc::Uniform("ProjMatrix", Shader::UNIFORM_PROJMATRIX));
+		sd_mesh.uniforms.push_back(Shader::Desc::Uniform("DiffuseTex", Shader::UNIFORM_TEXTURE0));
+		sd_mesh.uniforms.push_back(Shader::Desc::Uniform("SpecularTex", Shader::UNIFORM_TEXTURE1));
+		sd_mesh.uniforms.push_back(Shader::Desc::Uniform("NormalTex", Shader::UNIFORM_TEXTURE2));
+		sd_mesh.uniforms.push_back(Shader::Desc::Uniform("eyePosition", Shader::UNIFORM_EYEPOS));
+		sd_mesh.uniforms.push_back(Shader::Desc::Uniform("nLights", Shader::UNIFORM_NLIGHTS));
+		sd_mesh.uniformblocks.push_back(Shader::Desc::UniformBlock("Material", Shader::UNIFORMBLOCK_MATERIAL));
+		sd_mesh.uniformblocks.push_back(Shader::Desc::UniformBlock("Lights", Shader::UNIFORMBLOCK_LIGHTS));
+		sd_mesh.shaderSlot = shader_slot;
+
+
+		Shader::Handle shader_mesh = Shader::Build(sd_mesh);
+		if (shader_mesh != Shader::SHADER_3D_MESH) {
+			LogErr("Error loading Mesh shader.");
+			return false;
+		}
+		Shader::Bind(shader_mesh);
+		Shader::SendInt(Shader::UNIFORM_TEXTURE0, Texture::TexTarget0);
+		Shader::SendInt(Shader::UNIFORM_TEXTURE1, Texture::TexTarget1);
+		Shader::SendInt(Shader::UNIFORM_TEXTURE2, Texture::TexTarget2);
+
+		inited = true;
+		return true;
 	}
 
 	int GetCurrentShader() { return renderer->curr_GL_program; }

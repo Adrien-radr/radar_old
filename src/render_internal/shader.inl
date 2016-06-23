@@ -4,12 +4,12 @@ namespace UBO {
 	Handle Build(const Desc &desc) {
 		Data ubo;
 
-		if(desc.size > 0 && desc.data) {
+		if(desc.size > 0 && (desc.sType == ST_DYNAMIC || (desc.sType == ST_STATIC && desc.data))) {
 			GLint last_ubo = renderer->curr_GL_ubo;
 
 			glGenBuffers(1, &ubo.id);
 			glBindBuffer(GL_UNIFORM_BUFFER, ubo.id);
-			glBufferData(GL_UNIFORM_BUFFER, desc.size, desc.data, GL_STATIC_DRAW);
+			glBufferData(GL_UNIFORM_BUFFER, desc.size, desc.data, desc.sType == ST_STATIC ? GL_STATIC_DRAW : GL_DYNAMIC_DRAW);
 			glBindBuffer(GL_UNIFORM_BUFFER, last_ubo);
 
 			int ubo_i = (int)renderer->ubos.size();
@@ -18,6 +18,16 @@ namespace UBO {
 			return ubo_i;
 		} else {
 			return -1;
+		}
+	}
+
+	void Update(Handle h, const Desc &desc) {
+		if(Exists(h) && desc.sType == ST_DYNAMIC) {
+			GLint last_ubo = renderer->curr_GL_ubo;
+			Data &ubo = renderer->ubos[h];
+			glBindBuffer(GL_UNIFORM_BUFFER, ubo.id);
+			glBufferSubData(GL_UNIFORM_BUFFER, 0, desc.size, desc.data);
+			glBindBuffer(GL_UNIFORM_BUFFER, last_ubo);
 		}
 	}
 
@@ -186,11 +196,21 @@ namespace Shader {
 			}
 		}
 
-		// Shader successfully loaded. Increment global counter
-		int s = (int)renderer->shaders.size();
-		renderer->shaders.push_back(shader);
+		// Shader successfully loaded. Increment global counter if no slot is given
+		int slot;
+		int nShaders = (int)renderer->shaders.size();
 
-		return s;
+		if(desc.shaderSlot >= 0) {
+			if(desc.shaderSlot < nShaders) {
+				slot = desc.shaderSlot;
+				renderer->shaders[slot] = shader;
+			}
+		} else {
+			slot = nShaders;
+			renderer->shaders.push_back(shader);
+		}
+
+		return slot;
 	}
 
 	void Destroy(Handle h) {

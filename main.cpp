@@ -7,6 +7,33 @@
 Render::Mesh::Handle test_mesh;
 Object::Handle crysisGuy = -1;
 
+
+bool MakeLights(Scene *scene) {
+	// Lights
+	Light::Desc light;
+	light.position = vec3f(-9.5, 5, -10);
+	light.Ld = vec3f(1.5, 1, 0);
+	light.radius = 1000.f;
+
+	Light::Handle light_h = scene->Add(light);
+	if(light_h < 0) goto err; 
+
+	light.position = vec3f(-90, 15, 3);
+	light.Ld = vec3f(1.2, 1.2, 3);
+	light.radius = 1000.f;
+
+	light_h = scene->Add(light);
+	if(light_h < 0) goto err;
+
+
+	return true;
+	err:
+	{
+		LogErr("Couldn't add light to scene.");
+		return false;
+	}
+}
+
 bool initFunc(Scene *scene) {
 	f32 hWidth = 100;
 	f32 texRepetition = hWidth/10;
@@ -77,6 +104,8 @@ bool initFunc(Scene *scene) {
 	Object::Desc *crysisGuyObj = scene->GetObject(crysisGuy);
 	crysisGuyObj->Translate(vec3f(0,-0.7,-1));
 	
+	if(!MakeLights(scene))
+		return false;
 
 	Render::Mesh::Handle sphere = Render::Mesh::BuildSphere();
 	if(sphere < 0) {

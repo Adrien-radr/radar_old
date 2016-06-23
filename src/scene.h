@@ -28,13 +28,24 @@ struct Camera {
 };
 
 namespace Light {
+	/// Light GPU signature (sent as UBO)
+	struct UniformBufferData {
+		vec3f   position;
+		f32		dummy0;
+		//----
+		vec3f   Ld;
+		f32		radius;
+	};
+
 	/// Light Descriptor
 	struct Desc {
+		Desc() : active(false) {}
+
 		vec3f   position;   //!< 3D position in world-coordinates
-		vec4f   amb_color;  //!< Light Ambient Color. w-coord unused
-		vec4f   diff_color; //!< Light Diffuse Color. w-coord unused
-		f32		radius;     //!< Light radius. Light is 0 at the r
-		bool    active;
+		vec3f   Ld; 		//!< Light Diffuse Color. w-coord unused
+		f32		radius;     //!< Light radius. Light is 0 at the r		
+
+		bool	active;
 	};
 
 	/// Handle representing a light in the scene.
@@ -225,8 +236,16 @@ public:
 	inline bool Exists(Object::Handle h);
 
 private:
+	bool InitLightUniforms();
+
+	/// Update the UBO defining the scene lights and upload it to GPU
+	/// returns the number of active lights to be rendered (to send to each shaders) 
+	u32 AggregateLightUniforms();
+
+private:
 	std::vector<Text::Desc> texts;
 
+	Render::UBO::Handle lightsUBO;
 	std::vector<Light::Desc> lights;
 	std::vector<int> active_lights;
 
