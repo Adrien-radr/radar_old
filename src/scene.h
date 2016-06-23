@@ -224,7 +224,7 @@ public:
 	ModelResource::Handle GetModelResource(const std::string &modelName);
 
 	ModelResource::Handle LoadModelResource(const std::string &fileName);
-	Object::Handle AddFromModel(const ModelResource::Handle &h);
+	Object::Handle InstanciateModel(const ModelResource::Handle &h);
 	Object::Handle Add(const Object::Desc &d);
 	Light::Handle Add(const Light::Desc &d);
 	Text::Handle Add(const Text::Desc &d);

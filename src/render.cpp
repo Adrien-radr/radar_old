@@ -37,7 +37,8 @@ namespace Render {
 
 	namespace Texture {
 		// loaded in Render::Init
-		Handle DEFAULT_TEXTURE = -1;
+		Handle DEFAULT_DIFFUSE = -1;
+		Handle DEFAULT_NORMAL = -1;
 	}
 
 	namespace Shader {
@@ -140,10 +141,17 @@ namespace Render {
 
 		// Create Default white texture 
 		Texture::Desc t_desc;
-		t_desc.name = "data/dummy.png";
-		Texture::DEFAULT_TEXTURE = Texture::Build(t_desc);
-		if(Texture::DEFAULT_TEXTURE < 0) {
-			LogErr("Error creating default dummy texture.");
+		t_desc.name = "data/default_diff.png";
+		Texture::DEFAULT_DIFFUSE = Texture::Build(t_desc);
+		if(Texture::DEFAULT_DIFFUSE < 0) {
+			LogErr("Error creating default diffuse texture.");
+			return false;
+		}
+
+		t_desc.name = "data/default_nrm.png";
+		Texture::DEFAULT_NORMAL = Texture::Build(t_desc);
+		if(Texture::DEFAULT_NORMAL < 0) {
+			LogErr("Error creating default normal texture.");
 			return false;
 		}
 
@@ -287,7 +295,7 @@ namespace Render {
 				break;
 			}
 			if (resources[i].name == name) {
-				LogDebug("Mesh resource ", name, " found. Returning its handle.");
+				// LogDebug("Mesh resource ", name, " found. Returning its handle.");
 				free_index = resources[i].handle;
 				return true;
 			}

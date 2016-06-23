@@ -23,6 +23,34 @@ bool MakeLights(Scene *scene) {
 	light.radius = 1000.f;
 
 	light_h = scene->Add(light);
+	if(light_h < 0) goto err; 
+
+	light.position = vec3f(90, 15, 3);
+	light.Ld = vec3f(1.2, 1.2, 3);
+	light.radius = 1000.f;
+
+	light_h = scene->Add(light);
+	if(light_h < 0) goto err;
+
+	light.position = vec3f(-40.5, 8, 10);
+	light.Ld = vec3f(0.8, 1.2, 1);
+	light.radius = 1000.f;
+
+	light_h = scene->Add(light);
+	if(light_h < 0) goto err;
+
+	light.position = vec3f(5, 10, 10);
+	light.Ld = vec3f(1.5, 0.8, 1.2);
+	light.radius = 1000.f;
+
+	light_h = scene->Add(light);
+	if(light_h < 0) goto err;
+
+	light.position = vec3f(-20, 30, 0);
+	light.Ld = vec3f(3, 3, 3);
+	light.radius = 1000.f;
+
+	light_h = scene->Add(light);
 	if(light_h < 0) goto err;
 
 
@@ -87,7 +115,7 @@ bool initFunc(Scene *scene) {
 		return false;
 	}
 
-	Object::Handle sponza = scene->AddFromModel(sponzaModel);
+	Object::Handle sponza = scene->InstanciateModel(sponzaModel);
 	if(sponza < 0) {
 		LogErr("Error creating sponza scene");
 		return false;
@@ -96,7 +124,7 @@ bool initFunc(Scene *scene) {
 	sponzaObj->Scale(0.08f);
 	sponzaObj->Translate(vec3f(0,-0.9,0));
 
-	crysisGuy = scene->AddFromModel(crysisModel);
+	crysisGuy = scene->InstanciateModel(crysisModel);
 	if(crysisGuy < 0) {
 		LogErr("Error creating crysis Guy.");
 		return false;
@@ -137,18 +165,22 @@ bool initFunc(Scene *scene) {
 	}
 
 	const int sphere_n = 10;
-	for(int j = 0; j < 1; ++j) {
+	const int sphere_j = 8;
+	for(int j = 0; j < sphere_j; ++j) {
 		for(int i = 0; i < sphere_n; ++i) {
+			f32 fi = pow((i+1) / (f32)sphere_n, 0.4);
+			f32 fj = j / (f32)sphere_j;
+
 			odesc.ClearSubmeshes();
 
 			odesc.Identity();
-			odesc.Translate(vec3f(2 - i * 3.f, 0.f, 2 -j * 3.f));
+			odesc.Translate(vec3f(2 - i * 3.f, 0.f, 8 - j * 3.f));
 			odesc.Rotate(vec3f(0, M_PI_OVER_TWO * i, 0));
 
-			Material::Desc mat_desc(col3f(0.0225, 0.0735, 0.19125),
-									col3f(0.0828, 0.17048, 1.9038),
-									col3f(0.08601, 0.13762, 0.25678),
-									0.001f + (0.974f/sphere_n) * (i+1));
+			Material::Desc mat_desc(col3f(0.0225 + fj * 0.16, 0.0735, 0.19125 - fj * 0.16),
+									col3f(0.0828 + fj * 1.05, 0.17048, 1.9038 - fj * 1.05),
+									col3f(0.08601+ fj * 0.16, 0.13762, 0.25678- fj * 0.16),
+									0.001f + 0.984f * fi);
 			mat_desc.normalTexPath = "data/wave_nm.png";
 
 			Material::Handle mat = scene->Add(mat_desc);

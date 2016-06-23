@@ -260,7 +260,7 @@ void Scene::UpdateView() {
 void Scene::Update(float dt) {
 	Device &device = GetDevice();
 
-	// 
+	// Ctrl+R to hot reload shaders
 	if(device.IsKeyHit(K_R) & device.IsKeyDown(K_LControl)) {
 		Render::ReloadShaders();
 		camera.hasMoved = true; // to reupload view matrices
@@ -354,6 +354,9 @@ void Scene::Render() {
 
 	// Render::StartPolygonRendering();
 
+
+	// glEnable(GL_FRAMEBUFFER_SRGB);
+
 	// Update light uniform buffer
 	u32 numLights = AggregateLightUniforms();
 
@@ -388,6 +391,8 @@ void Scene::Render() {
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 	}
 
+	// glDisable(GL_FRAMEBUFFER_SRGB);
+
 	Render::StartTextRendering();
 	for (u32 i = 0; i < texts.size(); ++i) {
 		Text::Desc &text = texts[i];
@@ -411,7 +416,7 @@ void Scene::SetTextString(Text::Handle h, const std::string &str) {
 }
 
 
-Object::Handle Scene::AddFromModel(const ModelResource::Handle &h) {
+Object::Handle Scene::InstanciateModel(const ModelResource::Handle &h) {
 	size_t index = objects.size();
 	ModelResource::Data &model = models[h];
 
@@ -538,7 +543,7 @@ Material::Handle Scene::Add(const Material::Desc &d) {
 		mat.diffuseTex = t_h;
 	} else {
 		// Default diffuse texture
-		mat.diffuseTex = Render::Texture::DEFAULT_TEXTURE;
+		mat.diffuseTex = Render::Texture::DEFAULT_DIFFUSE;
 	}
 
 	if(d.specularTexPath != "") {
@@ -551,7 +556,7 @@ Material::Handle Scene::Add(const Material::Desc &d) {
 		// LogDebug("Loaded specular texture at idx ", t_h);
 		mat.specularTex = t_h;
 	} else {
-		mat.specularTex = Render::Texture::DEFAULT_TEXTURE;	 // 1 specular, multiplied by the mat.shininess
+		mat.specularTex = Render::Texture::DEFAULT_DIFFUSE;	 // 1 specular, multiplied by the mat.shininess
 	}
 
 	if(d.normalTexPath != "") {
@@ -563,7 +568,7 @@ Material::Handle Scene::Add(const Material::Desc &d) {
 		}
 		mat.normalTex = t_h;
 	} else {
-		mat.normalTex = Render::Texture::DEFAULT_TEXTURE;
+		mat.normalTex = Render::Texture::DEFAULT_NORMAL;
 	}
 
 	materials.push_back(mat);
@@ -575,12 +580,6 @@ Object::Desc *Scene::GetObject(Object::Handle h) {
 		return &objects[h];
 	return nullptr;
 }
-
-// ModelResource::Data *Scene::GetModelInstance(ModelResource::Handle h) {
-// 	if(Exists(h))
-// 		return &models[h];
-// 	return nullptr;
-// }
 
 bool Scene::Exists(Object::Handle h) {
 	return h >= 0 && h < (int)objects.size();

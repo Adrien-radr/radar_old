@@ -115,19 +115,6 @@ uniform sampler2D NormalTex;    // index 2
 
 out vec4 frag_color;
 
-
-// const int nLights = 3;
-// const vec3 lightpos[nLights] = vec3[](
-    // vec3(-9.5, 5, -10),
-    // vec3(-90.5, 15, 3),
-    // vec3(-21, 13, -4)
-// );
-// const vec3 lightcol[nLights] = vec3[](
-    // vec3(1.5,1, 0),
-    // vec3(1.2,1.2, 3),
-    // vec3(1.5, 0.8, 1.2)
-// );
-
 vec4 depthBuffer() {
     float near = 1.0;
     float far = 100.0;
@@ -191,7 +178,7 @@ void main() {
     }
 
 
-    vec3 finalcol = light_contrib + Ka;// + diffuseTexColor * 0.00001;
+    vec3 finalcol = light_contrib + Ka;
 
     frag_color = vec4(finalcol, 1) *  // lighting
                  1 * //(0.3 + 0.7 * v_color) *  // color

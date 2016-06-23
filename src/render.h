@@ -228,8 +228,9 @@ namespace Render {
 		/// Returns true if the given texture exists in renderer
 		bool Exists(Handle h);
 
-		// Default 1x1 white texture
-		extern Handle DEFAULT_TEXTURE;
+		// Default 1x1 textures
+		extern Handle DEFAULT_DIFFUSE;	// white for diffuse
+		extern Handle DEFAULT_NORMAL;	// (127, 255, 127) for normal
 	}
 
 
