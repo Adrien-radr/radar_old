@@ -1,6 +1,6 @@
 {
-    "iWindowWidth" : 1024,
-    "iWindowHeight" : 768,
+    "iWindowWidth" : 1280,
+    "iWindowHeight" : 720,
     "iMSAA" : 0,
     "bFullScreen" : 0,
     "bVSync" : 1,
@@ -9,6 +9,8 @@
 
     "fCameraSpeedBase" : 10.0,
     "fCameraSpeedMult" : 2.0,
-    "vCameraPosition" : [10, 8, -15],
-    "vCameraTarget" : [0, 5, -5]
+    "vCameraPosition" : [73.3, 11.5, 35.2],
+    "vCameraTarget" : [72.7, 11.3, 34.4],
+    "old vCameraPosition" : [10, 8, -15],
+    "old vCameraTarget" : [0, 5, -5]
 }

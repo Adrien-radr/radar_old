@@ -6,53 +6,63 @@
 
 Render::Mesh::Handle test_mesh;
 Object::Handle crysisGuy = -1;
-
+AreaLight::Handle alh = -1;
 
 bool MakeLights(Scene *scene) {
+	PointLight::Desc light;
+	AreaLight::Desc al;
+	PointLight::Handle light_h;
+
 	// Lights
-	Light::Desc light;
-	light.position = vec3f(-9.5, 5, -10);
+	light.position = vec3f(9.5, 5, 10);
 	light.Ld = vec3f(1.5, 1, 0);
 	light.radius = 1000.f;
 
-	Light::Handle light_h = scene->Add(light);
+	light_h = scene->Add(light);
 	if(light_h < 0) goto err; 
 
-	light.position = vec3f(-90, 15, 3);
+	light.position = vec3f(90, 15, -3);
 	light.Ld = vec3f(1.2, 1.2, 3);
 	light.radius = 1000.f;
 
 	light_h = scene->Add(light);
 	if(light_h < 0) goto err; 
 
-	light.position = vec3f(90, 15, 3);
+	light.position = vec3f(-90, 15, -3);
 	light.Ld = vec3f(1.2, 1.2, 3);
 	light.radius = 1000.f;
 
 	light_h = scene->Add(light);
 	if(light_h < 0) goto err;
 
-	light.position = vec3f(-40.5, 8, 10);
+	light.position = vec3f(40.5, 8, -10);
 	light.Ld = vec3f(0.8, 1.2, 1);
 	light.radius = 1000.f;
 
 	light_h = scene->Add(light);
 	if(light_h < 0) goto err;
 
-	light.position = vec3f(5, 10, 10);
+	light.position = vec3f(-5, 10, -10);
 	light.Ld = vec3f(1.5, 0.8, 1.2);
 	light.radius = 1000.f;
 
 	light_h = scene->Add(light);
 	if(light_h < 0) goto err;
 
-	light.position = vec3f(-20, 30, 0);
+	light.position = vec3f(20, 30, 0);
 	light.Ld = vec3f(3, 3, 3);
 	light.radius = 1000.f;
 
 	light_h = scene->Add(light);
 	if(light_h < 0) goto err;
 
+	al.position = vec3f(60, 1, 0);
+	al.width = vec2f(10.f, 2.f);
+	al.rotation = vec3f(0, 0, 0);
+	al.Ld = vec3f(1,0.8,0);
+
+	alh = scene->Add(al);
+	if(alh < 0) goto area_err;
 
 	return true;
 	err:
@@ -60,11 +70,19 @@ bool MakeLights(Scene *scene) {
 		LogErr("Couldn't add light to scene.");
 		return false;
 	}
+
+	area_err: {
+		LogErr("Couldn't add area light to scene.");
+		return false;
+	}
 }
 
 bool initFunc(Scene *scene) {
-	f32 hWidth = 100;
-	f32 texRepetition = hWidth/10;
+	if(!MakeLights(scene))
+		return false;
+
+	f32 hWidth = 200;
+	f32 texRepetition = hWidth/5;
 	f32 pos[] = {
 		-hWidth, 0, -hWidth,
 		-hWidth, 0, hWidth,
@@ -109,6 +127,7 @@ bool initFunc(Scene *scene) {
 		return false;
 	}
 
+#if 0
 	ModelResource::Handle sponzaModel = scene->LoadModelResource("data/sponza/sponza.obj");
 	if(sponzaModel < 0) {
 		LogErr("Error loading sponza.");
@@ -123,17 +142,16 @@ bool initFunc(Scene *scene) {
 	Object::Desc *sponzaObj = scene->GetObject(sponza);
 	sponzaObj->Scale(0.08f);
 	sponzaObj->Translate(vec3f(0,-0.9,0));
-
+	
+#endif
 	crysisGuy = scene->InstanciateModel(crysisModel);
 	if(crysisGuy < 0) {
 		LogErr("Error creating crysis Guy.");
 		return false;
 	}
 	Object::Desc *crysisGuyObj = scene->GetObject(crysisGuy);
-	crysisGuyObj->Translate(vec3f(0,-0.7,-1));
+	crysisGuyObj->Translate(vec3f(0,-0.7,1));
 	
-	if(!MakeLights(scene))
-		return false;
 
 	Render::Mesh::Handle sphere = Render::Mesh::BuildSphere();
 	if(sphere < 0) {
@@ -145,8 +163,9 @@ bool initFunc(Scene *scene) {
 	{
 		odesc.ClearSubmeshes();
 
-		Material::Desc mat_desc(col3f(0.1,0.1,0.1), col3f(.5,.5,.5), col3f(1,1,1), 0.4, "data/concrete.png");
-		mat_desc.normalTexPath = "data/concrete_nm.png";
+		Material::Desc mat_desc(col3f(0.1,0.1,0.1), col3f(1,1,1), col3f(1,1,1), 1);//, "data/sponza/textures/sponza_floor_a_diff.png");
+		// mat_desc.normalTexPath = "data/sponza/textures/sponza_floor_a_nrm.png";
+		mat_desc.specularTexPath = "data/sponza/textures/sponza_floor_a_spec.png";
 		Material::Handle mat = scene->Add(mat_desc);
 		if(mat < 0) {
 			LogErr("Error adding material");
@@ -174,7 +193,7 @@ bool initFunc(Scene *scene) {
 			odesc.ClearSubmeshes();
 
 			odesc.Identity();
-			odesc.Translate(vec3f(2 - i * 3.f, 0.f, 8 - j * 3.f));
+			odesc.Translate(vec3f(-2 + i * 3.f, 0.f, -8 + j * 3.f));
 			odesc.Rotate(vec3f(0, M_PI_OVER_TWO * i, 0));
 
 			Material::Desc mat_desc(col3f(0.0225 + fj * 0.16, 0.0735, 0.19125 - fj * 0.16),
@@ -198,7 +217,6 @@ bool initFunc(Scene *scene) {
 			}
 		}
 	}
-
 	return true;
 }
 
@@ -206,9 +224,17 @@ void updateFunc(Scene *scene, float dt) {
 	// const Device &device = GetDevice();
 	// vec2i mouse_coord = vec2i(device.GetMouseX(), device.GetMouseY());
 
+#if 0
 	Object::Desc *model = scene->GetObject(crysisGuy);
-	model->Translate(vec3f(-1 * dt,0,0));
+	model->Translate(vec3f(1 * dt,0,0));
 	model->Rotate(vec3f(0,M_PI * 0.5 * dt,0));
+#endif
+
+	AreaLight::Desc *light = scene->GetLight(alh);
+	if(light) {
+		light->rotation.y += dt * M_PI * 0.5f;
+	}
+
 }
 
 void renderFunc(Scene *scene) {

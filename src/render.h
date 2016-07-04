@@ -54,7 +54,8 @@ namespace Render {
 			UNIFORM_TEXTCOLOR,          // Fragment Uniform, for "text_color", vec4
 
 			UNIFORM_EYEPOS,
-			UNIFORM_NLIGHTS,
+			UNIFORM_NPOINTLIGHTS,
+			UNIFORM_NAREALIGHTS,
 
 			UNIFORM_N                   // Do not use
 		};
@@ -62,7 +63,8 @@ namespace Render {
 		// Uniform Block Locations Descriptors
 		enum UniformBlock {
 			UNIFORMBLOCK_MATERIAL,
-			UNIFORMBLOCK_LIGHTS,
+			UNIFORMBLOCK_POINTLIGHTS,
+			UNIFORMBLOCK_AREALIGHTS,
 
 			UNIFORMBLOCK_N				// Do not use 
 		};
@@ -119,6 +121,8 @@ namespace Render {
 			std::vector<Uniform> uniforms;
 			std::vector<UniformBlock> uniformblocks;
 
+			std::vector<u32> linkedLibraries;
+
 			int shaderSlot;
 		};
 
@@ -134,6 +138,9 @@ namespace Render {
 		/// Read the ShaderDesc comments above to understand what to give to this function
 		/// Returns the handle of the created shader. Or -1 if an error occured.
 		Handle Build(const Desc &desc);
+
+		/// Build a vertex or fragment shader from source depending on type
+		u32 /*GLuint*/ BuildShader(const char *src, int /*GLenum*/ type);
 
 		/// Deallocate GL data
 		void Destroy(Handle h);

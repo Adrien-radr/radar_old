@@ -1,101 +1,55 @@
 #version 400
-#extension GL_ARB_shading_language_include : require
 
-#include "lighting.glsl"
-// ######################################################
 #define M_PI     3.14159265358
 #define M_INV_PI 0.31830988618
 
-#define IOR_IRON 2.9304
-#define IOR_POLYSTYREN 1.5916
+struct PointLight {
+    vec3  position;
+    vec3  Ld;
+    float radius;
+};
 
-#define IOR_GOLD 0.27049
-#define IOR_SILVER 0.15016
-#define SCOLOR_GOLD      vec3(1.000000, 0.765557, 0.336057)
-#define SCOLOR_SILVER    vec3(0.971519, 0.959915, 0.915324)
-#define SCOLOR_ALUMINIUM vec3(0.913183, 0.921494, 0.924524)
-#define SCOLOR_COPPER    vec3(0.955008, 0.637427, 0.538163)
+struct AreaLight {
+    vec3  position;
+    vec3  dirx;
+    float hwidthx;
+    vec3  diry;
+    float hwidthy;
+    vec3  Ld;
+    vec4  plane;
+};
+void InitRectPoints(AreaLight rect, out vec3 points[4]) {
+    vec3 ex = rect.hwidthx * rect.dirx;
+    vec3 ey = rect.hwidthy * rect.diry;
 
-float fresnel_F0(float n1, float n2) {
-    float f0 = (n1 - n2)/(n1 + n2);
-    return f0 * f0;
+    points[0] = rect.position - ex - ey;
+    points[1] = rect.position + ex - ey;
+    points[2] = rect.position + ex + ey;
+    points[3] = rect.position - ex + ey;
 }
 
-vec3 F_schlick(vec3 f0, float f90, float u) {
-    return f0 + (f90 - f0) * pow(1.0 - u, 5.0);
-}
+// FWD Decl of functions in lib.glsl
+vec3 GGX(float NdotL, float NdotV, float NdotH, float LdotH, float roughness, vec3 F0);
+float diffuseBurley(float NdotL, float NdotV, float LdotH, float roughness);
+float getDistanceAttenuation(vec3 light_vec, float invSqrAttRadius);
+vec3 LTCEvaluate(vec3 N, vec3 V, vec3 P, mat3 Minv, vec3 points[4], bool twoSided);
+vec3 FetchCorrectedNormal(sampler2D nrmTex, vec2 texcoord, mat3 TBN, vec3 V);
 
-float G_schlick_GGX(float k, float dotVal) {
-    return dotVal / (dotVal * (1 - k) + k);
-}
-
-vec3 GGX(float NdotL, float NdotV, float NdotH, float LdotH, float roughness, vec3 F0) {
-    float alpha2 = roughness * roughness;
-
-    // F 
-    vec3 F = F_schlick(F0, 1.0, LdotH);
-
-    // D (Trowbridge-Reitz). Divide by PI at the end
-    float denom = NdotH * NdotH * (alpha2 - 1.0) + 1.0;
-    float D = alpha2 / (M_PI * denom * denom);
-
-    // G (Smith GGX - Height-correlated)
-    float lambda_GGXV = NdotL * sqrt((-NdotV * alpha2 + NdotV) * NdotV + alpha2);
-    float lambda_GGXL = NdotV * sqrt((-NdotL * alpha2 + NdotL) * NdotL + alpha2);
-    // float G = G_schlick_GGX(k, NdotL) * G_schlick_GGX(k, NdotV);
-
-    // optimized G(NdotL) * G(NdotV) / (4 NdotV NdotL)
-    // float G = 1.0 / (4.0 * (NdotL * (1 - k) + k) * (NdotV * (1 - k) + k));
-    float G = 0.5 / (lambda_GGXL + lambda_GGXV);
-
-    return D * F * G;
-}
-
-// Renormalized version of Burley's Disney Diffuse factor, used by Frostbite
-float diffuse_Burley(float NdotL, float NdotV, float LdotH, float roughness) {
-    float energyBias = mix(0.0, 0.5, roughness);
-    float energyFactor = mix(1.0, 1.0 / 1.51, roughness);
-    float fd90 = energyBias + 2.0 * LdotH * LdotH * roughness;
-    vec3 f0 = vec3(1.0);
-    float lightScatter = F_schlick(f0, fd90, NdotL).r;
-    float viewScatter = F_schlick(f0, fd90, NdotV).r;
-
-    return lightScatter * viewScatter * energyFactor * M_INV_PI;
-}
-
-float diffuse_Lambert(float NdotL) {
-    return NdotL * M_INV_PI;
-}
-
-float smoothDistanceAttenuation(float sqrDist, float invSqrAttRadius) {
-    float factor = sqrDist * invSqrAttRadius;
-    float smoothFactor = clamp(1.0 - factor * factor, 0.0, 1.0);
-    return smoothFactor * smoothFactor;
-}
-
-float getDistanceAttenuation(vec3 light_vec, float invSqrAttRadius) {
-    float sqrDist = dot(light_vec, light_vec);
-    float attenuation = 1.0 / (max(sqrDist, 0.0001));
-    attenuation *= smoothDistanceAttenuation(sqrDist, invSqrAttRadius);
-
-    return attenuation;
-}
-// ######################################################
-
+// INPUTS
 in vec4 v_color;
 in vec3 v_position;
 in vec3 v_normal;
 in vec2 v_texcoord;
 in mat3 v_TBN;
+in vec3 v_viewPosition;
+in vec3 v_viewNormal;
 
-struct Light {
-    vec3 position;
-    vec3 Ld;
-    float radius;
+layout (std140) uniform PointLights {
+    PointLight plights[8];
 };
 
-layout (std140) uniform Lights {
-    Light lights[8];
+layout (std140) uniform AreaLights {
+    AreaLight alights[8];
 };
 
 layout (std140) uniform Material {
@@ -105,7 +59,8 @@ layout (std140) uniform Material {
     float shininess;
 };
 
-uniform int nLights;
+uniform int nPointLights;
+uniform int nAreaLights;
 uniform vec3 eyePosition;
 
 // Texture buffers
@@ -124,37 +79,16 @@ vec4 depthBuffer() {
     return vec4(vec3(z), 1.0);
 }
 
-void main() {
-    // texturing
-    vec3 diffuseTexColor = texture2D(DiffuseTex, v_texcoord).rgb;
-    vec4 specularTexColor = texture2D(SpecularTex, v_texcoord);
-    vec3 normalTexColor = texture2D(NormalTex, v_texcoord).rgb;
-
-    // Normal vector from Normalmap
-    // vec3 N = normalize(normalTexColor * 2.0 - 1.0);
-    // N = normalize(v_TBN * N);
-    vec3 objN = normalize(normalTexColor * 2.0 - 1.0);
-    objN = normalize(v_TBN * objN);
-    // objN += (v_TBN[1] + 1.0 * 0.5);
-
-    // lighting
-    vec3 light_contrib = vec3(0);
+vec3 pointLightContribution(vec3 N, vec3 V, float NdotV, vec3 Kd, vec3 Ks, float roughness) {
+    vec3 contrib = vec3(0);
 
     float light_power = 200;
 
-    vec3 diffuse_color = Kd;
-    vec3 specular_color = Ks * specularTexColor.rgb;
-    float roughness = 1.0 - (shininess * specularTexColor.r);
-
-    vec3 N = objN;//normalize(v_normal);
-    vec3 V = normalize(eyePosition - v_position);
-    float NdotV = max(0, dot(N, V));
-
-    for(int i = 0; i < nLights; ++i) {
-        vec3 light_vec = lights[i].position - v_position;
-        vec3 light_color = lights[i].Ld * light_power;
+    for(int i = 0; i < nPointLights; ++i) {
+        vec3 light_vec = plights[i].position - v_position;
+        vec3 light_color = plights[i].Ld * light_power;
         float light_dist = length(light_vec);
-        float light_radius = lights[i].radius;
+        float light_radius = plights[i].radius;
 
         vec3 L = light_vec / light_dist;
         vec3 H = normalize(V + L); 
@@ -167,18 +101,71 @@ void main() {
             float att = 1;
             att *= getDistanceAttenuation(light_vec, 1.0/(light_radius*light_radius));
 
-            vec3 Fd = diffuse_color * diffuse_Burley(NdotL, NdotV, LdotH, roughness);
-            vec3 Fr = GGX(NdotL, NdotV, NdotH, LdotH, roughness, specular_color);
+            vec3 Fd = Kd * diffuseBurley(NdotL, NdotV, LdotH, roughness);
+            vec3 Fr = GGX(NdotL, NdotV, NdotH, LdotH, roughness, Ks);
             // vec3 Fd = diffuse_color * diffuse_Lambert(NdotL);
             // vec3 R = 2.0 * NdotL * N - L;
             // vec3 Fr = F0 * NdotL * pow(max(0, dot(V, R)), (1.0/(roughness*roughness)));
 
-            light_contrib += light_color * att * (Fd + Fr) * NdotL;
+            contrib += light_color * att * (Fd + Fr) * NdotL;
         }
     }
 
+    return contrib;
+}
 
-    vec3 finalcol = light_contrib + Ka;
+vec3 areaLightContribution(vec3 N, vec3 V, float NdotV, vec3 Kd, vec3 Ks, float roughness) {
+    vec3 contrib = vec3(0);
+    vec3 points[4];
+
+    vec3 viewV = normalize(-v_viewPosition);
+
+    for(int i = 0; i < nAreaLights; ++i) {
+        vec3 light_vec = alights[i].position - v_position;
+        float light_dist = length(light_vec);
+        vec3 L = light_vec / light_dist;
+        vec3 pN = alights[i].plane.xyz;
+
+        InitRectPoints(alights[i], points);
+
+        // diffuse
+        mat3 Minv = mat3(1);
+        contrib += 1 * alights[i].Ld * LTCEvaluate(N, V, v_position, Minv, points, false);
+
+        // specular
+        // Minv = LTC_Matrix()
+    }
+
+    contrib /= 2.0 * M_PI;
+
+    return contrib;
+}
+
+void main() {
+    // texturing
+    vec3 diffuseTexColor = texture2D(DiffuseTex, v_texcoord).rgb;
+    vec4 specularTexColor = texture2D(SpecularTex, v_texcoord);
+    vec3 normalTexColor = texture2D(NormalTex, v_texcoord).rgb;
+
+    // lighting
+    vec3 Li = vec3(0);
+
+    vec3 diffuse_color = Kd;
+    vec3 specular_color = Ks * specularTexColor.rgb;
+    float roughness = 1.0 - (shininess * specularTexColor.r);
+
+    // Normal vector from Normalmap
+    // vec3 objN = normalize(normalTexColor * 2.0 - 1.0);
+    // objN = normalize(v_TBN * objN);
+
+    vec3 V = normalize(eyePosition - v_position);
+    vec3 N = FetchCorrectedNormal(NormalTex, v_texcoord, v_TBN, V);
+    float NdotV = max(0, dot(N, V));
+
+    Li += pointLightContribution(N, V, NdotV, diffuse_color, specular_color, roughness);
+    Li += areaLightContribution(N, V, NdotV, diffuse_color, specular_color, roughness);
+
+    vec3 finalcol = Ka + Li;
 
     frag_color = vec4(finalcol, 1) *  // lighting
                  1 * //(0.3 + 0.7 * v_color) *  // color

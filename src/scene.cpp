@@ -4,7 +4,6 @@
 #include <algorithm>
 
 #define SCENE_MAX_LIGHTS 64
-#define SCENE_MAX_ACTIVE_LIGHTS 8
 #define SCENE_MAX_OBJECTS 2048
 #define SCENE_MAX_TEXTS 64
 
@@ -102,20 +101,15 @@ namespace Object {
 	}
 
 	void Desc::Translate(const vec3f &t) {
-		// model_matrix *= mat4f::Translation(t);
 		position += t;
 	}
 
-	void Desc::Scale(f32 s) {
-		// model_matrix *= mat4f::Scale(s);
+	void Desc::Scale(const vec3f &s) {
 		scale *= s;
 	}
 
 	void Desc::Rotate(const vec3f &r) {
-		// model_matrix = model_matrix.RotateX(r.x);
-		// model_matrix *= mat4f::RotationY(r.y);
 		rotation += r;
-		// model_matrix = model_matrix.RotateZ(r.z);
 	}
 		
 	// void Desc::SetPosition(const vec2f &pos) {
@@ -189,11 +183,13 @@ bool Scene::Init(SceneInitFunc initFunc, SceneUpdateFunc updateFunc, SceneRender
 	UpdateView();
 
 	texts.reserve(256);
-	lights.reserve(32);
+	pointLights.reserve(32);
+	areaLights.reserve(32);
 	objects.reserve(1024);
 	materials.reserve(64);
 	for(u32 i = 0; i < SCENE_MAX_ACTIVE_LIGHTS; ++i) {
-		active_lights.push_back(-1);
+		active_pointLights[i] = -1;
+		active_areaLights[i] = -1;
 	}
 
 	// Fps text
@@ -240,7 +236,8 @@ bool Scene::Init(SceneInitFunc initFunc, SceneUpdateFunc updateFunc, SceneRender
 }
 
 void Scene::Clean() {
-	lights.clear();
+	pointLights.clear();
+	areaLights.clear();
 	objects.clear();
 	texts.clear();
 	materials.clear();
@@ -310,23 +307,123 @@ void Scene::Update(float dt) {
 }
 
 bool Scene::InitLightUniforms() {
-	Render::UBO::Desc ubo_desc(NULL, SCENE_MAX_ACTIVE_LIGHTS * sizeof(Light::UniformBufferData), Render::UBO::ST_DYNAMIC);
-	lightsUBO = Render::UBO::Build(ubo_desc);
-	if(lightsUBO < 0) {
-		LogErr("Error creating light's UBO.");
+	// Point Lights
+	Render::UBO::Desc ubo_desc(NULL, SCENE_MAX_ACTIVE_LIGHTS * sizeof(PointLight::UniformBufferData), Render::UBO::ST_DYNAMIC);
+	pointLightsUBO = Render::UBO::Build(ubo_desc);
+	if(pointLightsUBO < 0) {
+		LogErr("Error creating point light's UBO.");
+		return false;
+	}
+
+	// Area Lights
+	Render::UBO::Desc area_ubo_desc(NULL, SCENE_MAX_ACTIVE_LIGHTS * sizeof(AreaLight::UniformBufferData), Render::UBO::ST_DYNAMIC);
+	areaLightsUBO = Render::UBO::Build(area_ubo_desc);
+	if(areaLightsUBO < 0) {
+		LogErr("Error creating area light's UBO.");
 		return false;
 	}
 
 	return true;
 }
 
-u32 Scene::AggregateLightUniforms() {
-	static Light::UniformBufferData fullUBO[SCENE_MAX_ACTIVE_LIGHTS];
+u32 Scene::AggregateAreaLightUniforms() {
+	static AreaLight::UniformBufferData fullUBO[SCENE_MAX_ACTIVE_LIGHTS];
 
 	u32 numActiveLights = 0;
-	for (u32 l = 0; l < active_lights.size(); ++l) {
-		if (active_lights[l] < 0) break;
-		const Light::Desc &src = lights[active_lights[l]];
+	for (u32 l = 0; l < SCENE_MAX_ACTIVE_LIGHTS; ++l) {
+		if (active_areaLights[l] < 0) break;
+		AreaLight::Desc &src = areaLights[active_areaLights[l]];
+
+		++numActiveLights;
+
+		fullUBO[l].position = src.position;
+		fullUBO[l].Ld = src.Ld;
+		fullUBO[l].hwidthx = src.width.x * 0.5f;
+		fullUBO[l].hwidthy = src.width.y * 0.5f;
+
+		mat4f m = mat4f::Scale(vec3f(src.width.x, src.width.y, 1));
+		m = m.RotateX(src.rotation.x);
+		m = m.RotateY(src.rotation.y);
+		m = m.RotateZ(src.rotation.z);
+
+
+		fullUBO[l].dirx = m * vec3f(1,0,0);
+		fullUBO[l].dirx.Normalize();
+		fullUBO[l].diry = m * vec3f(0,1,0);
+		fullUBO[l].dirx.Normalize();
+
+		vec3f N = fullUBO[l].dirx.Cross(fullUBO[l].diry);
+		fullUBO[l].plane = vec4f(N.x, N.y, N.z, - N.Dot(src.position));
+
+		// Create mesh representation
+		if(src.fixture < 0) {
+			f32 pos[] = { 
+				-0.5, -0.5, 0,
+				0.5, -0.5, 0,
+				0.5, 0.5, 0,
+				-0.5, 0.5, 0
+			};
+			f32 normals[] = {
+				0, 0, 1,
+				0, 0, 1,
+				0, 0, 1,
+				0, 0, 1
+			};
+			u32 idx[] = { 0, 1, 2, 0, 2, 3, 3, 2, 1, 3, 1, 0 };
+			Render::Mesh::Desc md("Quad", false, 12, idx, 4, pos, normals);
+			Render::Mesh::Handle mh = Render::Mesh::Build(md);
+			if(mh < 0) {
+				LogErr("err");
+				continue;
+			}
+
+			// TODO : other shader for light fixtures
+			Object::Desc od(Render::Shader::SHADER_3D_MESH);
+			Material::Desc matd(col3f(src.Ld.x, src.Ld.y, src.Ld.z), col3f(0,0,0), col3f(0,0,0), 0);
+			Material::Handle math = Add(matd);
+			if(math < 0) {
+				LogErr("mat err");
+				continue;
+			}
+			od.AddSubmesh(mh, math);
+			od.Identity();
+			od.Translate(src.position);
+			od.Rotate(src.rotation);
+			od.Scale(vec3f(src.width.x, src.width.y, 1.f));
+			src.fixture = Add(od);
+			if(src.fixture < 0) {
+				LogErr("obj err");
+				continue;
+			}
+		} else {
+			// if it exists, just modify it
+			Object::Desc *od = GetObject(src.fixture);
+			if(od) {
+				od->Identity();
+				od->Translate(src.position);
+				od->Rotate(src.rotation);
+				od->Scale(vec3f(src.width.x, src.width.y, 1.f));
+			}
+		}
+	}
+
+	// Update UBO
+	Render::UBO::Desc ubo_desc((f32*)fullUBO, numActiveLights * sizeof(AreaLight::UniformBufferData), Render::UBO::ST_DYNAMIC);
+	Render::UBO::Update(areaLightsUBO, ubo_desc);
+
+	// Bind it
+	Render::UBO::Bind(Render::Shader::UNIFORMBLOCK_AREALIGHTS, areaLightsUBO);
+
+	return numActiveLights;
+}
+
+u32 Scene::AggregatePointLightUniforms() {
+	static PointLight::UniformBufferData fullUBO[SCENE_MAX_ACTIVE_LIGHTS];
+
+	u32 numActiveLights = 0;
+	for (u32 l = 0; l < SCENE_MAX_ACTIVE_LIGHTS; ++l) {
+		if (active_pointLights[l] < 0) break;
+		const PointLight::Desc &src = pointLights[active_pointLights[l]];
 
 		++numActiveLights;
 
@@ -335,11 +432,11 @@ u32 Scene::AggregateLightUniforms() {
 		fullUBO[l].radius = src.radius;
 	}
 	// Update UBO
-	Render::UBO::Desc ubo_desc((f32*)fullUBO, numActiveLights * sizeof(Light::UniformBufferData), Render::UBO::ST_DYNAMIC);
-	Render::UBO::Update(lightsUBO, ubo_desc);
+	Render::UBO::Desc ubo_desc((f32*)fullUBO, numActiveLights * sizeof(PointLight::UniformBufferData), Render::UBO::ST_DYNAMIC);
+	Render::UBO::Update(pointLightsUBO, ubo_desc);
 
 	// Bind it
-	Render::UBO::Bind(Render::Shader::UNIFORMBLOCK_LIGHTS, lightsUBO);
+	Render::UBO::Bind(Render::Shader::UNIFORMBLOCK_POINTLIGHTS, pointLightsUBO);
 
 	return numActiveLights;
 }
@@ -358,12 +455,14 @@ void Scene::Render() {
 	// glEnable(GL_FRAMEBUFFER_SRGB);
 
 	// Update light uniform buffer
-	u32 numLights = AggregateLightUniforms();
+	u32 numPointLights = AggregatePointLightUniforms();
+	u32 numAreaLights = AggregateAreaLightUniforms();
 
 	for (u32 j = 0; j < objects.size(); ++j) {
 		Object::Desc &object = objects[j];
 		Render::Shader::Bind(object.shader);
-		Render::Shader::SendInt(Render::Shader::UNIFORM_NLIGHTS, numLights);
+		Render::Shader::SendInt(Render::Shader::UNIFORM_NPOINTLIGHTS, numPointLights);
+		Render::Shader::SendInt(Render::Shader::UNIFORM_NAREALIGHTS, numAreaLights);
 
 		object.model_matrix.FromTRS(object.position, object.rotation, object.scale);
 		Render::Shader::SendMat4(Render::Shader::UNIFORM_MODELMATRIX, object.model_matrix);
@@ -470,27 +569,60 @@ Object::Handle Scene::Add(const Object::Desc &d) {
 	return (Object::Handle)index;
 }
 
-Light::Handle Scene::Add(const Light::Desc &d) {
-	size_t index = lights.size();
+PointLight::Handle Scene::Add(const PointLight::Desc &d) {
+	size_t index = pointLights.size();
 
 	if (index >= SCENE_MAX_LIGHTS) {
-		LogErr("Reached maximum number (", SCENE_MAX_LIGHTS, ") of lights in scene.");
+		LogErr("Reached maximum number (", SCENE_MAX_LIGHTS, ") of point lights in scene.");
 		return -1;
 	}
 
-	lights.push_back(d);
+	pointLights.push_back(d);
 
-	Light::Desc &light = lights[index];
+	PointLight::Desc &light = pointLights[index];
 	light.active = true;
 	// look for active slot
 	for(u32 i = 0; i < SCENE_MAX_ACTIVE_LIGHTS; ++i) {
-		if(active_lights[i] < 0) {
-			active_lights[i] = index;
+		if(active_pointLights[i] < 0) {
+			active_pointLights[i] = index;
 			break;
 		}
 	}
 
-	return (Light::Handle)index;
+	return (PointLight::Handle)index;
+}
+
+AreaLight::Handle Scene::Add(const AreaLight::Desc &d) {
+	size_t index = areaLights.size();
+
+	if (index >= SCENE_MAX_LIGHTS) {
+		LogErr("Reached maximum number (", SCENE_MAX_LIGHTS, ") of area lights in scene.");
+		return -1;
+	}
+
+	areaLights.push_back(d);
+
+	AreaLight::Desc &light = areaLights[index];
+	light.active = true;
+	// look for active slot
+	for(u32 i = 0; i < SCENE_MAX_ACTIVE_LIGHTS; ++i) {
+		if(active_areaLights[i] < 0) {
+			active_areaLights[i] = index;
+			break;
+		}
+	}
+
+	return (AreaLight::Handle)index;
+}
+
+AreaLight::Desc *Scene::GetLight(AreaLight::Handle h) {
+	if(AreaLightExists(h))
+		return &areaLights[h];
+	return nullptr;
+}
+
+bool Scene::AreaLightExists(AreaLight::Handle h) {
+	return h >= 0 && h < (int)areaLights.size();
 }
 
 Text::Handle Scene::Add(const Text::Desc &d) {
@@ -576,12 +708,11 @@ Material::Handle Scene::Add(const Material::Desc &d) {
 }
 
 Object::Desc *Scene::GetObject(Object::Handle h) {
-	if(Exists(h))
+	if(ObjectExists(h))
 		return &objects[h];
 	return nullptr;
 }
 
-bool Scene::Exists(Object::Handle h) {
+bool Scene::ObjectExists(Object::Handle h) {
 	return h >= 0 && h < (int)objects.size();
 }
-

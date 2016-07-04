@@ -192,6 +192,13 @@ public:
 		return *this;
 	}
 
+	vec3<T>& operator*=(const vec3<T> &v) {
+		x *= v.x;
+		y *= v.y;
+		z *= v.z;
+		return *this;
+	}
+
 	vec3<T>& operator/=(T v) {
 		x /= v;
 		y /= v;
@@ -428,6 +435,7 @@ template<typename T>
 class mat4 {
 public:
 	mat4() {
+		Identity();
 	}
 	mat4(vec4<T> ix, vec4<T> iy, vec4<T> iz, vec4<T> iw) {
 		M[0] = ix;
@@ -547,6 +555,17 @@ public:
 		return r;
 	}
 
+	vec3<T> operator*(const vec3<T> &v) const {
+		vec3<T> r;
+		for (int j = 0; j<3; ++j) {
+			r[j] = 0;
+			for (int i = 0; i<3; ++i) {
+				r[j] += M[i][j] * v[i];
+			}
+		}
+		return r;
+	}
+
 	vec4<T> operator*(const vec4<T> &v) const {
 		vec4<T> r;
 		for (int j = 0; j<4; ++j) {
@@ -592,8 +611,8 @@ public:
 				M[i][j] = i < 3 && j < 3 ? a[i] * b[j] : 0.f;
 	}
 
-	void FromTRS(const vec3<T> &pos, const vec3<T> &rot, const T scale = 1.0) {
-		*this = mat4<T>::Scale(vec3<T>(scale, scale, scale));
+	void FromTRS(const vec3<T> &pos, const vec3<T> &rot, const vec3<T> scale) {
+		*this = mat4<T>::Scale(scale);
 		*this = this->RotateX(rot.x);
 		*this = this->RotateY(rot.y);
 		*this = this->RotateZ(rot.z);
@@ -632,7 +651,7 @@ public:
 			{ 0, -s, c, 0 },
 			{ 0, 0, 0, 1 }
 		};
-		return (*this) * R;
+		return R * (*this);
 	}
 
 	mat4<T> RotateY(float angle) {
@@ -644,7 +663,7 @@ public:
 			{ -s, 0, c, 0 },
 			{ 0, 0, 0, 1 }
 		};
-		return (*this) * R;
+		return R * (*this);
 	}
 
 	mat4<T> RotateZ(float angle) {
@@ -656,7 +675,7 @@ public:
 			{ 0, 0, 1, 0 },
 			{ 0, 0, 0, 1 }
 		};
-		return (*this) * R;
+		return R * (*this);
 	}
 
 	mat4<T> Transpose() {

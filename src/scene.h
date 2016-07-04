@@ -3,6 +3,8 @@
 #include "render.h"
 #include "common/event.h"
 
+#define SCENE_MAX_ACTIVE_LIGHTS 8
+
 class Scene;
 
 /// Camera
@@ -26,32 +28,6 @@ struct Camera {
 	bool speedMode;
 	bool freeflyMode;
 };
-
-namespace Light {
-	/// Light GPU signature (sent as UBO)
-	struct UniformBufferData {
-		vec3f   position;
-		f32		dummy0;
-		//----
-		vec3f   Ld;
-		f32		radius;
-	};
-
-	/// Light Descriptor
-	struct Desc {
-		Desc() : active(false) {}
-
-		vec3f   position;   //!< 3D position in world-coordinates
-		vec3f   Ld; 		//!< Light Diffuse Color. w-coord unused
-		f32		radius;     //!< Light radius. Light is 0 at the r		
-
-		bool	active;
-	};
-
-	/// Handle representing a light in the scene.
-	/// This can be used to modify or delete the light after creation.
-	typedef int Handle;
-}
 
 namespace Material {
 	using namespace Render;
@@ -107,7 +83,7 @@ namespace Object {
 		: shader(shader_h), numSubmeshes(0) {
 			position = vec3f();
 			rotation = vec3f();
-			scale = 1.f;
+			scale = vec3f(1.f);
 			model_matrix.Identity();
 		}
 
@@ -125,7 +101,7 @@ namespace Object {
 
 		void Identity();
 		void Translate(const vec3f &t);
-		void Scale(f32 s);
+		void Scale(const vec3f &s);
 		void Rotate(const vec3f &r);
 
 		Shader::Handle   shader;
@@ -139,7 +115,7 @@ namespace Object {
 		mat4f					model_matrix;
 		vec3f	position;
 		vec3f	rotation;
-		f32 	scale;
+		vec3f 	scale;
 
 		u32 numSubmeshes;
 	};
@@ -198,6 +174,68 @@ namespace Text {
 	typedef int Handle;
 }
 
+namespace PointLight {
+	/// Point Light GPU signature (sent as UBO)
+	struct UniformBufferData {
+		vec3f   position;
+		f32		dummy0;
+		//----
+		vec3f   Ld;
+		f32		radius;
+	};
+
+	/// Point Light Descriptor
+	struct Desc {
+		Desc() : active(false) {}
+
+		vec3f   position;   //!< 3D position in world-coordinates
+		vec3f   Ld; 		//!< Light Diffuse Color. w-coord unused
+		f32		radius;     //!< Light radius. Light is 0 at the r		
+
+		bool	active;
+	};
+
+	/// Handle representing a point light in the scene.
+	/// This can be used to modify or delete the light after creation.
+	typedef int Handle;
+}
+
+namespace AreaLight {
+	/// Area Light GPU signature (sent as UBO)
+	struct UniformBufferData {
+		vec3f position;
+		f32   dummy0;
+		//----
+		vec3f dirx;
+		f32   hwidthx;
+		//----
+		vec3f diry;
+		f32   hwidthy;
+		//----
+		vec3f Ld;
+		f32   dummy1;
+		//----
+		vec4f plane;
+	};
+
+	/// Area Light Descriptor
+	struct Desc {
+		Desc() : active(false), fixture(-1) {}
+
+		vec3f position;
+		vec3f Ld;
+		vec3f rotation;
+		vec2f width;
+
+		bool active;
+		Object::Handle fixture;	// link to the light fixture mesh
+	};
+
+	/// Handle representing a area light in the scene.
+	/// This can be used to modify or delete the light after creation.
+	typedef int Handle;
+}
+
 class Scene;
 typedef bool (*SceneInitFunc)(Scene *scene);
 typedef void (*SceneUpdateFunc)(Scene *scene, float dt);
@@ -226,28 +264,36 @@ public:
 	ModelResource::Handle LoadModelResource(const std::string &fileName);
 	Object::Handle InstanciateModel(const ModelResource::Handle &h);
 	Object::Handle Add(const Object::Desc &d);
-	Light::Handle Add(const Light::Desc &d);
+	PointLight::Handle Add(const PointLight::Desc &d);
+	AreaLight::Handle Add(const AreaLight::Desc &d);
 	Text::Handle Add(const Text::Desc &d);
 	Material::Handle Add(const Material::Desc &d);
 
-	// Object functions
+	// Scene getters
 	Object::Desc *GetObject(Object::Handle h);
-	// ModelResource::Data *GetModelInstance(ModelResource::Handle h);
-	inline bool Exists(Object::Handle h);
+	AreaLight::Desc *GetLight(AreaLight::Handle h);
+
+	bool ObjectExists(Object::Handle h);
+	bool AreaLightExists(AreaLight::Handle h);
 
 private:
 	bool InitLightUniforms();
 
 	/// Update the UBO defining the scene lights and upload it to GPU
 	/// returns the number of active lights to be rendered (to send to each shaders) 
-	u32 AggregateLightUniforms();
+	u32 AggregatePointLightUniforms(); 
+	u32 AggregateAreaLightUniforms();
 
 private:
 	std::vector<Text::Desc> texts;
 
-	Render::UBO::Handle lightsUBO;
-	std::vector<Light::Desc> lights;
-	std::vector<int> active_lights;
+	Render::UBO::Handle pointLightsUBO;
+	std::vector<PointLight::Desc> pointLights;
+	int active_pointLights[SCENE_MAX_ACTIVE_LIGHTS];
+
+	Render::UBO::Handle areaLightsUBO;
+	std::vector<AreaLight::Desc> areaLights;
+	int active_areaLights[SCENE_MAX_ACTIVE_LIGHTS];
 
 	std::vector<Object::Desc> objects;
 	std::vector<Material::Data> materials;

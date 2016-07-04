@@ -63,6 +63,8 @@ namespace Render {
 		GLint           curr_GL_texture[Texture::TexTarget_N];
 		Texture::Target curr_GL_texture_target;
 
+		GLuint			shaderFunctionLibrary;
+
 		/// View/Camera Matrix
 		mat4f           view_matrix;
 
@@ -99,6 +101,8 @@ namespace Render {
 			renderer->curr_GL_texture[i] = -1;
 		renderer->curr_GL_texture_target = Texture::TexTarget0;
 		glActiveTexture(GL_TEXTURE0);   // default to 1st one
+
+		renderer->shaderFunctionLibrary = 0;
 
 		renderer->mesh_resources.clear();
 		renderer->font_resources.clear();
@@ -197,8 +201,35 @@ namespace Render {
 		}
 	}
 
+	bool RecompileShaderLibrary(bool inited) {
+		static std::string shaderLibraryPath = "data/shaders/lib.glsl";
+
+		if(inited && renderer->shaderFunctionLibrary > 0) {
+			glDeleteShader(renderer->shaderFunctionLibrary);
+			renderer->shaderFunctionLibrary = 0;
+		}
+
+		std::string src;
+		if(!Resource::ReadFile(src, shaderLibraryPath)) {
+			LogErr("Failed to read shader library (", shaderLibraryPath, ")");
+			return false;
+		}
+
+		renderer->shaderFunctionLibrary = Shader::BuildShader(src.c_str(), GL_FRAGMENT_SHADER);
+		if(!renderer->shaderFunctionLibrary) {
+			LogErr("Failed to build shader library.");
+			return false;
+		}
+
+		return true;
+	}
+
 	bool ReloadShaders() {
 		static bool inited = false;
+
+		// Compile shader function libraries
+		if(!RecompileShaderLibrary(inited))
+			return false;
 
 		int shader_slot = -1;
 
@@ -252,10 +283,13 @@ namespace Render {
 		sd_mesh.uniforms.push_back(Shader::Desc::Uniform("SpecularTex", Shader::UNIFORM_TEXTURE1));
 		sd_mesh.uniforms.push_back(Shader::Desc::Uniform("NormalTex", Shader::UNIFORM_TEXTURE2));
 		sd_mesh.uniforms.push_back(Shader::Desc::Uniform("eyePosition", Shader::UNIFORM_EYEPOS));
-		sd_mesh.uniforms.push_back(Shader::Desc::Uniform("nLights", Shader::UNIFORM_NLIGHTS));
+		sd_mesh.uniforms.push_back(Shader::Desc::Uniform("nPointLights", Shader::UNIFORM_NPOINTLIGHTS));
+		sd_mesh.uniforms.push_back(Shader::Desc::Uniform("nAreaLights", Shader::UNIFORM_NAREALIGHTS));
 		sd_mesh.uniformblocks.push_back(Shader::Desc::UniformBlock("Material", Shader::UNIFORMBLOCK_MATERIAL));
-		sd_mesh.uniformblocks.push_back(Shader::Desc::UniformBlock("Lights", Shader::UNIFORMBLOCK_LIGHTS));
+		sd_mesh.uniformblocks.push_back(Shader::Desc::UniformBlock("PointLights", Shader::UNIFORMBLOCK_POINTLIGHTS));
+		sd_mesh.uniformblocks.push_back(Shader::Desc::UniformBlock("AreaLights", Shader::UNIFORMBLOCK_AREALIGHTS));
 		sd_mesh.shaderSlot = shader_slot;
+		sd_mesh.linkedLibraries.push_back(renderer->shaderFunctionLibrary);
 
 
 		Shader::Handle shader_mesh = Shader::Build(sd_mesh);

@@ -54,7 +54,7 @@ namespace UBO {
 }
 
 namespace Shader {
-	static GLuint build_new_shader(const char *src, GLenum type) {
+	u32 BuildShader(const char *src, int type) {
 		GLuint shader = glCreateShader(type);
 
 		glShaderSource(shader, 1, &src, NULL);
@@ -114,7 +114,7 @@ namespace Shader {
 
 		shader.id = glCreateProgram();
 
-		v_shader = build_new_shader(v_src.c_str(), GL_VERTEX_SHADER);
+		v_shader = BuildShader(v_src.c_str(), GL_VERTEX_SHADER);
 		if (!v_shader) {
 			if(from_file)
 				LogErr("Failed to build '", desc.vertex_file.c_str(), "' Vertex shader.");
@@ -124,7 +124,7 @@ namespace Shader {
 			return -1;
 		}
 
-		f_shader = build_new_shader(f_src.c_str(), GL_FRAGMENT_SHADER);
+		f_shader = BuildShader(f_src.c_str(), GL_FRAGMENT_SHADER);
 		if (!f_shader) {
 			if(from_file)
 				LogErr("Failed to build '", desc.fragment_file.c_str(), "' Fragment shader.");
@@ -136,6 +136,10 @@ namespace Shader {
 		}
 
 		glAttachShader(shader.id, v_shader);
+
+		for(u32 i = 0; i < desc.linkedLibraries.size(); ++i) {
+			glAttachShader(shader.id, desc.linkedLibraries[i]);
+		}
 		glAttachShader(shader.id, f_shader);
 
 		glDeleteShader(v_shader);
