@@ -75,7 +75,7 @@ void Camera::Update(float dt) {
 			if(phi < 0.f)
 				phi += M_TWO_PI;
 
-			theta = std::max(-M_PI_OVER_TWO, std::min(M_PI_OVER_TWO, theta));
+			theta = std::max(-M_PI_OVER_TWO+1e-5f, std::min(M_PI_OVER_TWO-1e-5f, theta));
 
 			const f32 cosTheta = std::cos(theta);
 			forward.x = cosTheta * std::cos(phi);
@@ -325,7 +325,17 @@ bool Scene::InitLightUniforms() {
 
 	return true;
 }
+void InitRectPoints(AreaLight::UniformBufferData &rect, vec3f points[4]) {
+    vec3f ex = rect.dirx * rect.hwidthx;
+    vec3f ey = rect.diry * rect.hwidthy;
 
+	// LogInfo(rect.diry.x, " ", rect.diry.y, " ", rect.diry.z, " | ", ey.x, " ", ey.y);
+
+    points[0] = rect.position - ex - ey;
+    points[1] = rect.position + ex - ey;
+    points[2] = rect.position + ex + ey;
+    points[3] = rect.position - ex + ey;
+}
 u32 Scene::AggregateAreaLightUniforms() {
 	static AreaLight::UniformBufferData fullUBO[SCENE_MAX_ACTIVE_LIGHTS];
 
@@ -341,6 +351,7 @@ u32 Scene::AggregateAreaLightUniforms() {
 		fullUBO[l].hwidthx = src.width.x * 0.5f;
 		fullUBO[l].hwidthy = src.width.y * 0.5f;
 
+
 		mat4f m = mat4f::Scale(vec3f(src.width.x, src.width.y, 1));
 		m = m.RotateX(src.rotation.x);
 		m = m.RotateY(src.rotation.y);
@@ -350,9 +361,10 @@ u32 Scene::AggregateAreaLightUniforms() {
 		fullUBO[l].dirx = m * vec3f(1,0,0);
 		fullUBO[l].dirx.Normalize();
 		fullUBO[l].diry = m * vec3f(0,1,0);
-		fullUBO[l].dirx.Normalize();
+		fullUBO[l].diry.Normalize();
 
 		vec3f N = fullUBO[l].dirx.Cross(fullUBO[l].diry);
+		N.Normalize();
 		fullUBO[l].plane = vec4f(N.x, N.y, N.z, - N.Dot(src.position));
 
 		// Create mesh representation
@@ -473,9 +485,12 @@ void Scene::Render() {
 
 			// send material parameters
 			Render::UBO::Bind(Render::Shader::UNIFORMBLOCK_MATERIAL, material.ubo);
-			Render::Texture::Bind(material.diffuseTex, Render::Texture::TexTarget0);
-			Render::Texture::Bind(material.specularTex, Render::Texture::TexTarget1);
-			Render::Texture::Bind(material.normalTex, Render::Texture::TexTarget2);
+			Render::Texture::Bind(material.diffuseTex, Render::Texture::TARGET0);
+			Render::Texture::Bind(material.specularTex, Render::Texture::TARGET1);
+			Render::Texture::Bind(material.normalTex, Render::Texture::TARGET2);
+			Render::Texture::Bind(material.occlusionTex, Render::Texture::TARGET3);
+			Render::Texture::Bind(material.ltcMatrix, Render::Texture::TARGET4);
+			Render::Texture::Bind(material.ltcAmplitude, Render::Texture::TARGET5);
 
 			Render::Mesh::Render(object.meshes[m]);
 		}
@@ -497,7 +512,7 @@ void Scene::Render() {
 		Text::Desc &text = texts[i];
 		Render::Shader::SendMat4(Render::Shader::UNIFORM_MODELMATRIX, text.model_matrix);
 		Render::Shader::SendVec4(Render::Shader::UNIFORM_TEXTCOLOR, text.color);
-		Render::Font::Bind(text.font, Render::Texture::TexTarget0);
+		Render::Font::Bind(text.font, Render::Texture::TARGET0);
 		Render::TextMesh::Render(text.mesh);
 	}
 }
@@ -701,6 +716,42 @@ Material::Handle Scene::Add(const Material::Desc &d) {
 		mat.normalTex = t_h;
 	} else {
 		mat.normalTex = Render::Texture::DEFAULT_NORMAL;
+	}
+
+	if(d.occlusionTexPath != "") {
+		Render::Texture::Desc t_desc(d.occlusionTexPath);
+		Render::Texture::Handle t_h = Render::Texture::Build(t_desc);
+		if(t_h < 0) {
+			LogErr("Error loading occlusion texture ", d.occlusionTexPath);
+			return -1;
+		}
+		mat.occlusionTex = t_h;
+	} else {
+		mat.occlusionTex = Render::Texture::DEFAULT_DIFFUSE;
+	}
+
+	if(d.ltcMatrixPath != "") {
+		Render::Texture::Desc t_desc(d.ltcMatrixPath);
+		Render::Texture::Handle t_h = Render::Texture::Build(t_desc);
+		if(t_h < 0) {
+			LogErr("Error loading ltcMatrix texture ", d.ltcMatrixPath);
+			return -1;
+		}
+		mat.ltcMatrix = t_h;
+	} else {
+		mat.ltcMatrix = Render::Texture::DEFAULT_DIFFUSE;
+	}
+
+	if(d.ltcAmplitudePath != "") {
+		Render::Texture::Desc t_desc(d.ltcAmplitudePath);
+		Render::Texture::Handle t_h = Render::Texture::Build(t_desc);
+		if(t_h < 0) {
+			LogErr("Error loading ltcAmplitude texture ", d.ltcAmplitudePath);
+			return -1;
+		}
+		mat.ltcAmplitude = t_h;
+	} else {
+		mat.ltcAmplitude = Render::Texture::DEFAULT_DIFFUSE;
 	}
 
 	materials.push_back(mat);

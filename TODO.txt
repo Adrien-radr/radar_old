@@ -8,7 +8,8 @@ x Specular textures
 x Normal textures
 x Area light
     x Diffuse
-    o Specular
+    x Specular
+o GT area light lighting
 
 Normal :
 x GGX -- fixed (smith DFG + burley's disney diffuse)

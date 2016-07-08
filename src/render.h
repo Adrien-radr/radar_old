@@ -51,6 +51,11 @@ namespace Render {
 			UNIFORM_TEXTURE0,           // Fragment Uniform, for "tex0", int	Usually diffuse texture
 			UNIFORM_TEXTURE1,           // Fragment Uniform, for "tex1", int	Usually specular texture
 			UNIFORM_TEXTURE2,           // Fragment Uniform, for "tex2", int	Usually normal texture
+			UNIFORM_TEXTURE3,           // Fragment Uniform, for "tex2", int	Usually AO texture
+
+			UNIFORM_TEXTURE4,
+			UNIFORM_TEXTURE5,
+
 			UNIFORM_TEXTCOLOR,          // Fragment Uniform, for "text_color", vec4
 
 			UNIFORM_EYEPOS,
@@ -207,11 +212,16 @@ namespace Render {
 		};
 
 		enum Target {
-			TexTarget0 = 0,		// Usually Diffuse Texture
-			TexTarget1 = 1,		// Usually Specular Texture
-			TexTarget2 = 2,		// Usually Normal Texture
+			TARGET0 = 0,		// Usually Diffuse Texture
+			TARGET1 = 1,		// Usually Specular Texture
+			TARGET2 = 2,		// Usually Normal Texture
+			TARGET3 = 3,		// Usually Occlusion(AO) Texture
 
-			TexTarget_N // Do Not Use !!
+			// Additional misc slots
+			TARGET4 = 4,
+			TARGET5 = 5,
+
+			TARGET_N // Do Not Use !!
 		};
 
 		/// Texture Handle

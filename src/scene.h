@@ -34,13 +34,16 @@ namespace Material {
 	struct Desc {
 		Desc() :	// Default debug material
 			uniform(col3f(0.3, 0.0, 0.3), col3f(0.51,0.4,0.51), col3f(0.7,0.04,0.7), 0.95f), 
-			diffuseTexPath(""), specularTexPath(""), normalTexPath("") {}
+			diffuseTexPath(""), specularTexPath(""), normalTexPath(""), occlusionTexPath(""),
+			ltcMatrixPath(""), ltcAmplitudePath("") {}
 
 		Desc(const col3f &ka, const col3f &kd, const col3f &ks, float s, const std::string diffuse = "") : 
-			uniform(ka, kd, ks, s), diffuseTexPath(diffuse), specularTexPath(""), normalTexPath("") {}
+			uniform(ka, kd, ks, s), diffuseTexPath(diffuse), specularTexPath(""), normalTexPath(""),
+			occlusionTexPath(""), ltcMatrixPath(""), ltcAmplitudePath("") {}
 
 		struct UniformBufferData {
-			UniformBufferData(const col3f &ka, const col3f &kd, const col3f &ks, float s) : Ka(ka), Kd(kd), Ks(ks), shininess(s) {}
+			UniformBufferData(const col3f &ka, const col3f &kd, const col3f &ks, float s) : 
+				Ka(ka), Kd(kd), Ks(ks), shininess(s) {}
 			//----
 			col3f 	Ka;			//!< ambient color
 			f32 	dummy0;
@@ -57,16 +60,23 @@ namespace Material {
 		std::string diffuseTexPath;
 		std::string specularTexPath;
 		std::string normalTexPath;
+		std::string occlusionTexPath;
+		std::string ltcMatrixPath;
+		std::string ltcAmplitudePath;
 	};
 
 	struct Data {
-		Data() : ubo(-1), diffuseTex(-1), specularTex(-1), normalTex(-1) {}
+		Data() : ubo(-1), diffuseTex(-1), specularTex(-1), normalTex(-1), occlusionTex(-1), 
+				 ltcMatrix(-1), ltcAmplitude(-1) {}
 		Desc desc;
 		UBO::Handle ubo;
 
 		Texture::Handle diffuseTex;
 		Texture::Handle specularTex;
 		Texture::Handle normalTex;
+		Texture::Handle occlusionTex;
+		Texture::Handle ltcMatrix;
+		Texture::Handle ltcAmplitude;
 	};
 
 	typedef int Handle;

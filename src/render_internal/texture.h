@@ -9,19 +9,52 @@
 
 namespace Render {
 	namespace Texture {
+		enum TextureFormat {
+			FMT_UNKNOWN,
+
+			R8U,
+			RG8U,
+			RGB8U,
+			RGBA8U,
+
+			R32F,
+			RG32F,
+			RGB32F,
+			RGBA32F,
+
+			DXT1,
+			DXT3,
+			DXT5,
+
+			_FORMAT_MAX
+		};
+
+		struct FormatDesc {
+			// FormatDesc() : 
+				// blockSize(0), bpp(0), component(0), formatGL(GL_NONE), formatInternalGL(0), type(GL_NONE) {}
+			u32 	blockSize;
+			u32 	bpp;
+			u32 	component;
+			GLenum	formatGL;
+			GLint 	formatInternalGL;
+			GLenum  type;
+		};
+
 		/// Intermediate format for texture loading
 		/// Do not use unless you know why/how
 		struct _tex {
-			_tex() : width(0), height(0), id(0), texels(NULL) {}
+			_tex() : width(0), height(0), id(0), format(FMT_UNKNOWN), mipmapCount(0), texels(NULL) {}
 
-			u32         width,
-						height;
+			u32         	width,
+							height;
 
-			GLenum      fmt;
-			GLint       int_fmt;
-			GLuint      id;
+			GLuint      	id;
 
-			GLubyte    *texels;
+		    TextureFormat 	format;
+			FormatDesc		desc;
+			GLuint			mipmapCount;
+
+			GLubyte    		*texels;
 		};
 
 		/// Format for a loaded GL texture
@@ -38,6 +71,9 @@ namespace Render {
 		/// @param filename : Filename of PNG file on disk
 		/// @return : The allocated and filled texture
 		_tex *LoadPNG(const std::string &filename);
+
+		/// Same for DDS image file
+		_tex *LoadDDS(const std::string &filename);
 
 		/// Loads an image file. Determine the format internally
 		/// @param texture : target. Image will be loaded in here

@@ -7,6 +7,13 @@
 Render::Mesh::Handle test_mesh;
 Object::Handle crysisGuy = -1;
 AreaLight::Handle alh = -1;
+AreaLight::Handle alh2;
+AreaLight::Handle alh3;
+vec3f alPos(40., 3, -20);
+vec3f alPos2(20., 7.5, 20);
+
+Render::Texture::Handle th1;
+Render::Texture::Handle th2;
 
 bool MakeLights(Scene *scene) {
 	PointLight::Desc light;
@@ -34,14 +41,14 @@ bool MakeLights(Scene *scene) {
 
 	light_h = scene->Add(light);
 	if(light_h < 0) goto err;
-
+/*
 	light.position = vec3f(40.5, 8, -10);
-	light.Ld = vec3f(0.8, 1.2, 1);
+	light.Ld = vec3f(2,2,2);
 	light.radius = 1000.f;
 
 	light_h = scene->Add(light);
 	if(light_h < 0) goto err;
-
+*/
 	light.position = vec3f(-5, 10, -10);
 	light.Ld = vec3f(1.5, 0.8, 1.2);
 	light.radius = 1000.f;
@@ -56,13 +63,30 @@ bool MakeLights(Scene *scene) {
 	light_h = scene->Add(light);
 	if(light_h < 0) goto err;
 
-	al.position = vec3f(60, 1, 0);
+	al.position = vec3f(60, 0, 0);
 	al.width = vec2f(10.f, 2.f);
 	al.rotation = vec3f(0, 0, 0);
 	al.Ld = vec3f(1,0.8,0);
 
 	alh = scene->Add(al);
 	if(alh < 0) goto area_err;
+
+
+	al.position = alPos;
+	al.width = vec2f(8.f, 6.f);
+	al.rotation = vec3f(0, 0, M_PI/4);
+	al.Ld = vec3f(2.0,1.5,1);
+
+	alh2 = scene->Add(al);
+	if(alh2 < 0) goto area_err;
+
+	al.position = alPos2;
+	al.width = vec2f(60.f, 18.f);
+	al.rotation = vec3f(0, M_PI, 0);
+	al.Ld = vec3f(1.5,1,2);
+
+	alh3 = scene->Add(al);
+	if(alh3 < 0) goto area_err;
 
 	return true;
 	err:
@@ -112,7 +136,25 @@ bool initFunc(Scene *scene) {
 	u32 idx[] = {
 		0, 1, 2, 0, 2, 3
 	};
+	/*
+	Render::Texture::Desc tdesc("data/ltc_mat.dds");
+	th1 = Render::Texture::Build(tdesc);
+	if(!th1) {
+		return false;
+	}
+	Render::Texture::Desc tdesc2("data/ltc_amp.dds");
+	th2 = Render::Texture::Build(tdesc2);
+	if(!th2) {
+		return false;
+	}*/
+	
+	// Render::Texture::Bind(th1, Render::Texture::TARGET3);
+	// Render::Texture::Bind(th2, Render::Texture::TARGET4);
 
+
+
+
+	
 	Render::Mesh::Desc mdesc("TestMesh", false, 6, idx, 4, pos, normals, texcoords, nullptr, nullptr, colors);
 
 	test_mesh = Render::Mesh::Build(mdesc);
@@ -127,6 +169,17 @@ bool initFunc(Scene *scene) {
 		return false;
 	}
 
+	ModelResource::Handle metal0Model = scene->LoadModelResource("data/colt/colt.obj");
+	if(metal0Model < 0) {
+		LogErr("Error loading metal0");
+		return false;
+	}
+
+	ModelResource::Handle m14Model = scene->LoadModelResource("data/ak/AK_BS_Exp.obj");
+	if(metal0Model < 0) {
+		LogErr("Error loading m14");
+		return false;
+	}
 #if 0
 	ModelResource::Handle sponzaModel = scene->LoadModelResource("data/sponza/sponza.obj");
 	if(sponzaModel < 0) {
@@ -151,6 +204,25 @@ bool initFunc(Scene *scene) {
 	}
 	Object::Desc *crysisGuyObj = scene->GetObject(crysisGuy);
 	crysisGuyObj->Translate(vec3f(0,-0.7,1));
+
+
+	Object::Handle metal_h = scene->InstanciateModel(metal0Model);
+	if(metal_h < 0) {
+		LogErr("Error creating metal0.");
+		return false;
+	}
+	Object::Desc *coltObj = scene->GetObject(metal_h);
+	coltObj->Translate(vec3f(40.5, 3, -16));
+
+
+	Object::Handle m14_h = scene->InstanciateModel(m14Model);
+	if(m14_h < 0) {
+		LogErr("Error creating m14.");
+		return false;
+	}
+	Object::Desc *m14_o = scene->GetObject(m14_h);
+	m14_o->Translate(vec3f(40.5, 1.0, -16));
+	// m14_o->Scale(vec3f(2));
 	
 
 	Render::Mesh::Handle sphere = Render::Mesh::BuildSphere();
@@ -164,8 +236,10 @@ bool initFunc(Scene *scene) {
 		odesc.ClearSubmeshes();
 
 		Material::Desc mat_desc(col3f(0.1,0.1,0.1), col3f(1,1,1), col3f(1,1,1), 1);//, "data/sponza/textures/sponza_floor_a_diff.png");
-		// mat_desc.normalTexPath = "data/sponza/textures/sponza_floor_a_nrm.png";
+		mat_desc.normalTexPath = "data/sponza/textures/sponza_floor_a_nrm.png";
 		mat_desc.specularTexPath = "data/sponza/textures/sponza_floor_a_spec.png";
+		mat_desc.ltcMatrixPath = "data/ltc_mat.dds";
+		mat_desc.ltcAmplitudePath = "data/ltc_amp.dds";
 		Material::Handle mat = scene->Add(mat_desc);
 		if(mat < 0) {
 			LogErr("Error adding material");
@@ -201,6 +275,9 @@ bool initFunc(Scene *scene) {
 									col3f(0.08601+ fj * 0.16, 0.13762, 0.25678- fj * 0.16),
 									0.001f + 0.984f * fi);
 			mat_desc.normalTexPath = "data/wave_nm.png";
+			mat_desc.specularTexPath = "data/metal_spec.png";
+			mat_desc.ltcMatrixPath = "data/ltc_mat.dds";
+			mat_desc.ltcAmplitudePath = "data/ltc_amp.dds";
 
 			Material::Handle mat = scene->Add(mat_desc);
 			if(mat < 0) {
@@ -223,6 +300,7 @@ bool initFunc(Scene *scene) {
 void updateFunc(Scene *scene, float dt) {
 	// const Device &device = GetDevice();
 	// vec2i mouse_coord = vec2i(device.GetMouseX(), device.GetMouseY());
+	static f32 t = 0;
 
 #if 0
 	Object::Desc *model = scene->GetObject(crysisGuy);
@@ -234,7 +312,17 @@ void updateFunc(Scene *scene, float dt) {
 	if(light) {
 		light->rotation.y += dt * M_PI * 0.5f;
 	}
+	AreaLight::Desc *light2 = scene->GetLight(alh2);
+	if(light2) {
+		light2->position.y = alPos.y + 2 * sinf(1.5*t);
+		light2->rotation.z += dt * M_PI * 0.5f;
+	}
+	AreaLight::Desc *light3 = scene->GetLight(alh3);
+	if(light3) {
+		light3->position.x = alPos2.x + 10 * sinf(1*t);
+	}
 
+	t += dt;
 }
 
 void renderFunc(Scene *scene) {

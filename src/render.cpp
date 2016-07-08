@@ -60,7 +60,7 @@ namespace Render {
 		GLint           curr_GL_program;
 		GLint			curr_GL_ubo;
 		GLint           curr_GL_vao;
-		GLint           curr_GL_texture[Texture::TexTarget_N];
+		GLint           curr_GL_texture[Texture::TARGET_N];
 		Texture::Target curr_GL_texture_target;
 
 		GLuint			shaderFunctionLibrary;
@@ -97,9 +97,9 @@ namespace Render {
 		renderer->curr_GL_program = -1;
 		renderer->curr_GL_vao = -1;
 		renderer->curr_GL_ubo = -1;
-		for (int i = 0; i < Texture::TexTarget_N; ++i)
+		for (int i = 0; i < Texture::TARGET_N; ++i)
 			renderer->curr_GL_texture[i] = -1;
-		renderer->curr_GL_texture_target = Texture::TexTarget0;
+		renderer->curr_GL_texture_target = Texture::TARGET0;
 		glActiveTexture(GL_TEXTURE0);   // default to 1st one
 
 		renderer->shaderFunctionLibrary = 0;
@@ -257,7 +257,7 @@ namespace Render {
 			return false;
 		}
 		Shader::Bind(shader_ui);
-		Shader::SendInt(Shader::UNIFORM_TEXTURE0, Texture::TexTarget0);
+		Shader::SendInt(Shader::UNIFORM_TEXTURE0, Texture::TARGET0);
 
 		shader_slot = -1;
 
@@ -267,8 +267,8 @@ namespace Render {
 		}
 
 		Shader::Desc sd_mesh;
-		sd_mesh.vertex_file = "data/shaders/mesh.vs";
-		sd_mesh.fragment_file = "data/shaders/mesh.fs";
+		sd_mesh.vertex_file = "data/shaders/mesh_vert.glsl";
+		sd_mesh.fragment_file = "data/shaders/mesh_frag.glsl";
 		sd_mesh.attribs[0] = Shader::Desc::Attrib("in_position", 0);
 		sd_mesh.attribs[1] = Shader::Desc::Attrib("in_normal", 1);
 		sd_mesh.attribs[2] = Shader::Desc::Attrib("in_texcoord", 2);
@@ -282,6 +282,9 @@ namespace Render {
 		sd_mesh.uniforms.push_back(Shader::Desc::Uniform("DiffuseTex", Shader::UNIFORM_TEXTURE0));
 		sd_mesh.uniforms.push_back(Shader::Desc::Uniform("SpecularTex", Shader::UNIFORM_TEXTURE1));
 		sd_mesh.uniforms.push_back(Shader::Desc::Uniform("NormalTex", Shader::UNIFORM_TEXTURE2));
+		sd_mesh.uniforms.push_back(Shader::Desc::Uniform("AOTex", Shader::UNIFORM_TEXTURE3));
+		sd_mesh.uniforms.push_back(Shader::Desc::Uniform("ltc_mat", Shader::UNIFORM_TEXTURE4));
+		sd_mesh.uniforms.push_back(Shader::Desc::Uniform("ltc_amp", Shader::UNIFORM_TEXTURE5));
 		sd_mesh.uniforms.push_back(Shader::Desc::Uniform("eyePosition", Shader::UNIFORM_EYEPOS));
 		sd_mesh.uniforms.push_back(Shader::Desc::Uniform("nPointLights", Shader::UNIFORM_NPOINTLIGHTS));
 		sd_mesh.uniforms.push_back(Shader::Desc::Uniform("nAreaLights", Shader::UNIFORM_NAREALIGHTS));
@@ -298,9 +301,12 @@ namespace Render {
 			return false;
 		}
 		Shader::Bind(shader_mesh);
-		Shader::SendInt(Shader::UNIFORM_TEXTURE0, Texture::TexTarget0);
-		Shader::SendInt(Shader::UNIFORM_TEXTURE1, Texture::TexTarget1);
-		Shader::SendInt(Shader::UNIFORM_TEXTURE2, Texture::TexTarget2);
+		Shader::SendInt(Shader::UNIFORM_TEXTURE0, Texture::TARGET0);
+		Shader::SendInt(Shader::UNIFORM_TEXTURE1, Texture::TARGET1);
+		Shader::SendInt(Shader::UNIFORM_TEXTURE2, Texture::TARGET2);
+		Shader::SendInt(Shader::UNIFORM_TEXTURE3, Texture::TARGET3);
+		Shader::SendInt(Shader::UNIFORM_TEXTURE4, Texture::TARGET4);
+		Shader::SendInt(Shader::UNIFORM_TEXTURE5, Texture::TARGET5);
 
 		inited = true;
 		return true;

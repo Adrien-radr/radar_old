@@ -449,7 +449,7 @@ bool Device::Init(SceneInitFunc sceneInitFunc, SceneUpdateFunc sceneUpdateFunc, 
 
 	if (!Render::Init()) {
 		LogErr("Error initializing Device's Renderer.");
-		goto em_error;
+		goto err;
 	}
 
     // Initialize projection matrix
@@ -461,17 +461,17 @@ bool Device::Init(SceneInitFunc sceneInitFunc, SceneUpdateFunc sceneUpdateFunc, 
     // Initialize Game Scene
 	if (!scene.Init(sceneInitFunc, sceneUpdateFunc, sceneRenderFunc)) {
 		LogErr("Error initializing Device's Scene.");
-		goto render_error;
+		goto err;
 	}
 
 	// Initialize listeners in order
 	if (!AddEventListener(LT_ResizeListener, SceneResizeEventListener, this)) {
 		LogErr("Error registering scene as a resize event listener.");
-		goto render_error;
+		goto err;
 	}
 	if (!AddEventListener(LT_ResizeListener, DeviceResizeEventListener, this)) {
 		LogErr("Error registering device as a resize event listener.");
-		goto render_error;
+		goto err;
 	}
 
     LogInfo("Device successfully initialized.");
@@ -479,9 +479,7 @@ bool Device::Init(SceneInitFunc sceneInitFunc, SceneUpdateFunc sceneUpdateFunc, 
     return true;
 
 
-render_error:
-	Render::Destroy();
-em_error:
+err:
 	delete em; em = nullptr;
 	glfwDestroyWindow(window);
     window = nullptr;

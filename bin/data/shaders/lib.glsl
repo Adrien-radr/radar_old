@@ -130,7 +130,7 @@ float smoothDistanceAttenuation(float sqrDist, float invSqrAttRadius) {
 float getDistanceAttenuation(vec3 light_vec, float invSqrAttRadius) {
     float sqrDist = dot(light_vec, light_vec);
     float attenuation = 1.0 / (max(sqrDist, 0.0001));
-    attenuation *= smoothDistanceAttenuation(sqrDist, invSqrAttRadius);
+    //attenuation *= smoothDistanceAttenuation(sqrDist, invSqrAttRadius);
 
     return attenuation;
 }
@@ -257,11 +257,43 @@ float IntegrateEdge(vec3 P1, vec3 P2) {
     return r;
 }
 
+// Returns a vec2 to index the BRDF matrix depending on the view angle and surface roughness
+vec2 LTCCoords(float NdotV, float roughness) {
+    float theta = acos(NdotV);
+    vec2 coords = vec2(roughness, theta/(0.5*M_PI));
+
+    // corrected lookup (x - 1 + 0.5)
+    const float LUT_SIZE = 32.0;
+    coords = coords * (LUT_SIZE - 1.0) / LUT_SIZE + 0.5 / LUT_SIZE;
+
+    return coords;
+}
+
+mat3 LTCMatrix(sampler2D ltcMatrix, vec2 coord) {
+    vec4 v = texture2D(ltcMatrix, coord);
+    v = v.rgba;
+    // bgra
+    // rgba
+
+    // inverse of 
+    // a 0 b
+    // 0 c 0
+    // d 0 1
+    mat3 Minv = mat3(
+       vec3(1,   0, v.g),       // 1st column
+        vec3(0,  v.b,   0),
+        vec3(v.a,  0,v.r)
+    );
+    return Minv;
+}
+
 vec3 LTCEvaluate(vec3 N, vec3 V, vec3 P, mat3 Minv, vec3 points[4], bool twoSided) {
     // N orthonormal frame
     vec3 T, B;
     T = normalize(V - N * dot(V, N));
     B = cross(N, T);
+
+    vec3 R = 2.0 * dot(V,N) * N - V;
 
     Minv = Minv * transpose(mat3(T, B, N));
 
@@ -271,6 +303,7 @@ vec3 LTCEvaluate(vec3 N, vec3 V, vec3 P, mat3 Minv, vec3 points[4], bool twoSide
     L[1] = Minv * (points[1] - P);
     L[2] = Minv * (points[2] - P);
     L[3] = Minv * (points[3] - P);
+    L[4] = L[3];
 
     int n;
     ClipQuadToHorizon(L, n);
@@ -298,5 +331,5 @@ vec3 LTCEvaluate(vec3 N, vec3 V, vec3 P, mat3 Minv, vec3 points[4], bool twoSide
 
     sum = twoSided ? abs(sum) : max(0.0, -sum);
 
-    return vec3(sum);
+    return vec3(sum);// * 0.0001 + vec3(max(0,dot(normalize(points[0] - P), R)));
 } 

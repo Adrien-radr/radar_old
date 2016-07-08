@@ -110,7 +110,7 @@ bool ModelResource::_ProcessAssimpMaterials(Scene *gameScene, Data &model, const
                 // "Ks (", mat_desc.Ks.x, mat_desc.Ks.y, mat_desc.Ks.z, "), shininess: ", mat_desc.shininess);
 
             // Those are texture based. Just use defaults
-            mat_desc.uniform.Ka = col3f(0.1,0.1,0.1);
+            mat_desc.uniform.Ka = col3f(0.15,0.15,0.15);
             mat_desc.uniform.Kd = col3f(1,1,1);
             mat_desc.uniform.Ks = col3f(1,1,1);
             mat_desc.uniform.shininess = 1.0;   // This gets multiplied by the Specular Texture in shader
@@ -128,6 +128,13 @@ bool ModelResource::_ProcessAssimpMaterials(Scene *gameScene, Data &model, const
 
             // Normal Texture
             mat_desc.normalTexPath = GetTexturePath(material, model, aiTextureType_HEIGHT); // HEIGHT for normalmaps on .obj ?!
+
+            // Occlusion Texture
+            mat_desc.occlusionTexPath = GetTexturePath(material, model, aiTextureType_AMBIENT);
+
+            // TODO : Data-driven way for this ? This should be per-brdf type
+			mat_desc.ltcMatrixPath = "data/ltc_mat.dds";
+			mat_desc.ltcAmplitudePath = "data/ltc_amp.dds";
 
             mat_h = gameScene->Add(mat_desc);
             if(mat_h < 0) {
@@ -166,16 +173,19 @@ bool ModelResource::_ProcessAssimpMesh(Scene *gameScene, Data &model, aiMesh *me
     u32 faces_n = mesh->mNumFaces;
     u32 indices_n = faces_n * 3;
 
-    vec3f vp[vertices_n], vn[vertices_n], vtan[vertices_n], vbit[vertices_n];
-    vec2f vt[vertices_n];
-    u32 idx[indices_n];
-
     bool hasTangents = mesh->mTangents != NULL;
 
     if(!mesh->mNormals) {
         LogErr("Mesh has no normals!");
         return false;
     }
+
+    vec3f *vp = new vec3f[vertices_n];
+    vec3f *vn = new vec3f[vertices_n];
+    vec3f *vtan = new vec3f[vertices_n];
+    vec3f *vbit = new vec3f[vertices_n];
+    vec2f *vt = new vec2f[vertices_n];
+    u32 *idx = new u32[indices_n];
 
     for(u32 i = 0; i < vertices_n; ++i) {
         vp[i] = aiVector3D_To_vec3f(mesh->mVertices[i]);
@@ -211,6 +221,7 @@ bool ModelResource::_ProcessAssimpMesh(Scene *gameScene, Data &model, aiMesh *me
     Render::Mesh::Handle mesh_h = Render::Mesh::Build(mesh_desc);
     if(mesh_h < 0) {
         LogErr("Error creating subMesh.");
+        delete[] vp; delete[] vn; delete[] vtan; delete[] vbit; delete[] vt; delete[] idx; 
         return false;
     }
     
@@ -219,5 +230,6 @@ bool ModelResource::_ProcessAssimpMesh(Scene *gameScene, Data &model, aiMesh *me
     // Index the used material/texture
     model.materialIdx.push_back(mesh->mMaterialIndex);
 
+    delete[] vp; delete[] vn; delete[] vtan; delete[] vbit; delete[] vt; delete[] idx;
     return true;
 }
