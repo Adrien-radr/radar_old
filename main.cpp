@@ -180,7 +180,13 @@ bool initFunc(Scene *scene) {
 		LogErr("Error loading m14");
 		return false;
 	}
+
 #if 0
+	ModelResource::Handle ironmanModel = scene->LoadModelResource("data/ironman/ironman.obj");
+	if(ironmanModel < 0) {
+		LogErr("Error loading ironman");
+		return false;
+	}
 	ModelResource::Handle sponzaModel = scene->LoadModelResource("data/sponza/sponza.obj");
 	if(sponzaModel < 0) {
 		LogErr("Error loading sponza.");
@@ -204,6 +210,16 @@ bool initFunc(Scene *scene) {
 	}
 	Object::Desc *crysisGuyObj = scene->GetObject(crysisGuy);
 	crysisGuyObj->Translate(vec3f(0,-0.7,1));
+
+
+	// Object::Handle ironman = scene->InstanciateModel(ironmanModel);
+	// if(ironman < 0) {
+		// LogErr("Error creating ironman Guy.");
+		// return false;
+	// }
+	// Object::Desc *ironmanObj = scene->GetObject(ironman);
+	// ironmanObj->Translate(vec3f(0,-0.7,1));
+
 
 
 	Object::Handle metal_h = scene->InstanciateModel(metal0Model);
@@ -310,16 +326,16 @@ void updateFunc(Scene *scene, float dt) {
 
 	AreaLight::Desc *light = scene->GetLight(alh);
 	if(light) {
-		light->rotation.y += dt * M_PI * 0.5f;
+		// light->rotation.y += dt * M_PI * 0.5f;
 	}
 	AreaLight::Desc *light2 = scene->GetLight(alh2);
 	if(light2) {
-		light2->position.y = alPos.y + 2 * sinf(1.5*t);
-		light2->rotation.z += dt * M_PI * 0.5f;
+		// light2->position.y = alPos.y + 2 * sinf(1.5*t);
+		// light2->rotation.z += dt * M_PI * 0.5f;
 	}
 	AreaLight::Desc *light3 = scene->GetLight(alh3);
 	if(light3) {
-		light3->position.x = alPos2.x + 10 * sinf(1*t);
+		// light3->position.x = alPos2.x + 10 * sinf(1*t);
 	}
 
 	t += dt;

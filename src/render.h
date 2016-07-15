@@ -16,6 +16,11 @@ namespace Render {
 	void StartTextRendering();
 	void StartPolygonRendering();
 
+	void ToggleGTRaytracing();
+	void ResetGTAccumulation();
+	void AccumulateGT();
+	void UpdateView(const mat4f &viewMatrix, const vec3f &eyePos);
+
 	//bool FindResource(const std::vector<RenderResource> &resources, const )
 
 	namespace Shader {
@@ -61,6 +66,8 @@ namespace Render {
 			UNIFORM_EYEPOS,
 			UNIFORM_NPOINTLIGHTS,
 			UNIFORM_NAREALIGHTS,
+			UNIFORM_GROUNDTRUTH,
+			UNIFORM_GLOBALTIME,
 
 			UNIFORM_N                   // Do not use
 		};

@@ -570,7 +570,6 @@ void Device::Run() {
         em->Update();
 
         // Render Scene
-        glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
 		scene.Render();
 
 

@@ -64,6 +64,8 @@ layout (std140) uniform Material {
 uniform int nPointLights;
 uniform int nAreaLights;
 uniform vec3 eyePosition;
+uniform int GTMode;
+uniform float globalTime;
 
 // Texture buffers
 uniform sampler2D DiffuseTex;   // index 0
@@ -74,6 +76,11 @@ uniform sampler2D ltc_mat;
 uniform sampler2D ltc_amp;
 
 out vec4 frag_color;
+
+
+float rand(vec2 co){
+    return fract(sin(dot(co.xy ,vec2(12.9898,78.233))) * 43758.5453);
+}
 
 vec4 depthBuffer() {
     float near = 1.0;
@@ -146,12 +153,206 @@ vec3 areaLightContribution(vec3 N, vec3 V, float NdotV, vec3 diff_color, vec3 sp
             // specular
             vec3 specular =  LTCEvaluate(N, V, v_position, MinvSpec, points, false);
             specular *= spec_color * schlick.x + (1.0 - spec_color) * schlick.y;
+            specular *= 0.000000000001;
 
             contrib += alights[i].Ld * (diffuse + specular);
         }
     }
 
     contrib /= 2.0 * M_PI;
+
+    return contrib;
+}
+struct SphericalQuad
+{
+    vec3 o, x, y, z;
+    float z0, z0sq;
+    float x0, y0, y0sq;
+    float x1, y1, y1sq;
+    float b0, b1, b0sq, k;
+    float S;
+};
+
+SphericalQuad SphericalQuadInit(vec3 s, vec3 ex, vec3 ey, vec3 o)
+{
+    SphericalQuad squad;
+
+    squad.o = o;
+    float exl = length(ex);
+    float eyl = length(ey);
+
+    // compute local reference system ’R’
+    squad.x = ex / exl;
+    squad.y = ey / eyl;
+    squad.z = cross(squad.x, squad.y);
+
+    // compute rectangle coords in local reference system
+    vec3 d = s - o;
+    squad.z0 = dot(d, squad.z);
+
+    // flip ’z’ to make it point against ’Q’
+    if (squad.z0 > 0.0)
+    {
+        squad.z  *= -1.0;
+        squad.z0 *= -1.0;
+    }
+
+    squad.z0sq = squad.z0 * squad.z0;
+    squad.x0 = dot(d, squad.x);
+    squad.y0 = dot(d, squad.y);
+    squad.x1 = squad.x0 + exl;
+    squad.y1 = squad.y0 + eyl;
+    squad.y0sq = squad.y0 * squad.y0;
+    squad.y1sq = squad.y1 * squad.y1;
+
+    // create vectors to four vertices
+    vec3 v00 = vec3(squad.x0, squad.y0, squad.z0);
+    vec3 v01 = vec3(squad.x0, squad.y1, squad.z0);
+    vec3 v10 = vec3(squad.x1, squad.y0, squad.z0);
+    vec3 v11 = vec3(squad.x1, squad.y1, squad.z0);
+
+    // compute normals to edges
+    vec3 n0 = normalize(cross(v00, v10));
+    vec3 n1 = normalize(cross(v10, v11));
+    vec3 n2 = normalize(cross(v11, v01));
+    vec3 n3 = normalize(cross(v01, v00));
+
+    // compute internal angles (gamma_i)
+    float g0 = acos(-dot(n0, n1));
+    float g1 = acos(-dot(n1, n2));
+    float g2 = acos(-dot(n2, n3));
+    float g3 = acos(-dot(n3, n0));
+
+    // compute predefined constants
+    squad.b0 = n0.z;
+    squad.b1 = n2.z;
+    squad.b0sq = squad.b0 * squad.b0;
+    squad.k = 2.0*M_PI - g2 - g3;
+
+    // compute solid angle from internal angles
+    squad.S = g0 + g1 - squad.k;
+
+    return squad;
+}
+
+vec3 SphericalQuadSample(SphericalQuad squad, float u, float v) {
+    // 1. compute 'cu'
+    float au = u * squad.S + squad.k;
+    float fu = (cos(au) * squad.b0 - squad.b1) / sin(au);
+    float cu = 1.0 / sqrt(fu*fu + squad.b0sq) * (fu > 0.0 ? 1.0 : -1.0);
+    cu = clamp(cu, -1.0, 1.0); // avoid NaNs
+
+    // 2. compute 'xu'
+    float xu = -(cu * squad.z0) / sqrt(1.0 - cu * cu);
+    xu = clamp(xu, squad.x0, squad.x1); // avoid Infs
+
+    // 3. compute 'yv'
+    float d = sqrt(xu * xu + squad.z0sq);
+    float h0 = squad.y0 / sqrt(d*d + squad.y0sq);
+    float h1 = squad.y1 / sqrt(d*d + squad.y1sq);
+    float hv = h0 + v * (h1 - h0), hv2 = hv * hv;
+    float yv = (hv2 < 1.0 - 1e-6) ? (hv * d) / sqrt(1.0 - hv2) : squad.y1;
+
+    // 4. transform (xu, yv, z0) to world coords
+    return squad.o + xu*squad.x + yv*squad.y + squad.z0*squad.z;
+
+}
+
+mat3 BasisFrisvad(vec3 v)
+{
+    vec3 x, y;
+
+    if (v.z < -0.999999)
+    {
+        x = vec3( 0, -1, 0);
+        y = vec3(-1,  0, 0);
+    }
+    else
+    {
+        float a = 1.0 / (1.0 + v.z);
+        float b = -v.x*v.y*a;
+        x = vec3(1.0 - v.x*v.x*a, b, -v.x);
+        y = vec3(b, 1.0 - v.y*v.y*a, -v.y);
+    }
+
+    return mat3(x, y, v);
+}
+vec3 areaLightGT(vec3 N, vec3 V, float NdotV, vec3 diff_color, vec3 spec_color, float roughness) {
+    vec3 contrib = vec3(0);
+    vec3 points[4];
+
+    // randVal = randVal * 2.0 - 1.0; // [-1, 1]
+
+    // vec2 ltcCoords = LTCCoords(NdotV, roughness);
+    // mat3 MinvSpec = LTCMatrix(ltc_mat, ltcCoords);
+    // mat3 MinvDiff = mat3(1);
+    // vec2 schlick = texture2D(ltc_amp, ltcCoords).xy;
+
+
+    mat3 t2w = BasisFrisvad(N);
+    mat3 w2t = transpose(t2w);
+    vec3 wo = w2t * V;
+
+    for(int i = 0; i < nAreaLights; ++i) {
+        vec3 pN = alights[i].plane.xyz;
+
+        float lighted = dot(pN, v_position) + alights[i].plane.w;
+
+        if(lighted > 0.0) {
+            vec3 diffuse = vec3(0);
+            vec3 specular = vec3(0);
+
+            InitRectPoints(alights[i], points);
+            // luminaire in tangent space
+            vec3 ex = points[1] - points[0];
+            vec3 ey = points[3] - points[0];
+            SphericalQuad squad = SphericalQuadInit(points[0], ex, ey, v_position);
+            float rcpSolidAngle = 1.0/squad.S;
+            vec3 ez = normalize(cross(ex,ey));
+            ez = w2t * ez;
+
+            const int nSamples = 1;
+
+            for(int s = 1; s <= nSamples; ++s) {
+                vec3 randSeed = v_position * globalTime * s;
+                vec3 randVal = vec3(rand(randSeed.xy), rand(randSeed.xz), rand(randSeed.yz));
+                vec3 samplePos = SphericalQuadSample(squad, randVal.x, randVal.y);
+                vec3 wi = normalize(samplePos - v_position);
+                wi = w2t * wi;
+
+                float cosTheta = wi.z;
+                float pdfBRDF = 1.0 / (2.0*M_PI); // hemispherical pdf
+                vec3 fr_p = alights[i].Ld / M_PI;
+
+                float pdfLight = rcpSolidAngle;
+
+                if(cosTheta > 0.0 && (dot(wi,ez) < 0.0))
+                    diffuse += fr_p * cosTheta / ( pdfLight);
+            }
+            diffuse *= diff_color / float(nSamples);
+
+            // vec3 samplePos = alights[i].position;
+            // samplePos += randVal.x * alights[i].dirx * alights[i].hwidthx;
+            // samplePos += randVal.z * alights[i].diry * alights[i].hwidthy;
+            // float area = alights[i].hwidthx * alights[i].hwidthy * 4;
+            // vec3 L = samplePos - v_position;
+            // float Ldist = length(L);
+            // L /= Ldist;
+            // float atten = max(0.0001, Ldist * Ldist);
+
+            // diffuse
+            // vec3 diffuse = vec3(max(0, dot(N, L)) * max(0, dot(pN, -L)) * area / (M_PI * atten));
+            // diffuse *= diff_color;
+            // vec3 diffuse = LTCEvaluate(N, V, v_position, MinvDiff, points, false);
+            // diffuse *= diff_color / (2.0*M_PI);
+
+            // specular
+            // vec3 specular =  LTCEvaluate(N, V, v_position, MinvSpec, points, false);
+            // specular *= spec_color * schlick.x + (1.0 - spec_color) * schlick.y;
+
+            contrib += (diffuse + specular);
+        }
+    }
 
     return contrib;
 }
@@ -180,15 +381,23 @@ void main() {
     // N = N * 0.00000001 + normalize(v_normal);
     float NdotV = max(0, dot(N, V));
 
-    Li += pointLightContribution(N, V, NdotV, diffuse_color, specular_color, roughness);
-    Li += areaLightContribution(N, V, NdotV, diffuse_color, specular_color, roughness);
-    
-    vec3 finalcol = Ka * AmbientOcclusion + Li;
+    if(GTMode == 0) {
+        Li += pointLightContribution(N, V, NdotV, diffuse_color, specular_color, roughness);
+        Li += areaLightContribution(N, V, NdotV, diffuse_color, specular_color, roughness);
 
-    frag_color = vec4(finalcol, 1) *  // lighting
-                //  1 * //(0.3 + 0.7 * v_color) *  // color
-                  vec4(diffuseTexColor , 1);                     // texture
+        vec3 finalcol = Ka * AmbientOcclusion + Li;
 
-    // To visualize depth :
-    // frag_color = frag_color * 0.0001 + depthBuffer();
+        frag_color = vec4(finalcol, 1) *  // lighting
+                    //  1 * //(0.3 + 0.7 * v_color) *  // color
+                    vec4(diffuseTexColor * (1-0.000001*globalTime), 1);                     // texture
+
+        // To visualize depth :
+        // frag_color = frag_color * 0.0001 + depthBuffer();
+    } else {
+        Li += pointLightContribution(N, V, NdotV, diffuse_color, specular_color, roughness);
+        Li += areaLightGT(N, V, NdotV, diffuse_color, specular_color, roughness);
+
+        vec3 finalcol = Ka * AmbientOcclusion + Li;
+        frag_color = vec4(diffuseTexColor * finalcol, 1);
+    }    
 }

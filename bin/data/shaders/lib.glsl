@@ -293,8 +293,6 @@ vec3 LTCEvaluate(vec3 N, vec3 V, vec3 P, mat3 Minv, vec3 points[4], bool twoSide
     T = normalize(V - N * dot(V, N));
     B = cross(N, T);
 
-    vec3 R = 2.0 * dot(V,N) * N - V;
-
     Minv = Minv * transpose(mat3(T, B, N));
 
     // polygon in TBN frame 
@@ -331,5 +329,5 @@ vec3 LTCEvaluate(vec3 N, vec3 V, vec3 P, mat3 Minv, vec3 points[4], bool twoSide
 
     sum = twoSided ? abs(sum) : max(0.0, -sum);
 
-    return vec3(sum);// * 0.0001 + vec3(max(0,dot(normalize(points[0] - P), R)));
+    return vec3(sum);
 } 

@@ -247,21 +247,22 @@ void Scene::UpdateView() {
 	camera.target = camera.position + camera.forward;
 	view_matrix = mat4f::LookAt(camera.position, camera.target, camera.up);
 
-	for(int i = Render::Shader::_SHADER_3D_PROJECTION_START; i < Render::Shader::_SHADER_3D_PROJECTION_END; ++i) {
-		Render::Shader::Bind(i);
-		Render::Shader::SendMat4(Render::Shader::UNIFORM_VIEWMATRIX, view_matrix);
-		Render::Shader::SendVec3(Render::Shader::UNIFORM_EYEPOS, camera.position);
-	}
+	Render::UpdateView(view_matrix, camera.position);
 }
 
 void Scene::Update(float dt) {
 	Device &device = GetDevice();
 
 	// Ctrl+R to hot reload shaders
-	if(device.IsKeyHit(K_R) & device.IsKeyDown(K_LControl)) {
+	if(device.IsKeyHit(K_R) && device.IsKeyDown(K_LControl)) {
 		Render::ReloadShaders();
 		camera.hasMoved = true; // to reupload view matrices
 		device.UpdateProjection(); // to reupload projection matrices
+	}
+
+	// Ctrl+G to toggle Ground Truth ray tracing mode
+	if(device.IsKeyHit(K_G) && device.IsKeyDown(K_LControl)) {
+		Render::ToggleGTRaytracing();
 	}
 
 	// Real-time camera updating
@@ -461,7 +462,7 @@ void Scene::Render() {
 		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 	}
 
-	// Render::StartPolygonRendering();
+	Render::StartPolygonRendering();
 
 
 	// glEnable(GL_FRAMEBUFFER_SRGB);
@@ -470,9 +471,11 @@ void Scene::Render() {
 	u32 numPointLights = AggregatePointLightUniforms();
 	u32 numAreaLights = AggregateAreaLightUniforms();
 
+	float globalTime = (float)glfwGetTime();
 	for (u32 j = 0; j < objects.size(); ++j) {
 		Object::Desc &object = objects[j];
 		Render::Shader::Bind(object.shader);
+		Render::Shader::SendFloat(Render::Shader::UNIFORM_GLOBALTIME, globalTime);
 		Render::Shader::SendInt(Render::Shader::UNIFORM_NPOINTLIGHTS, numPointLights);
 		Render::Shader::SendInt(Render::Shader::UNIFORM_NAREALIGHTS, numAreaLights);
 
@@ -504,6 +507,9 @@ void Scene::Render() {
 		glEnable(GL_CULL_FACE);
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 	}
+
+	// In case we are doing GT raytracing, accumulate backbuffer
+	Render::AccumulateGT();
 
 	// glDisable(GL_FRAMEBUFFER_SRGB);
 

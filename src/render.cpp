@@ -68,6 +68,10 @@ namespace Render {
 		/// View/Camera Matrix
 		mat4f           view_matrix;
 
+		bool 			GTMode;			// Ground Truth Raytracing mode
+		bool			blendChange;	// To reset the backbuffer accumulation when moving the camera
+		int				accumFrames;	// number of accumulation frames
+
 		// Those arrays contain the GL-loaded resources and contains no explicit
 		// duplicates.
 		std::vector<Shader::Data> shaders;
@@ -103,6 +107,9 @@ namespace Render {
 		glActiveTexture(GL_TEXTURE0);   // default to 1st one
 
 		renderer->shaderFunctionLibrary = 0;
+		renderer->GTMode = false;
+		renderer->blendChange = true;
+		renderer->accumFrames = 1;
 
 		renderer->mesh_resources.clear();
 		renderer->font_resources.clear();
@@ -288,6 +295,8 @@ namespace Render {
 		sd_mesh.uniforms.push_back(Shader::Desc::Uniform("eyePosition", Shader::UNIFORM_EYEPOS));
 		sd_mesh.uniforms.push_back(Shader::Desc::Uniform("nPointLights", Shader::UNIFORM_NPOINTLIGHTS));
 		sd_mesh.uniforms.push_back(Shader::Desc::Uniform("nAreaLights", Shader::UNIFORM_NAREALIGHTS));
+		sd_mesh.uniforms.push_back(Shader::Desc::Uniform("GTMode", Shader::UNIFORM_GROUNDTRUTH));
+		sd_mesh.uniforms.push_back(Shader::Desc::Uniform("globalTime", Shader::UNIFORM_GLOBALTIME));
 		sd_mesh.uniformblocks.push_back(Shader::Desc::UniformBlock("Material", Shader::UNIFORMBLOCK_MATERIAL));
 		sd_mesh.uniformblocks.push_back(Shader::Desc::UniformBlock("PointLights", Shader::UNIFORMBLOCK_POINTLIGHTS));
 		sd_mesh.uniformblocks.push_back(Shader::Desc::UniformBlock("AreaLights", Shader::UNIFORMBLOCK_AREALIGHTS));
@@ -307,6 +316,8 @@ namespace Render {
 		Shader::SendInt(Shader::UNIFORM_TEXTURE3, Texture::TARGET3);
 		Shader::SendInt(Shader::UNIFORM_TEXTURE4, Texture::TARGET4);
 		Shader::SendInt(Shader::UNIFORM_TEXTURE5, Texture::TARGET5);
+		Shader::SendInt(Shader::UNIFORM_GROUNDTRUTH, (int)renderer->GTMode);
+		Shader::SendFloat(Shader::UNIFORM_GLOBALTIME, 0.f);	// Default : not using ground truth raytracing
 
 		inited = true;
 		return true;
@@ -319,9 +330,66 @@ namespace Render {
 		Shader::Bind(Shader::SHADER_2D_UI);
 		Mesh::Bind(renderer->text_vao);	// bind general text vao
 	}
+
 	void StartPolygonRendering() {
-		Shader::Bind(Shader::SHADER_3D_MESH);
+		glClear(GL_ACCUM_BUFFER_BIT);
+			glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
+		// Clear the backbuffers if not in accumulating mode
+		if(!renderer->GTMode || renderer->blendChange) {
+			renderer->accumFrames = 1;
+			// glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
+			// glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+		} else {
+			// add last frame's to the accum
+			// glAccum(GL_ACCUM, renderer->accumFrames / (float)(renderer->accumFrames+1));
+        	// glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
+			// glClear(GL_DEPTH_BUFFER_BIT);
+			// glBlendFunc(GL_ONE, GL_ONE);
+			++renderer->accumFrames;
+		}
+		// Shader::Bind(Shader::SHADER_3D_MESH);
 		//Mesh::Bind(0);
+	}
+
+	void ToggleGTRaytracing() {
+		renderer->GTMode = !renderer->GTMode;
+		Shader::Bind(Shader::SHADER_3D_MESH);
+		Shader::SendInt(Shader::UNIFORM_GROUNDTRUTH, (int)renderer->GTMode);
+		ResetGTAccumulation();
+	}
+
+	void ResetGTAccumulation() {
+		renderer->blendChange = true;
+		// glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA); // reset backbuffer accumulation for 1 frame
+	}
+
+	void AccumulateGT() {
+		if(renderer->GTMode && renderer->blendChange) {
+			renderer->blendChange = false;
+			// glBlendFunc(GL_ONE, GL_ONE);
+			// glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		}
+		if(renderer->GTMode) {
+
+		// glAccum(GL_ACCUM, 1.f / (float)(renderer->accumFrames+1));
+		// glAccum(GL_RETURN, 1.f);
+		}
+
+			// glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	}
+
+	void UpdateView(const mat4f &viewMatrix, const vec3f &eyePos) {
+		for(int i = Shader::_SHADER_3D_PROJECTION_START; i < Shader::_SHADER_3D_PROJECTION_END; ++i) {
+			Shader::Bind(i);
+			Shader::SendMat4(Shader::UNIFORM_VIEWMATRIX, viewMatrix);
+			Shader::SendVec3(Shader::UNIFORM_EYEPOS, eyePos);
+		}
+
+		// view changed, reset blend mode for Raytracing
+		if(renderer->GTMode) {
+			ResetGTAccumulation();
+		}
 	}
 
 	// @param addSlot : if true, actively search for an empty slot to store the unexisting resource
