@@ -332,14 +332,18 @@ namespace Render {
 	}
 
 	void StartPolygonRendering() {
-		glClear(GL_ACCUM_BUFFER_BIT);
-			glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
+		
+		// glClear(GL_ACCUM_BUFFER_BIT);
+		// glClearColor(0.0f, 0.0f, 0.0f, 0.f);
+
+		glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
 		// Clear the backbuffers if not in accumulating mode
 		if(!renderer->GTMode || renderer->blendChange) {
 			renderer->accumFrames = 1;
 			// glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
 			// glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
+			// glBlendFunc(GL_ONE, GL_ONE);
+			// glEnable(GL_BLEND);
 		} else {
 			// add last frame's to the accum
 			// glAccum(GL_ACCUM, renderer->accumFrames / (float)(renderer->accumFrames+1));
@@ -372,7 +376,7 @@ namespace Render {
 		}
 		if(renderer->GTMode) {
 
-		// glAccum(GL_ACCUM, 1.f / (float)(renderer->accumFrames+1));
+		// glAccum(GL_ACCUM, 1.f / (float)(renderer->accumFrames));
 		// glAccum(GL_RETURN, 1.f);
 		}
 

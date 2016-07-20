@@ -153,7 +153,6 @@ vec3 areaLightContribution(vec3 N, vec3 V, float NdotV, vec3 diff_color, vec3 sp
             // specular
             vec3 specular =  LTCEvaluate(N, V, v_position, MinvSpec, points, false);
             specular *= spec_color * schlick.x + (1.0 - spec_color) * schlick.y;
-            specular *= 0.000000000001;
 
             contrib += alights[i].Ld * (diffuse + specular);
         }
@@ -299,8 +298,6 @@ vec3 areaLightGT(vec3 N, vec3 V, float NdotV, vec3 diff_color, vec3 spec_color, 
         float lighted = dot(pN, v_position) + alights[i].plane.w;
 
         if(lighted > 0.0) {
-            vec3 diffuse = vec3(0);
-            vec3 specular = vec3(0);
 
             InitRectPoints(alights[i], points);
             // luminaire in tangent space
@@ -311,8 +308,9 @@ vec3 areaLightGT(vec3 N, vec3 V, float NdotV, vec3 diff_color, vec3 spec_color, 
             vec3 ez = normalize(cross(ex,ey));
             ez = w2t * ez;
 
-            const int nSamples = 1;
+            const int nSamples = 15;
 
+            vec3 sum = vec3(0);
             for(int s = 1; s <= nSamples; ++s) {
                 vec3 randSeed = v_position * globalTime * s;
                 vec3 randVal = vec3(rand(randSeed.xy), rand(randSeed.xz), rand(randSeed.yz));
@@ -321,36 +319,21 @@ vec3 areaLightGT(vec3 N, vec3 V, float NdotV, vec3 diff_color, vec3 spec_color, 
                 wi = w2t * wi;
 
                 float cosTheta = wi.z;
-                float pdfBRDF = 1.0 / (2.0*M_PI); // hemispherical pdf
-                vec3 fr_p = alights[i].Ld / M_PI;
+                vec3 diffBRDF = diff_color / M_PI;
+
+                vec3 h = normalize(wi + wo);
+                float LdotH = max(0, dot(wi, h));
+                float NdotH = h.z;
+                vec3 specBRDF = GGX(wi.z, wo.z, NdotH, LdotH, roughness, spec_color);
 
                 float pdfLight = rcpSolidAngle;
 
-                if(cosTheta > 0.0 && (dot(wi,ez) < 0.0))
-                    diffuse += fr_p * cosTheta / ( pdfLight);
+                if(cosTheta > 0.0 && (dot(wi,ez) < 0.0)) {
+                    sum += (diffBRDF + specBRDF) * cosTheta / (pdfLight);
+                }
             }
-            diffuse *= diff_color / float(nSamples);
 
-            // vec3 samplePos = alights[i].position;
-            // samplePos += randVal.x * alights[i].dirx * alights[i].hwidthx;
-            // samplePos += randVal.z * alights[i].diry * alights[i].hwidthy;
-            // float area = alights[i].hwidthx * alights[i].hwidthy * 4;
-            // vec3 L = samplePos - v_position;
-            // float Ldist = length(L);
-            // L /= Ldist;
-            // float atten = max(0.0001, Ldist * Ldist);
-
-            // diffuse
-            // vec3 diffuse = vec3(max(0, dot(N, L)) * max(0, dot(pN, -L)) * area / (M_PI * atten));
-            // diffuse *= diff_color;
-            // vec3 diffuse = LTCEvaluate(N, V, v_position, MinvDiff, points, false);
-            // diffuse *= diff_color / (2.0*M_PI);
-
-            // specular
-            // vec3 specular =  LTCEvaluate(N, V, v_position, MinvSpec, points, false);
-            // specular *= spec_color * schlick.x + (1.0 - spec_color) * schlick.y;
-
-            contrib += (diffuse + specular);
+            contrib += sum * alights[i].Ld / float(nSamples);
         }
     }
 
@@ -389,7 +372,7 @@ void main() {
 
         frag_color = vec4(finalcol, 1) *  // lighting
                     //  1 * //(0.3 + 0.7 * v_color) *  // color
-                    vec4(diffuseTexColor * (1-0.000001*globalTime), 1);                     // texture
+                    vec4(diffuseTexColor, 1);                     // texture
 
         // To visualize depth :
         // frag_color = frag_color * 0.0001 + depthBuffer();
