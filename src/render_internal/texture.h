@@ -9,26 +9,6 @@
 
 namespace Render {
 	namespace Texture {
-		enum TextureFormat {
-			FMT_UNKNOWN,
-
-			R8U,
-			RG8U,
-			RGB8U,
-			RGBA8U,
-
-			R32F,
-			RG32F,
-			RGB32F,
-			RGBA32F,
-
-			DXT1,
-			DXT3,
-			DXT5,
-
-			_FORMAT_MAX
-		};
-
 		struct FormatDesc {
 			// FormatDesc() : 
 				// blockSize(0), bpp(0), component(0), formatGL(GL_NONE), formatInternalGL(0), type(GL_NONE) {}
@@ -39,6 +19,8 @@ namespace Render {
 			GLint 	formatInternalGL;
 			GLenum  type;
 		};
+
+		FormatDesc GetTextureFormat(TextureFormat fmt);
 
 		/// Intermediate format for texture loading
 		/// Do not use unless you know why/how

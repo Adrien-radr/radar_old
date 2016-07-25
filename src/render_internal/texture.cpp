@@ -18,14 +18,22 @@ namespace Render {
 				// unsigned
 				{ 1,  8, 1, GL_RED, GL_RED, GL_UNSIGNED_BYTE }, // R8U
 				{ 2, 16, 2, GL_RG, GL_RG, GL_UNSIGNED_BYTE }, // RG8U
-				{ 3, 24, 3, GL_BGR, GL_RGB, GL_UNSIGNED_BYTE }, // RGB8U
-				{ 4, 32, 4, GL_BGRA, GL_RGBA, GL_UNSIGNED_BYTE }, // RGBA8U
+				{ 3, 24, 3, GL_RGB, GL_RGB, GL_UNSIGNED_BYTE }, // RGB8U
+				{ 4, 32, 4, GL_RGBA, GL_RGBA, GL_UNSIGNED_BYTE }, // RGBA8U
 
 				// float
+				{  2,  16, 1, GL_R16F, GL_RED, GL_FLOAT }, // R16F
+				{  4,  32, 2, GL_RG16F, GL_RG, GL_FLOAT }, // RG16F
+				{  6,  48, 3, GL_RGB16F, GL_RGB, GL_FLOAT }, // RGB16F
+				{  8,  64, 4, GL_RGBA16F, GL_RGBA, GL_FLOAT }, // RGBA16F
+
 				{  4,  32, 1, GL_RED, GL_RED, GL_FLOAT }, // R32F
 				{  8,  64, 2, GL_RG, GL_RG, GL_FLOAT }, // RG32F
-				{ 12,  96, 3, GL_BGR, GL_RGB, GL_FLOAT }, // RGB32F
-				{ 16, 128, 4, GL_BGRA, GL_RGBA, GL_FLOAT }, // RGBA32F
+				{ 12,  96, 3, GL_RGB, GL_RGB, GL_FLOAT }, // RGB32F
+				{ 16, 128, 4, GL_RGBA, GL_RGBA, GL_FLOAT }, // RGBA32F
+
+				{ 2, 16, 1, GL_DEPTH_COMPONENT16, GL_DEPTH_COMPONENT, GL_FLOAT }, // DEPTH16F
+				{ 4, 32, 1, GL_DEPTH_COMPONENT32, GL_DEPTH_COMPONENT, GL_FLOAT }, // DEPTH32F
 
 				{  8, 4, 4, GL_COMPRESSED_RGBA_S3TC_DXT1_EXT, GL_NONE, GL_NONE },	// DXT1
 				{ 16, 8, 4, GL_COMPRESSED_RGBA_S3TC_DXT3_EXT, GL_NONE, GL_NONE },	// DXT3
@@ -444,6 +452,8 @@ namespace Render {
 
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 			glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, deviceConfig.anisotropicFiltering);
 
 			switch(t->format) {

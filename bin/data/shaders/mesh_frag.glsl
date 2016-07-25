@@ -43,8 +43,6 @@ in vec3 v_position;
 in vec3 v_normal;
 in vec2 v_texcoord;
 in mat3 v_TBN;
-in vec3 v_viewPosition;
-in vec3 v_viewNormal;
 
 layout (std140) uniform PointLights {
     PointLight plights[8];

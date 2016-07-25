@@ -462,8 +462,24 @@ void Scene::Render() {
 		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 	}
 
-	Render::StartPolygonRendering();
+	// GBuffer Pass
+	Render::StartGBufferPass();
+	for (u32 j = 0; j < objects.size(); ++j) {
+		Object::Desc &object = objects[j];
+		Render::Shader::SendInt(Render::Shader::UNIFORM_OBJECTID, j);
 
+		// TODO : model_matrix from TRS should be done in update function, not in render
+		object.model_matrix.FromTRS(object.position, object.rotation, object.scale);
+		Render::Shader::SendMat4(Render::Shader::UNIFORM_MODELMATRIX, object.model_matrix);
+
+		// Render all submeshes
+		for(u32 m = 0; m < object.numSubmeshes; ++m) {
+			Render::Mesh::Render(object.meshes[m]);
+		}
+	}
+	Render::StopGBufferPass();
+
+	Render::StartPolygonRendering();
 
 	// glEnable(GL_FRAMEBUFFER_SRGB);
 

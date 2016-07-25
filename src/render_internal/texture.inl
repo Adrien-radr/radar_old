@@ -63,3 +63,74 @@ namespace Texture {
     }
 
 }
+
+
+namespace FBO {
+    GLuint fbo_attachments[5] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, 
+                                  GL_COLOR_ATTACHMENT3, GL_COLOR_ATTACHMENT4 };
+
+    Handle Build(Desc d) {
+        Data fbo;
+        glGenFramebuffers(1, &fbo.framebuffer); 
+        glBindFramebuffer(GL_FRAMEBUFFER, fbo.framebuffer);
+
+        // Create all attachments
+        int numAttachments = d.textures.size();
+        for(int i = 0; i < numAttachments; ++i) {
+            Texture::Desc td;
+            td.size = d.size;
+            td.from_file = false;
+            Texture::Handle th = Texture::Build(td);
+            if(th < 0) {
+                LogErr("Error creating FBO's associated texture.");
+                return -1;
+            }
+            GLuint tex_id = renderer->textures[th].id;
+
+            Texture::FormatDesc fdesc = Texture::GetTextureFormat(d.textures[i]);
+            Texture::Bind(th, Texture::TARGET0);
+            glTexImage2D(GL_TEXTURE_2D, 0, fdesc.formatGL, d.size.x, d.size.y, 0, fdesc.formatInternalGL, fdesc.type, NULL);
+
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + i, GL_TEXTURE_2D, tex_id, 0);
+            fbo.attachments.push_back(th);
+        }     
+
+        glDrawBuffers(numAttachments, fbo_attachments);
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+        int fbo_i = (int)renderer->fbos.size();
+        renderer->fbos.push_back(fbo);
+
+        return fbo_i;
+    }
+
+    void Destroy(Handle h) {
+        if(Exists(h)) {
+            FBO::Data &f = renderer->fbos[h];
+            for(Texture::Handle &h : f.attachments)
+                Texture::Destroy(h);
+            if(f.framebuffer > 0) {
+                glDeleteFramebuffers(1, &f.framebuffer);
+                f.framebuffer = 0;
+            }
+        }
+    }
+
+    bool Exists(Handle h) {
+        return h >= 0 && h < (int)renderer->fbos.size();
+    }
+
+    void Bind(Handle h) {
+        if(Exists(h)) {
+            glBindFramebuffer(GL_FRAMEBUFFER, renderer->fbos[h].framebuffer);
+        }    
+    }
+
+    /*void BindTexture() {
+        Texture::Bind(texture);
+    }*/
+}

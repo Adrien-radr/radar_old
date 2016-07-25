@@ -1,4 +1,5 @@
 #include "render.h"
+#include "device.h"
 #include "common/resource.h"
 #include "GL/glew.h"
 #include "json/cJSON.h"
@@ -75,6 +76,7 @@ namespace Render {
 		// Those arrays contain the GL-loaded resources and contains no explicit
 		// duplicates.
 		std::vector<Shader::Data> shaders;
+		std::vector<FBO::Data> fbos;
 		std::vector<UBO::Data> ubos;
 		std::vector<Mesh::Data> meshes;
 		std::vector<TextMesh::Data> textmeshes;
@@ -117,6 +119,7 @@ namespace Render {
 		renderer->spritesheets_resources.clear();
 
 		renderer->ubos.clear();
+		renderer->fbos.clear();
 		renderer->shaders.clear();
 		renderer->meshes.clear();
 		renderer->textmeshes.clear();
@@ -147,6 +150,17 @@ namespace Render {
 		}
 
 		if(!ReloadShaders()) {
+			return false;
+		}
+
+		// Create FBO for gBuffer pass
+		FBO::Desc fdesc;
+		fdesc.size = GetDevice().windowSize;	// TODO : resize gBuffer when window change size
+		fdesc.textures.push_back(Texture::R8U);	// ObjectIDs. TODO : this can only hold 256 objects maximum, raise it later on
+
+		FBO::Handle fboh = FBO::Build(fdesc);
+		if(fboh < 0) {
+			LogErr("Error creating gBuffer.");
 			return false;
 		}
 
@@ -181,6 +195,12 @@ namespace Render {
 		if(renderer) {
 			for (u32 i = 0; i < renderer->shaders.size(); ++i)
 				Shader::Destroy(i);
+
+			for(u32 i = 0; i < renderer->ubos.size(); ++i)
+				UBO::Destroy(i);
+
+			for(u32 i = 0; i < renderer->fbos.size(); ++i)
+				FBO::Destroy(i);
 
 			for (u32 i = 0; i < renderer->meshes.size(); ++i)
 				Mesh::Destroy(i);
@@ -319,6 +339,38 @@ namespace Render {
 		Shader::SendInt(Shader::UNIFORM_GROUNDTRUTH, (int)renderer->GTMode);
 		Shader::SendFloat(Shader::UNIFORM_GLOBALTIME, 0.f);	// Default : not using ground truth raytracing
 
+		shader_slot = -1;
+
+		if(inited && renderer->shaders[Shader::SHADER_GBUFFERPASS].id > 0) {
+			Destroy(Shader::SHADER_GBUFFERPASS);
+			shader_slot = Shader::SHADER_GBUFFERPASS;
+		}
+
+		Shader::Desc sd_gbuf;
+		sd_gbuf.vertex_file = "data/shaders/gBufferPass_vert.glsl";
+		sd_gbuf.fragment_file = "data/shaders/gBufferPass_frag.glsl";
+		sd_gbuf.attribs[0] = Shader::Desc::Attrib("in_position", 0);
+		sd_gbuf.attribs[1] = Shader::Desc::Attrib("in_normal", 1);
+		sd_gbuf.attribs[2] = Shader::Desc::Attrib("in_texcoord", 2);
+		sd_gbuf.attribs[3] = Shader::Desc::Attrib("in_tangent", 3);
+		sd_gbuf.attribs[4] = Shader::Desc::Attrib("in_binormal", 4);
+		sd_gbuf.attribs[5] = Shader::Desc::Attrib("in_color", 5);
+
+		sd_gbuf.uniforms.push_back(Shader::Desc::Uniform("ModelMatrix", Shader::UNIFORM_MODELMATRIX));
+		sd_gbuf.uniforms.push_back(Shader::Desc::Uniform("ViewMatrix", Shader::UNIFORM_VIEWMATRIX));
+		sd_gbuf.uniforms.push_back(Shader::Desc::Uniform("ProjMatrix", Shader::UNIFORM_PROJMATRIX));
+		sd_gbuf.uniforms.push_back(Shader::Desc::Uniform("ObjectID", Shader::UNIFORM_OBJECTID));
+		sd_gbuf.shaderSlot = shader_slot;
+
+
+		Shader::Handle shader_gbuf = Shader::Build(sd_mesh);
+		if (shader_gbuf != Shader::SHADER_GBUFFERPASS) {
+			LogErr("Error loading Mesh shader.");
+			return false;
+		}
+		Shader::Bind(shader_gbuf);
+
+
 		inited = true;
 		return true;
 	}
@@ -329,6 +381,17 @@ namespace Render {
 	void StartTextRendering() {
 		Shader::Bind(Shader::SHADER_2D_UI);
 		Mesh::Bind(renderer->text_vao);	// bind general text vao
+	}
+
+	void StartGBufferPass() {
+		FBO::Bind(0);	// gBuffer is always the 1st created fbo
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		Shader::Bind(Render::Shader::SHADER_GBUFFERPASS);
+	}
+
+	void StopGBufferPass() {
+		glBindFramebuffer(GL_FRAMEBUFFER, 0); // use the default FB again
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	}
 
 	void StartPolygonRendering() {

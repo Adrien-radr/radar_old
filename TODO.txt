@@ -21,6 +21,7 @@ o Directional light
 o Use quaternions instead of vec3 for rotation info
 o Light aggregation work could be done at SceneUpdate instead of SceneRender
     - Also, could be done lazily only if light configuration changed, if not just send the same UBO
+o RTT
 
 Less :
 x Shader Hot reload

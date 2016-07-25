@@ -16,6 +16,9 @@ namespace Render {
 	void StartTextRendering();
 	void StartPolygonRendering();
 
+	void StartGBufferPass();
+	void StopGBufferPass();
+
 	void ToggleGTRaytracing();
 	void ResetGTAccumulation();
 	void AccumulateGT();
@@ -31,8 +34,9 @@ namespace Render {
 
             // Use 3D Perspective Projection
             SHADER_3D_MESH = 1,
-            SHADER_3D_MESH_BONE = 2,
-            SHADER_3D_HEIGHTFIELD = 3,
+			SHADER_GBUFFERPASS = 2,
+            SHADER_3D_MESH_BONE = 3,
+            SHADER_3D_HEIGHTFIELD = 4,
 
             _SHADER_END,                                    // Do not use
 
@@ -68,6 +72,7 @@ namespace Render {
 			UNIFORM_NAREALIGHTS,
 			UNIFORM_GROUNDTRUTH,
 			UNIFORM_GLOBALTIME,
+			UNIFORM_OBJECTID,
 
 			UNIFORM_N                   // Do not use
 		};
@@ -231,6 +236,34 @@ namespace Render {
 			TARGET_N // Do Not Use !!
 		};
 
+		enum TextureFormat {
+			FMT_UNKNOWN,
+
+			R8U,
+			RG8U,
+			RGB8U,
+			RGBA8U,
+
+			R16F,
+			RG16F,
+			RGB16F,
+			RGBA16F,
+
+			R32F,
+			RG32F,
+			RGB32F,
+			RGBA32F,
+
+			DEPTH16F,
+			DEPTH32F,
+
+			DXT1,
+			DXT3,
+			DXT5,
+
+			_FORMAT_MAX
+		};
+
 		/// Texture Handle
 		/// Textures are stored and worked on internally by the renderer.
 		/// Outside of render.c, Textures are referred by those handles
@@ -257,6 +290,26 @@ namespace Render {
 		extern Handle DEFAULT_NORMAL;	// (127, 255, 127) for normal
 	}
 
+
+	namespace FBO {
+		struct Desc {
+			std::vector<Texture::TextureFormat> textures;	//!< Ordered texture attachments
+			vec2i size;
+		};
+
+		struct Data {
+			u32 framebuffer;							//!< FB handle
+			std::vector<Texture::Handle> attachments;	//!< Associated textures, in attachment order
+		};	
+
+		typedef int Handle;
+
+		Handle Build(Desc d);
+		void Destroy(Handle h);
+		void Bind(Handle h);
+		bool Exists(Handle h);
+		// void BindTexture(Handle h);
+	};
 
 
 
