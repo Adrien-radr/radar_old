@@ -70,6 +70,13 @@ public:
 	const mat4f &Get2DProjectionMatrix() const { return projection_matrix_2d; }
 
 	const Config &GetConfig() const { return config; }
+
+private:
+	bool ImGui_Init();
+	bool ImGui_CreateDeviceObjects();
+	void ImGui_Destroy();
+	void ImGui_NewFrame();
+
 public:
 	vec2i       windowSize;
 	vec2i       windowCenter;
@@ -93,3 +100,7 @@ private:
 
 // Only instance of the device
 Device &GetDevice();
+
+// Defined in device_imgui.cpp
+void ImGui_MouseListener(const Event &evt, void *data);
+void ImGui_KeyListener(const Event &evt, void *data);

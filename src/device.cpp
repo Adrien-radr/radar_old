@@ -1,8 +1,10 @@
 #include "device.h"
 #include "json/cJSON.h"
+#include "imgui.h"
 
 #include <cstring>
 #include <algorithm>
+
 ////////////////////////////////////////////////////////////////
 ///     EVENT & INPUT
 ////////////////////////////////////////////////////////////////
@@ -49,7 +51,8 @@ public:
 
     std::vector<Listener>   key_listeners,      ///< List of all registered mouse listeners
 							mouse_listeners,    ///< List of all registered key listeners
-							resize_listeners;   ///< List of all registered resize listeners
+							resize_listeners,   ///< List of all registered resize listeners
+							scroll_listeners;
 
     std::vector<Event>      frame_key_events,    ///< All key events recorded during the frame
 							frame_mouse_events,  ///< All mouse events recorded during the frame
@@ -384,7 +387,6 @@ bool Device::Init(SceneInitFunc sceneInitFunc, SceneUpdateFunc sceneUpdateFunc, 
 
     LogInfo("GLEW successfully initialized.");
 
-
     GLubyte const *renderer = glGetString(GL_RENDERER);
     GLubyte const *version  = glGetString(GL_VERSION);
 	LogInfo("Renderer: ", renderer);
@@ -447,6 +449,16 @@ bool Device::Init(SceneInitFunc sceneInitFunc, SceneUpdateFunc sceneUpdateFunc, 
 		em = new EventManager();
 	}
 
+	if(!ImGui_Init()) {
+		LogErr("Error initializing ImGUI.");
+		glfwDestroyWindow(window);
+		glfwTerminate();
+		return false;
+	}
+	em->AddListener(LT_KeyListener, ImGui_KeyListener, nullptr);
+	em->AddListener(LT_MouseListener, ImGui_MouseListener, nullptr);
+	LogInfo("ImGUI successfully initialized.");
+
 	if (!Render::Init()) {
 		LogErr("Error initializing Device's Renderer.");
 		goto err;
@@ -488,7 +500,7 @@ err:
 }
 
 void Device::Destroy() {
-    //scene_destroy();
+    ImGui_Destroy();
 	if(em) delete em;
 	Render::Destroy();
 
@@ -540,6 +552,9 @@ void Device::UpdateProjection() {
 
 void Device::Run() {
     f64 dt, t, last_t = glfwGetTime();
+    ImVec4 clear_color = ImColor(114, 144, 154);
+    bool show_test_window = true;
+    bool show_another_window = false;
 
     while(!glfwWindowShouldClose(window)) {
         // Time management
@@ -568,9 +583,33 @@ void Device::Run() {
 		scene.Update((f32)dt);
 		
         em->Update();
+		ImGui_NewFrame();
 
+
+ 		{
+            static float f = 0.0f;
+            ImGui::Text("Hello, world!");
+            ImGui::SliderFloat("float", &f, 0.0f, 1.0f);
+            ImGui::ColorEdit3("clear color", (float*)&clear_color);
+            if (ImGui::Button("Test Window")) show_test_window ^= 1;
+            if (ImGui::Button("Another Window")) show_another_window ^= 1;
+            ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+        }
+		if (show_another_window)
+        {
+            ImGui::SetNextWindowSize(ImVec2(200,100), ImGuiSetCond_FirstUseEver);
+            ImGui::Begin("Another Window", &show_another_window);
+            ImGui::Text("Hello");
+            ImGui::End();
+        }
+		if (show_test_window)
+        {
+            ImGui::SetNextWindowPos(ImVec2(650, 20), ImGuiSetCond_FirstUseEver);
+            ImGui::ShowTestWindow(&show_test_window);
+        }
         // Render Scene
 		scene.Render();
+		ImGui::Render();
 
 
         //thread_sleep(10);

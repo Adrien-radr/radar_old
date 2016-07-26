@@ -198,7 +198,7 @@ struct Event {
 /// Listener function type
 /// @param event : Event recorded that can be processed
 /// @param data : Void pointer on anything that could be usefull in the callback
-typedef void (*ListenerFunc)(const Event &event, void *data );
+typedef void (*ListenerFunc)(const Event &event, void *data);
 
 /// Different types of listener
 enum ListenerType {
