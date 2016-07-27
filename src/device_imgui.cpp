@@ -28,6 +28,28 @@ static int          g_AttribLocationTex = 0, g_AttribLocationProjMtx = 0;
 static int          g_AttribLocationPosition = 0, g_AttribLocationUV = 0, g_AttribLocationColor = 0;
 static unsigned int g_VboHandle = 0, g_VaoHandle = 0, g_ElementsHandle = 0;
 
+
+
+
+/// Custom Style for ImGUI
+void ImGui_SetStyle() {
+    ImGuiStyle &style = ImGui::GetStyle();
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(2.f, 1.f));
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.f);
+    ImGui::PushStyleVar(ImGuiStyleVar_ChildWindowRounding, 0.f);
+    style.AntiAliasedLines = true;
+    style.AntiAliasedShapes = true;
+    style.ScrollbarSize = 10.f;
+    style.ScrollbarRounding = 0.f;
+    style.GrabRounding = 0.f;
+
+    // colors
+
+}
+
+
+
+
 // This is the main rendering function that you have to implement and provide to ImGui (via setting up 'RenderDrawListsFn' in the ImGuiIO structure)
 // If text or lines are blurry when integrating ImGui in your engine:
 // - in your Render function, try translating your projection matrix by (0.5f,0.5f) or (0.375f,0.375f)
@@ -264,7 +286,7 @@ bool Device::ImGui_CreateDeviceObjects() {
     return true;
 }
 
-bool    Device::ImGui_Init() {
+bool Device::ImGui_Init() {
     g_Window = window;
 
     ImGuiIO& io = ImGui::GetIO();
@@ -294,6 +316,8 @@ bool    Device::ImGui_Init() {
 #ifdef _WIN32
     io.ImeWindowHandle = glfwGetWin32Window(g_Window);
 #endif
+
+    ImGui_SetStyle();
 
     return true;
 }

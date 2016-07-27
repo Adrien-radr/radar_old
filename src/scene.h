@@ -259,6 +259,7 @@ public:
 	void Clean();
 
 	void Update(f32 dt);
+	void UpdateGUI();
 	void Render();
 
 	void UpdateView();
@@ -294,6 +295,9 @@ private:
 	u32 AggregatePointLightUniforms(); 
 	u32 AggregateAreaLightUniforms();
 
+	// GUI
+	bool ShowGBufferWindow();
+
 private:
 	std::vector<Text::Desc> texts;
 
@@ -316,10 +320,6 @@ private:
 	SceneInitFunc 	customInitFunc;
 	SceneUpdateFunc customUpdateFunc;
 	SceneRenderFunc customRenderFunc;
-
-	// Debug texts
-	Text::Handle fps_text;
-	Text::Handle camera_text;
 };
 
 /// Listener callback function for the scene

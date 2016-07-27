@@ -156,7 +156,7 @@ namespace Render {
 		// Create FBO for gBuffer pass
 		FBO::Desc fdesc;
 		fdesc.size = GetDevice().windowSize;	// TODO : resize gBuffer when window change size
-		fdesc.textures.push_back(Texture::R8U);	// ObjectIDs. TODO : this can only hold 256 objects maximum, raise it later on
+		fdesc.textures.push_back(Texture::RGBA8U);	// ObjectIDs. TODO : this can only hold 256 objects maximum, raise it later on
 
 		FBO::Handle fboh = FBO::Build(fdesc);
 		if(fboh < 0) {
@@ -363,9 +363,9 @@ namespace Render {
 		sd_gbuf.shaderSlot = shader_slot;
 
 
-		Shader::Handle shader_gbuf = Shader::Build(sd_mesh);
+		Shader::Handle shader_gbuf = Shader::Build(sd_gbuf);
 		if (shader_gbuf != Shader::SHADER_GBUFFERPASS) {
-			LogErr("Error loading Mesh shader.");
+			LogErr("Error loading GBuffer shader.");
 			return false;
 		}
 		Shader::Bind(shader_gbuf);

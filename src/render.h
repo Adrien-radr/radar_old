@@ -24,6 +24,8 @@ namespace Render {
 	void AccumulateGT();
 	void UpdateView(const mat4f &viewMatrix, const vec3f &eyePos);
 
+	u32 GetFramebufferTextureID(u32 framebufferIdx, u32 textureIdx);
+
 	//bool FindResource(const std::vector<RenderResource> &resources, const )
 
 	namespace Shader {
@@ -285,6 +287,9 @@ namespace Render {
 		/// Returns true if the given texture exists in renderer
 		bool Exists(Handle h);
 
+		/// Returns the OpenGL texture ID of the given texture
+		u32 GetGLID(Handle h);
+
 		// Default 1x1 textures
 		extern Handle DEFAULT_DIFFUSE;	// white for diffuse
 		extern Handle DEFAULT_NORMAL;	// (127, 255, 127) for normal
@@ -292,6 +297,11 @@ namespace Render {
 
 
 	namespace FBO {
+		enum GBufferAttachment {
+			OBJECTID,
+			_ATTACHMENT_N
+		};
+
 		struct Desc {
 			std::vector<Texture::TextureFormat> textures;	//!< Ordered texture attachments
 			vec2i size;
@@ -309,6 +319,9 @@ namespace Render {
 		void Bind(Handle h);
 		bool Exists(Handle h);
 		// void BindTexture(Handle h);
+
+		/// Returns the OpenGL Texture ID of the given attachment of the main GBuffer (FBO0)
+		u32 GetGBufferAttachment(GBufferAttachment idx);
 	};
 
 

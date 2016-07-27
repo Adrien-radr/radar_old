@@ -62,6 +62,12 @@ namespace Texture {
         return h >= 0 && h < (int)renderer->textures.size() && renderer->textures[h].id > 0;
     }
 
+    u32 GetGLID(Handle h) {
+        if(Exists(h)) {
+            return renderer->textures[h].id;
+        }
+        return 0;
+    }
 }
 
 
@@ -128,6 +134,18 @@ namespace FBO {
         if(Exists(h)) {
             glBindFramebuffer(GL_FRAMEBUFFER, renderer->fbos[h].framebuffer);
         }    
+    }
+
+	u32 GetGBufferAttachment(GBufferAttachment idx) {
+        if(idx < _ATTACHMENT_N) {
+            // GBuffer is FBO 0
+            Data &fbo = renderer->fbos[0];
+
+            if((int)idx <= fbo.attachments.size()) {
+                return Texture::GetGLID(fbo.attachments[idx]);
+            }
+        }
+        return 0;
     }
 
     /*void BindTexture() {

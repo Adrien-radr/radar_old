@@ -1,5 +1,6 @@
 #include "scene.h"
 #include "device.h"
+#include "imgui.h"
 
 #include <algorithm>
 
@@ -200,22 +201,6 @@ bool Scene::Init(SceneInitFunc initFunc, SceneUpdateFunc updateFunc, SceneRender
 		return false;
 	}
 
-	Text::Desc tdesc("FPS : ", fhandle, vec4f(0.3f, 0.3f, 0.3f, 1.f));
-	tdesc.SetPosition(vec2f(10, 10));
-	fps_text = Add(tdesc);
-	if (fps_text < 0) {
-		LogErr("Error adding scene's FPS text.");
-		return false;
-	}
-
-	tdesc.str = "Camera : ";
-	tdesc.SetPosition(vec2f(10, 22));
-	camera_text = Add(tdesc);
-	if (camera_text < 0) {
-		LogErr("Error adding scene's camera text.");
-		return false;
-	}
-
 	Material::Desc mat_desc;
 	Material::DEFAULT_MATERIAL = Add(mat_desc);
 	if(Material::DEFAULT_MATERIAL < 0) {
@@ -250,8 +235,89 @@ void Scene::UpdateView() {
 	Render::UpdateView(view_matrix, camera.position);
 }
 
+bool Scene::ShowGBufferWindow() {
+	bool show = true;
+	
+	ImGui::SetNextWindowPos(ImVec2(100,100), ImGuiSetCond_FirstUseEver);
+	ImGui::SetNextWindowSize(ImVec2(360, 600));
+	ImGui::Begin("GBuffer Window", &show, ImGuiWindowFlags_NoResize);
+	if(ImGui::TreeNode("Object ID")) {
+		u32 objIDTex = Render::FBO::GetGBufferAttachment(Render::FBO::OBJECTID);
+		if(objIDTex > 0) {
+			ImTextureID tid = reinterpret_cast<ImTextureID>(objIDTex);
+			ImGui::Image(tid, ImVec2(320, 180));
+		}
+		ImGui::TreePop();
+	}
+	ImGui::End();
+
+	return show;
+}
+
+void Scene::UpdateGUI() {
+	ImGuiIO &io = ImGui::GetIO();
+	static bool showGBufferWindow = false;
+
+	// Main Menu
+	if(ImGui::BeginMainMenuBar()) {
+		if(ImGui::BeginMenu("File")) {
+			ImGui::EndMenu();
+		}
+		if(ImGui::BeginMenu("Edit")) {
+			ImGui::EndMenu();
+		}
+		if(ImGui::BeginMenu("Debug")) {
+			if(ImGui::MenuItem("Show GBuffer")) {
+				showGBufferWindow = true;
+			}
+			ImGui::EndMenu();
+		}
+		ImGui::EndMainMenuBar();
+	}
+
+	// Show Main Menu activated windows
+	if(showGBufferWindow) {
+		showGBufferWindow = ShowGBufferWindow();
+	}
+
+	// Static info panel
+	const float fps = io.Framerate;
+	const float mspf = 1000.f / fps;
+	const vec3f cpos = camera.position;
+	const vec3f ctar = camera.target;
+
+	char fpsText[512];
+	snprintf(fpsText, 512, "Average %.3f ms/frame (%.1f FPS)", mspf, fps);
+	const int fpsTLen = ImGui::CalcTextSize(fpsText).x;
+
+	char camText[512];
+	snprintf(camText, 512, "Camera <%.2f, %.2f, %.2f> <%.2f, %.2f, %.2f>", cpos.x, cpos.y, cpos.z, ctar.x, ctar.y, ctar.z);
+	const int camTLen = ImGui::CalcTextSize(camText).x;
+
+	vec2f wSizef = GetDevice().windowSize;
+	ImVec2 wSize(wSizef.x, wSizef.y);
+	const ImVec2 panelSize(410, 50);
+	const ImVec2 panelPos(wSize.x - panelSize.x, 19);
+	
+	ImGui::PushStyleColor(ImGuiCol_WindowBg, ImColor::HSV(0, 0, 1, 0.075));
+	ImGui::PushStyleColor(ImGuiCol_Text, ImColor::HSV(0, 0, 0.8, 1));
+	ImGui::SetNextWindowPos(panelPos);
+	ImGui::SetNextWindowSize(panelSize);
+	ImGui::Begin("InfoPanel", NULL, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
+	ImGui::SameLine(ImGui::GetContentRegionMax().x - fpsTLen);
+	ImGui::Text("%s", fpsText);
+	ImGui::Text("%s", "");
+	ImGui::SameLine(ImGui::GetContentRegionMax().x - camTLen);
+	ImGui::Text("%s", camText);
+	ImGui::End();
+	ImGui::PopStyleColor(2);
+
+	// ImGui::ShowTestWindow();
+}
+
 void Scene::Update(float dt) {
 	Device &device = GetDevice();
+
 
 	// Ctrl+R to hot reload shaders
 	if(device.IsKeyHit(K_R) && device.IsKeyDown(K_LControl)) {
@@ -279,28 +345,20 @@ void Scene::Update(float dt) {
 	if (ai_timer >= 0.01f) {
 		ai_timer = 0.f;
 
+	UpdateGUI();
 		// update animation for all objects
-		for (u32 j = 0; j < objects.size(); ++j) {
-			Object::Desc &object = objects[j];
+		//for (u32 j = 0; j < objects.size(); ++j) {
+		//	Object::Desc &object = objects[j];
 			//if (object.animation > Render::Mesh::ANIM_NONE) {
 				//Render::Mesh::UpdateAnimation(object.mesh, object.animation_state, 0.01f);
 			//}
-		}
-
-		std::stringstream cam_str;
-		cam_str << "Camera : <" << camera.position.x << ", " << camera.position.y << ", "
-			<< camera.position.z << "> <" << camera.target.x << ", " << camera.target.y << ", " << camera.target.z << ">";
-		SetTextString(camera_text, cam_str.str());
+		//}
 	}
 
 	// Update every second
 	if (one_sec >= 1.f) {
 		one_sec = 0.f;
-
-
-		std::stringstream fps_str;
-		fps_str << "FPS : " << (int)(1.f / dt);
-		SetTextString(fps_text, fps_str.str());
+		
 	}
 
 	if(customUpdateFunc)
