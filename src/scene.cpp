@@ -238,16 +238,20 @@ void Scene::UpdateView() {
 bool Scene::ShowGBufferWindow() {
 	bool show = true;
 	
-	ImGui::SetNextWindowPos(ImVec2(100,100), ImGuiSetCond_FirstUseEver);
-	ImGui::SetNextWindowSize(ImVec2(360, 600));
-	ImGui::Begin("GBuffer Window", &show, ImGuiWindowFlags_NoResize);
-	if(ImGui::TreeNode("Object ID")) {
-		u32 objIDTex = Render::FBO::GetGBufferAttachment(Render::FBO::OBJECTID);
-		if(objIDTex > 0) {
-			ImTextureID tid = reinterpret_cast<ImTextureID>(objIDTex);
-			ImGui::Image(tid, ImVec2(320, 180));
+	ImGui::SetNextWindowPos(ImVec2(20,40), ImGuiSetCond_Once);
+	ImGui::SetNextWindowSize(ImVec2(355, 655));
+	ImGui::Begin("GBuffer Window", &show, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysVerticalScrollbar);
+	for(int i = 0; i < Render::FBO::_ATTACHMENT_N; ++i) {
+		Render::FBO::GBufferAttachment att = Render::FBO::GBufferAttachment(i);
+		std::stringstream ss;
+		ss << "[" << i << "] " << Render::FBO::GetGBufferAttachmentName(att);
+		if(ImGui::CollapsingHeader(ss.str().c_str())) {
+			u32 tex = Render::FBO::GetGBufferAttachment(att);
+			if(tex > 0) {
+				ImTextureID tid = reinterpret_cast<ImTextureID>(tex);
+				ImGui::Image(tid, ImVec2(320, 180), ImVec2(0,1), ImVec2(1,0), ImVec4(1,1,1,1), ImVec4(1,1,1,0.7));
+			}
 		}
-		ImGui::TreePop();
 	}
 	ImGui::End();
 
@@ -257,10 +261,14 @@ bool Scene::ShowGBufferWindow() {
 void Scene::UpdateGUI() {
 	ImGuiIO &io = ImGui::GetIO();
 	static bool showGBufferWindow = false;
+	static bool showTestWindow = false;
 
 	// Main Menu
 	if(ImGui::BeginMainMenuBar()) {
 		if(ImGui::BeginMenu("File")) {
+			if(ImGui::MenuItem("Show ImGui Test Window")) {
+				showTestWindow = true;
+			}
 			ImGui::EndMenu();
 		}
 		if(ImGui::BeginMenu("Edit")) {
@@ -278,6 +286,10 @@ void Scene::UpdateGUI() {
 	// Show Main Menu activated windows
 	if(showGBufferWindow) {
 		showGBufferWindow = ShowGBufferWindow();
+	}
+
+	if(showTestWindow) {
+		ImGui::ShowTestWindow(&showTestWindow);
 	}
 
 	// Static info panel
@@ -311,8 +323,6 @@ void Scene::UpdateGUI() {
 	ImGui::Text("%s", camText);
 	ImGui::End();
 	ImGui::PopStyleColor(2);
-
-	// ImGui::ShowTestWindow();
 }
 
 void Scene::Update(float dt) {

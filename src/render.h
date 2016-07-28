@@ -299,6 +299,9 @@ namespace Render {
 	namespace FBO {
 		enum GBufferAttachment {
 			OBJECTID,
+			DEPTH,
+			NORMAL,
+			WORLDPOS,
 			_ATTACHMENT_N
 		};
 
@@ -309,6 +312,7 @@ namespace Render {
 
 		struct Data {
 			u32 framebuffer;							//!< FB handle
+			u32 depthbuffer;							//!< Associated Depth Render Buffer
 			std::vector<Texture::Handle> attachments;	//!< Associated textures, in attachment order
 		};	
 
@@ -322,6 +326,9 @@ namespace Render {
 
 		/// Returns the OpenGL Texture ID of the given attachment of the main GBuffer (FBO0)
 		u32 GetGBufferAttachment(GBufferAttachment idx);
+		
+		/// Returns the string literal name of the given attachment
+		const char *GetGBufferAttachmentName(GBufferAttachment idx);
 	};
 
 

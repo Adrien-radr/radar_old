@@ -27,13 +27,13 @@ namespace Render {
 				{  6,  48, 3, GL_RGB16F, GL_RGB, GL_FLOAT }, // RGB16F
 				{  8,  64, 4, GL_RGBA16F, GL_RGBA, GL_FLOAT }, // RGBA16F
 
-				{  4,  32, 1, GL_RED, GL_RED, GL_FLOAT }, // R32F
-				{  8,  64, 2, GL_RG, GL_RG, GL_FLOAT }, // RG32F
-				{ 12,  96, 3, GL_RGB, GL_RGB, GL_FLOAT }, // RGB32F
-				{ 16, 128, 4, GL_RGBA, GL_RGBA, GL_FLOAT }, // RGBA32F
+				{  4,  32, 1, GL_R32F, GL_RED, GL_FLOAT }, // R32F
+				{  8,  64, 2, GL_RG32F, GL_RG, GL_FLOAT }, // RG32F
+				{ 12,  96, 3, GL_RGB32F, GL_RGB, GL_FLOAT }, // RGB32F
+				{ 16, 128, 4, GL_RGBA32F, GL_RGBA, GL_FLOAT }, // RGBA32F
 
-				{ 2, 16, 1, GL_DEPTH_COMPONENT16, GL_DEPTH_COMPONENT, GL_FLOAT }, // DEPTH16F
-				{ 4, 32, 1, GL_DEPTH_COMPONENT32, GL_DEPTH_COMPONENT, GL_FLOAT }, // DEPTH32F
+				{ 2, 16, 1, GL_DEPTH_COMPONENT, GL_DEPTH_COMPONENT, GL_FLOAT }, // DEPTH16F
+				{ 4, 32, 1, GL_DEPTH_COMPONENT, GL_DEPTH_COMPONENT, GL_FLOAT }, // DEPTH32F
 
 				{  8, 4, 4, GL_COMPRESSED_RGBA_S3TC_DXT1_EXT, GL_NONE, GL_NONE },	// DXT1
 				{ 16, 8, 4, GL_COMPRESSED_RGBA_S3TC_DXT3_EXT, GL_NONE, GL_NONE },	// DXT3
@@ -480,7 +480,7 @@ namespace Render {
 			case RGB8U:
 			case RGBA8U:
 				glTexImage2D(GL_TEXTURE_2D, 0, t->desc.formatInternalGL, t->width, t->height, 0,
-					t->desc.formatInternalGL, t->desc.type, t->texels);
+					t->desc.formatGL, t->desc.type, t->texels);
 
 				glGenerateMipmap(GL_TEXTURE_2D);
 				break;
@@ -491,7 +491,7 @@ namespace Render {
 				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 				glTexImage2D(GL_TEXTURE_2D, 0, t->desc.formatInternalGL, t->width, t->height, 0,
-					t->desc.formatInternalGL, t->desc.type, t->texels);
+					t->desc.formatGL, t->desc.type, t->texels);
 				break;
 			default:
 				LogErr("Invalid texture format (", t->format, ") at GL Texure creation.");

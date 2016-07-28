@@ -1,22 +1,27 @@
 
 namespace Texture {
     Handle Build(const Desc &desc) {
-        // Check if this font resource already exist
-        int free_index;
-        bool found_resource = FindResource(renderer->texture_resources, desc.name, free_index);
-
-        if (found_resource) {
-            return free_index;
-        }
-
-
         Texture::Data texture;
 
+        int tex_i = (int)renderer->textures.size();
+
         if (desc.from_file) {
+            // Check if this font resource already exist
+            int free_index;
+            bool found_resource = FindResource(renderer->texture_resources, desc.name, free_index);
+
+            if (found_resource) {
+                return free_index;
+            }
+
+            // If not loaded yet, do it
             if (!Load(texture, desc.name)) {
                 LogErr("Error while loading '", desc.name, "' image.");
                 return -1;
             }
+
+            // .. and add it as a loaded resources
+            AddResource(renderer->texture_resources, free_index, desc.name, tex_i);
         }
         else {
             glGenTextures(1, &texture.id);
@@ -24,12 +29,8 @@ namespace Texture {
             texture.size = desc.size;
         }
 
-
-        int tex_i = (int)renderer->textures.size();
+        // Store the texture
         renderer->textures.push_back(texture);
-
-        // Add texture to render resources
-        AddResource(renderer->texture_resources, free_index, desc.name, tex_i);
 
         return tex_i;
     }
@@ -95,7 +96,7 @@ namespace FBO {
 
             Texture::FormatDesc fdesc = Texture::GetTextureFormat(d.textures[i]);
             Texture::Bind(th, Texture::TARGET0);
-            glTexImage2D(GL_TEXTURE_2D, 0, fdesc.formatGL, d.size.x, d.size.y, 0, fdesc.formatInternalGL, fdesc.type, NULL);
+            glTexImage2D(GL_TEXTURE_2D, 0, fdesc.formatInternalGL, d.size.x, d.size.y, 0, fdesc.formatGL, fdesc.type, NULL);
 
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
@@ -106,6 +107,20 @@ namespace FBO {
         }     
 
         glDrawBuffers(numAttachments, fbo_attachments);
+
+        // Attach Depth Buffer
+        glGenRenderbuffers(1, &fbo.depthbuffer);
+        glBindRenderbuffer(GL_RENDERBUFFER, fbo.depthbuffer);
+        glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, d.size.x, d.size.y);
+        glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, fbo.depthbuffer);
+
+        // Check if everything is good
+        if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+            LogErr("Framebuffer not complete!");
+            glBindFramebuffer(GL_FRAMEBUFFER, 0);
+            return -1;
+        }
+
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
         int fbo_i = (int)renderer->fbos.size();
@@ -122,6 +137,10 @@ namespace FBO {
             if(f.framebuffer > 0) {
                 glDeleteFramebuffers(1, &f.framebuffer);
                 f.framebuffer = 0;
+            }
+            if(f.depthbuffer > 0) {
+                glDeleteRenderbuffers(1, &f.depthbuffer);
+                f.depthbuffer = 0;
             }
         }
     }
@@ -148,7 +167,18 @@ namespace FBO {
         return 0;
     }
 
-    /*void BindTexture() {
-        Texture::Bind(texture);
-    }*/
+    const char *GBufferAttachmentNames[_ATTACHMENT_N+1] = {
+        "Object ID",
+        "Depth",
+        "Normal",
+        "World Position"
+    };
+
+    const char *GetGBufferAttachmentName(GBufferAttachment idx) {
+        if(idx < _ATTACHMENT_N) {
+            return GBufferAttachmentNames[idx];
+        }
+
+        return nullptr; // should never happen if you're not idiot
+    }
 }

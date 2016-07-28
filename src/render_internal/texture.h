@@ -15,8 +15,8 @@ namespace Render {
 			u32 	blockSize;
 			u32 	bpp;
 			u32 	component;
-			GLenum	formatGL;
 			GLint 	formatInternalGL;
+			GLenum	formatGL;
 			GLenum  type;
 		};
 
