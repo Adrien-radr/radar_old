@@ -49,8 +49,8 @@ namespace Render {
 			// bool proj_matrix_type;              //!< Type of projection matrix used in shader
 
 			// Arrays of uniforms{blocks}, ordered as the Shader::Uniform{Block} enum
-			GLint  uniform_locations[Shader::UNIFORM_N];   //!< Locations for the possible uniforms
-			GLuint uniformblock_locations[Shader::UNIFORMBLOCK_N];
+			GLint  uniform_locations[Shader::_UNIFORM_N];   //!< Locations for the possible uniforms
+			GLuint uniformblock_locations[Shader::_UNIFORMBLOCK_N];
 		};
 	}
 
@@ -61,7 +61,7 @@ namespace Render {
 		GLint           curr_GL_program;
 		GLint			curr_GL_ubo;
 		GLint           curr_GL_vao;
-		GLint           curr_GL_texture[Texture::TARGET_N];
+		GLint           curr_GL_texture[Texture::_TARGET_N];
 		Texture::Target curr_GL_texture_target;
 
 		GLuint			shaderFunctionLibrary;
@@ -103,7 +103,7 @@ namespace Render {
 		renderer->curr_GL_program = -1;
 		renderer->curr_GL_vao = -1;
 		renderer->curr_GL_ubo = -1;
-		for (int i = 0; i < Texture::TARGET_N; ++i)
+		for (int i = 0; i < Texture::_TARGET_N; ++i)
 			renderer->curr_GL_texture[i] = -1;
 		renderer->curr_GL_texture_target = Texture::TARGET0;
 		glActiveTexture(GL_TEXTURE0);   // default to 1st one
@@ -157,7 +157,7 @@ namespace Render {
 		FBO::Desc fdesc;
 		fdesc.size = GetDevice().windowSize;	// TODO : resize gBuffer when window change size
 		fdesc.textures.push_back(Texture::RGB8U);	// ObjectIDs
-		fdesc.textures.push_back(Texture::R8U);	// Depth
+		fdesc.textures.push_back(Texture::R8U);		// Depth
 		fdesc.textures.push_back(Texture::RGB8U);	// Normals
 		fdesc.textures.push_back(Texture::RGB8U);	// World Pos
 
@@ -169,14 +169,14 @@ namespace Render {
 
 		// Create Default white texture 
 		Texture::Desc t_desc;
-		t_desc.name = "data/default_diff.png";
+		t_desc.name[0] = "data/default_diff.png";
 		Texture::DEFAULT_DIFFUSE = Texture::Build(t_desc);
 		if(Texture::DEFAULT_DIFFUSE < 0) {
 			LogErr("Error creating default diffuse texture.");
 			return false;
 		}
 
-		t_desc.name = "data/default_nrm.png";
+		t_desc.name[0] = "data/default_nrm.png";
 		Texture::DEFAULT_NORMAL = Texture::Build(t_desc);
 		if(Texture::DEFAULT_NORMAL < 0) {
 			LogErr("Error creating default normal texture.");
@@ -371,7 +371,30 @@ namespace Render {
 			LogErr("Error loading GBuffer shader.");
 			return false;
 		}
-		Shader::Bind(shader_gbuf);
+
+		shader_slot = -1;
+
+		if(inited && renderer->shaders[Shader::SHADER_SKYBOX].id > 0) {
+			Destroy(Shader::SHADER_SKYBOX);
+			shader_slot = Shader::SHADER_SKYBOX;
+		}
+
+		Shader::Desc sd_skybox;
+		sd_skybox.vertex_file = "data/shaders/skybox_vert.glsl";
+		sd_skybox.fragment_file = "data/shaders/skybox_frag.glsl";
+		sd_skybox.attribs[0] = Shader::Desc::Attrib("in_position", 0);
+
+		sd_skybox.uniforms.push_back(Shader::Desc::Uniform("ViewMatrix", Shader::UNIFORM_VIEWMATRIX));
+		sd_skybox.uniforms.push_back(Shader::Desc::Uniform("ProjMatrix", Shader::UNIFORM_PROJMATRIX));
+		sd_skybox.shaderSlot = shader_slot;
+
+		Shader::Handle shader_skybox = Shader::Build(sd_skybox);
+		if (shader_skybox != Shader::SHADER_SKYBOX) {
+			LogErr("Error loading Skybox shader.");
+			return false;
+		}
+		Shader::Bind(shader_skybox);
+		Shader::SendInt(Shader::UNIFORM_TEXTURE0, Texture::TARGET0);
 
 
 		inited = true;

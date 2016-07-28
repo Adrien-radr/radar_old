@@ -152,6 +152,19 @@ bool initFunc(Scene *scene) {
 	// Render::Texture::Bind(th2, Render::Texture::TARGET4);
 
 
+	Skybox::Desc skyd;
+	skyd.filenames[0] = "data/skybox/sky1/right.png";
+	skyd.filenames[1] = "data/skybox/sky1/left.png";
+	skyd.filenames[2] = "data/skybox/sky1/down.png";
+	skyd.filenames[3] = "data/skybox/sky1/up.png";
+	skyd.filenames[4] = "data/skybox/sky1/back.png";
+	skyd.filenames[5] = "data/skybox/sky1/front.png";
+	Skybox::Handle sky = scene->Add(skyd);
+	if(sky < 0) {
+		LogErr("Error loading skybox.");
+		return false;
+	}
+	scene->SetSkybox(sky);
 
 
 	
@@ -310,6 +323,21 @@ bool initFunc(Scene *scene) {
 			}
 		}
 	}
+
+	Render::Mesh::Handle box = Render::Mesh::BuildBox();
+	if(box < 0) {
+		LogErr("Error creating box mesh");
+		return false;
+	}
+	odesc.Identity();
+	odesc.ClearSubmeshes();
+	odesc.AddSubmesh(box, Material::DEFAULT_MATERIAL);
+	Object::Handle boxo = scene->Add(odesc);
+	if(boxo < 0) {
+		LogErr("Error creating box.");
+		return false;
+	}
+
 	return true;
 }
 

@@ -246,6 +246,18 @@ namespace AreaLight {
 	typedef int Handle;
 }
 
+namespace Skybox {
+	struct Desc {
+		std::string filenames[6]; // right, left, up, down, back front
+	};
+
+	struct Data {
+		Render::Texture::Handle cubemap; 
+	};
+
+	typedef int Handle;
+}
+
 class Scene;
 typedef bool (*SceneInitFunc)(Scene *scene);
 typedef void (*SceneUpdateFunc)(Scene *scene, float dt);
@@ -279,6 +291,8 @@ public:
 	AreaLight::Handle Add(const AreaLight::Desc &d);
 	Text::Handle Add(const Text::Desc &d);
 	Material::Handle Add(const Material::Desc &d);
+	Skybox::Handle Add(const Skybox::Desc &d);
+	void SetSkybox(Skybox::Handle h);
 
 	// Scene getters
 	Object::Desc *GetObject(Object::Handle h);
@@ -313,9 +327,13 @@ private:
 	std::vector<Material::Data> materials;
 
 	std::vector<ModelResource::Data> models;
+	std::vector<Skybox::Data> skyboxes;
 
 	mat4f view_matrix;
 	Camera camera;
+
+	Skybox::Handle currSkybox;
+	Render::Mesh::Handle skyboxMesh;
 
 	SceneInitFunc 	customInitFunc;
 	SceneUpdateFunc customUpdateFunc;

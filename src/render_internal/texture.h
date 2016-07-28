@@ -62,6 +62,11 @@ namespace Render {
 		/// @param filename : image file on disk
 		/// @return : true if successful. false if error occured.
 		bool Load(Data &texture, const std::string &filename);
+
+		/// Loads an image as a given cubemap face.
+		/// A Cubemap Texture should be bound before calling that.
+		/// This should only be called from Texture::Build
+		bool LoadCubemapFace(const std::string &filename, u32 face);
 	}
 
 	struct Sprite {

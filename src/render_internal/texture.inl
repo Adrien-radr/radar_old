@@ -5,28 +5,51 @@ namespace Texture {
 
         int tex_i = (int)renderer->textures.size();
 
-        if (desc.from_file) {
+        switch(desc.type) {
+        case FromFile: {
             // Check if this font resource already exist
             int free_index;
-            bool found_resource = FindResource(renderer->texture_resources, desc.name, free_index);
 
-            if (found_resource) {
+            if(FindResource(renderer->texture_resources, desc.name[0], free_index)) {
                 return free_index;
             }
 
             // If not loaded yet, do it
-            if (!Load(texture, desc.name)) {
-                LogErr("Error while loading '", desc.name, "' image.");
+            if (!Load(texture, desc.name[0])) {
+                LogErr("Error while loading '", desc.name[0], "' image.");
                 return -1;
             }
 
             // .. and add it as a loaded resources
-            AddResource(renderer->texture_resources, free_index, desc.name, tex_i);
-        }
-        else {
+            AddResource(renderer->texture_resources, free_index, desc.name[0], tex_i);
+        } break;
+
+        case Empty: {
             glGenTextures(1, &texture.id);
             glBindTexture(GL_TEXTURE_2D, texture.id);
             texture.size = desc.size;
+        } break;
+
+        case Cubemap: {
+            // Create cubemap 
+            glGenTextures(1, &texture.id);
+            glBindTexture(GL_TEXTURE_CUBE_MAP, texture.id);
+
+            // Create face textures
+            for(u32 i = 0; i < 6; ++i) {
+                if(!LoadCubemapFace(desc.name[i], i)) {
+                    LogErr("Error while loading face ", i," (", desc.name[i], ") of cubemap.");
+                    return -1;
+                }
+            }
+
+            glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+            glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+            glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+            glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+            glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+            glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
+        } break;
         }
 
         // Store the texture
@@ -55,8 +78,20 @@ namespace Texture {
         // Switch active Texture if needed
         if (renderer->curr_GL_texture[target] != tex) {
             renderer->curr_GL_texture[target] = tex;
-            glBindTexture(GL_TEXTURE_2D, tex >= 0 ? (int)renderer->textures[tex].id : -1);
+            glBindTexture(GL_TEXTURE_2D, tex >= 0 ? (int)renderer->textures[tex].id : 0);
         }
+    }
+
+    void BindCubemap(Handle h, Target target) {
+        GLint tex = Exists(h) ? h : -1;
+
+        // Switch Texture Target if needed
+        if (target != renderer->curr_GL_texture_target) {
+            renderer->curr_GL_texture_target = target;
+            glActiveTexture(GL_TEXTURE0 + target);
+        }
+
+        glBindTexture(GL_TEXTURE_CUBE_MAP, tex >= 0 ? (int)renderer->textures[tex].id : 0);
     }
 
     bool Exists(Handle h) {
@@ -86,7 +121,7 @@ namespace FBO {
         for(int i = 0; i < numAttachments; ++i) {
             Texture::Desc td;
             td.size = d.size;
-            td.from_file = false;
+            td.type = Texture::Empty;
             Texture::Handle th = Texture::Build(td);
             if(th < 0) {
                 LogErr("Error creating FBO's associated texture.");

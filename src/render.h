@@ -37,8 +37,9 @@ namespace Render {
             // Use 3D Perspective Projection
             SHADER_3D_MESH = 1,
 			SHADER_GBUFFERPASS = 2,
-            SHADER_3D_MESH_BONE = 3,
-            SHADER_3D_HEIGHTFIELD = 4,
+			SHADER_SKYBOX = 3,
+            SHADER_3D_MESH_BONE = 4,
+            SHADER_3D_HEIGHTFIELD = 5,
 
             _SHADER_END,                                    // Do not use
 
@@ -76,7 +77,7 @@ namespace Render {
 			UNIFORM_GLOBALTIME,
 			UNIFORM_OBJECTID,
 
-			UNIFORM_N                   // Do not use
+			_UNIFORM_N                   // Do not use
 		};
 
 		// Uniform Block Locations Descriptors
@@ -85,7 +86,7 @@ namespace Render {
 			UNIFORMBLOCK_POINTLIGHTS,
 			UNIFORMBLOCK_AREALIGHTS,
 
-			UNIFORMBLOCK_N				// Do not use 
+			_UNIFORMBLOCK_N				// Do not use 
 		};
 
 		/// Shader Descriptor for shader building.
@@ -214,15 +215,23 @@ namespace Render {
 	}
 
 	namespace Texture {
+		enum Type {
+			FromFile,	// Normal loading from disk file. Checks if the file is already loaded as resource each time
+			Empty,		// Create empty texture (e.g. used by FBOs)
+			Cubemap		// Loads 6 cubemap faces from the 6 given disk files (which each is a FromFile resource)
+		};
+
 		/// Descriptor for Texture creation
 		/// If texture_file is given, load texture from given file (supported: PNG)
 		/// Else, return an empty texture of the given size, registered in the renderer,
 		/// for use elsewhere
 		struct Desc {
-			Desc(const std::string &tname = "") : name(tname), from_file(true) {}
-			std::string name;	//!< Texture name
-			vec2i size;         //!< Used only if texture_file is not given
-			bool from_file;		//!< True if the given name is a image file
+			Desc(const std::string &tname = "") : type(FromFile) {
+				name[0] = tname;
+			}
+			std::string name[6];	//!< Texture name
+			vec2i size;         	//!< Used only if texture_file is not given
+			Type type;				//!< Determines how the texture is loaded
 		};
 
 		enum Target {
@@ -235,7 +244,7 @@ namespace Render {
 			TARGET4 = 4,
 			TARGET5 = 5,
 
-			TARGET_N // Do Not Use !!
+			_TARGET_N
 		};
 
 		enum TextureFormat {
@@ -263,7 +272,7 @@ namespace Render {
 			DXT3,
 			DXT5,
 
-			_FORMAT_MAX
+			_FORMAT_N
 		};
 
 		/// Texture Handle
@@ -283,6 +292,7 @@ namespace Render {
 		/// Bind given Texture as current target's texture
 		/// If -1 is given, unbind all textures for the given target
 		void Bind(Handle h, Target t);
+		void BindCubemap(Handle h, Target t);
 
 		/// Returns true if the given texture exists in renderer
 		bool Exists(Handle h);
@@ -326,7 +336,7 @@ namespace Render {
 
 		/// Returns the OpenGL Texture ID of the given attachment of the main GBuffer (FBO0)
 		u32 GetGBufferAttachment(GBufferAttachment idx);
-		
+
 		/// Returns the string literal name of the given attachment
 		const char *GetGBufferAttachmentName(GBufferAttachment idx);
 	};
@@ -430,6 +440,9 @@ namespace Render {
 
 		/// Build a radius 1 sphere
 		Handle BuildSphere();
+
+		/// Build a radius 1 box
+		Handle BuildBox();
 
 		/// Deallocate GL data for the given mesh handle
 		void Destroy(Handle h);

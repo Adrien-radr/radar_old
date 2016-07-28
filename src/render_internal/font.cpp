@@ -33,8 +33,8 @@ namespace Render {
 			td.size = font.size;
 			std::stringstream texture_name;
 			texture_name << file << "_" << size << "_atlas";
-			td.name = texture_name.str();
-			td.from_file = false;
+			td.name[0] = texture_name.str();
+			td.type = Texture::Empty;
 			font.handle = Texture::Build(td);
 			if (font.handle < 0) {
 				LogErr("Error creating empty texture for font.");

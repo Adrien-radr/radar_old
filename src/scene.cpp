@@ -183,6 +183,7 @@ bool Scene::Init(SceneInitFunc initFunc, SceneUpdateFunc updateFunc, SceneRender
 	// initialize shader matrices
 	UpdateView();
 
+	skyboxes.reserve(16);
 	texts.reserve(256);
 	pointLights.reserve(32);
 	areaLights.reserve(32);
@@ -193,7 +194,6 @@ bool Scene::Init(SceneInitFunc initFunc, SceneUpdateFunc updateFunc, SceneRender
 		active_areaLights[i] = -1;
 	}
 
-	// Fps text
 	Render::Font::Desc fdesc("data/DejaVuSans.ttf", 12);
 	Render::Font::Handle fhandle = Render::Font::Build(fdesc);
 	if (fhandle < 0) {
@@ -205,6 +205,27 @@ bool Scene::Init(SceneInitFunc initFunc, SceneUpdateFunc updateFunc, SceneRender
 	Material::DEFAULT_MATERIAL = Add(mat_desc);
 	if(Material::DEFAULT_MATERIAL < 0) {
 		LogErr("Error adding Default Material");
+		return false;
+	}
+
+	// Default Skybox (white)
+	Skybox::Desc sd;
+	sd.filenames[0] = "data/default_diff.png";
+	sd.filenames[1] = "data/default_diff.png";
+	sd.filenames[2] = "data/default_diff.png";
+	sd.filenames[3] = "data/default_diff.png";
+	sd.filenames[4] = "data/default_diff.png";
+	sd.filenames[5] = "data/default_diff.png";
+
+	Skybox::Handle sh = Add(sd);
+	if(sh < 0) {
+		LogErr("Error creating default white skybox.");
+		return false;
+	}
+	SetSkybox(sh);
+	skyboxMesh = Render::Mesh::BuildBox();
+	if(skyboxMesh < 0) {
+		LogErr("Error creating skybox mesh.");
 		return false;
 	}
 
@@ -226,6 +247,8 @@ void Scene::Clean() {
 	objects.clear();
 	texts.clear();
 	materials.clear();
+	skyboxes.clear();
+	models.clear();
 }
 
 void Scene::UpdateView() {
@@ -311,8 +334,8 @@ void Scene::UpdateGUI() {
 	const ImVec2 panelSize(410, 50);
 	const ImVec2 panelPos(wSize.x - panelSize.x, 19);
 	
-	ImGui::PushStyleColor(ImGuiCol_WindowBg, ImColor::HSV(0, 0, 1, 0.075));
-	ImGui::PushStyleColor(ImGuiCol_Text, ImColor::HSV(0, 0, 0.8, 1));
+	ImGui::PushStyleColor(ImGuiCol_WindowBg, ImColor::HSV(0, 0, 0.9, 0.15));
+	ImGui::PushStyleColor(ImGuiCol_Text, ImColor::HSV(0, 0, 0.6, 1));
 	ImGui::SetNextWindowPos(panelPos);
 	ImGui::SetNextWindowSize(panelSize);
 	ImGui::Begin("InfoPanel", NULL, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
@@ -592,6 +615,14 @@ void Scene::Render() {
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 	}
 
+	// Draw Skybox
+	glDisable(GL_CULL_FACE);
+	glDepthFunc(GL_LEQUAL);
+	Render::Shader::Bind(Render::Shader::SHADER_SKYBOX);
+	Render::Mesh::Render(skyboxMesh);
+	glDepthFunc(GL_LESS);
+	glEnable(GL_CULL_FACE);
+
 	// In case we are doing GT raytracing, accumulate backbuffer
 	Render::AccumulateGT();
 
@@ -756,7 +787,7 @@ Text::Handle Scene::Add(const Text::Desc &d) {
 
 
 Material::Handle Scene::Add(const Material::Desc &d) {
-	size_t index = materials.size();
+	size_t idx = materials.size();
 
 	Material::Data mat;
 	mat.desc = d;
@@ -845,7 +876,7 @@ Material::Handle Scene::Add(const Material::Desc &d) {
 	}
 
 	materials.push_back(mat);
-	return (Material::Handle)index;
+	return (Material::Handle) idx;
 }
 
 Object::Desc *Scene::GetObject(Object::Handle h) {
@@ -856,4 +887,28 @@ Object::Desc *Scene::GetObject(Object::Handle h) {
 
 bool Scene::ObjectExists(Object::Handle h) {
 	return h >= 0 && h < (int)objects.size();
+}
+
+Skybox::Handle Scene::Add(const Skybox::Desc &d) {
+	size_t idx = skyboxes.size();
+
+	Skybox::Data sky;
+	Render::Texture::Desc td;
+	td.type = Render::Texture::Cubemap;
+	for(u32 i = 0; i < 6; ++i) {
+		td.name[i] = d.filenames[i];
+	}
+	sky.cubemap = Render::Texture::Build(td);
+	if(sky.cubemap < 0) {
+		LogErr("Error creating Skybox.");
+		return -1;
+	}
+
+	skyboxes.push_back(sky);
+	return (Skybox::Handle) idx;
+}
+
+void Scene::SetSkybox(Skybox::Handle h) {
+	currSkybox = h;
+	Render::Texture::BindCubemap(skyboxes[currSkybox].cubemap, Render::Texture::TARGET0);
 }

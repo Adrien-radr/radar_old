@@ -175,8 +175,8 @@ namespace Shader {
 		}
 
 		// Find out Uniform Locations
-		memset(shader.uniform_locations, 0, sizeof(int)*UNIFORM_N);
-		memset(shader.uniformblock_locations, 0, sizeof(int)*UNIFORMBLOCK_N);
+		memset(shader.uniform_locations, 0, sizeof(int)*_UNIFORM_N);
+		memset(shader.uniformblock_locations, 0, sizeof(int)*_UNIFORMBLOCK_N);
 		for (u32 i = 0; i < desc.uniforms.size(); ++i) {
 			GLint loc = glGetUniformLocation(shader.id, desc.uniforms[i].name.c_str());
 			if (loc < 0) {

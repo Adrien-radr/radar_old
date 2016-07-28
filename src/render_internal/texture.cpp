@@ -12,7 +12,7 @@
 namespace Render {
 	namespace Texture {
 		FormatDesc GetTextureFormat(TextureFormat fmt) {
-			static FormatDesc fmts[_FORMAT_MAX] = {
+			static FormatDesc fmts[_FORMAT_N] = {
 				{ 0, 0, 0, GL_NONE, GL_NONE, GL_NONE },
 
 				// unsigned
@@ -424,6 +424,31 @@ namespace Render {
 			delete t;
 			f.close();
 			return NULL;
+		}
+
+		bool LoadCubemapFace(const std::string &filename, u32 face) {
+			_tex *t = NULL;
+
+			if (Resource::CheckExtension(filename, "png"))
+				t = LoadPNG(filename);
+			else if(Resource::CheckExtension(filename, "dds"))
+				t = LoadDDS(filename);
+			else {
+				LogErr("Format of '", filename, "' can't be loaded.");
+				return false;
+			}
+
+			if (!t || !t->texels)
+				return false;
+
+			glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, 0, 
+						 t->desc.formatInternalGL, t->width, t->height, 0,
+						 t->desc.formatGL, t->desc.type, t->texels);
+
+			free(t->texels);
+			delete t;
+
+			return true;
 		}
 
 		bool Load(Data &texture, const std::string &filename) {

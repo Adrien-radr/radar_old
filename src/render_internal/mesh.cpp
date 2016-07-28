@@ -215,7 +215,125 @@ namespace Render {
 			return Build(desc);
 		}
 
+		Handle BuildBox() {
+			// Test resource existence before recreating it
+			{
+				Handle h;
+				if(Exists("Box1", h)) {
+					return h;
+				}
+			}
 
+			vec3f pos[24] = {
+				vec3f(-1, -1, -1),
+				vec3f(-1, -1, 1),
+				vec3f(-1, 1, 1),
+				vec3f(-1, 1, -1),
+
+				vec3f(1, -1, 1),
+				vec3f(1, -1, -1),
+				vec3f(1, 1, -1),
+				vec3f(1, 1, 1),
+
+				vec3f(-1, -1, 1),
+				vec3f(-1, -1, -1),
+				vec3f(1, -1, -1),
+				vec3f(1, -1, 1),
+
+				vec3f(-1, 1, -1),
+				vec3f(-1, 1, 1),
+				vec3f(1, 1, 1),
+				vec3f(1, 1, -1),
+
+				vec3f(1, 1, -1),
+				vec3f(1, -1, -1),
+				vec3f(-1, -1, -1),
+				vec3f(-1, 1, -1),
+
+				vec3f(-1, 1, 1),
+				vec3f(-1, -1, 1),
+				vec3f(1, -1, 1),
+				vec3f(1, 1, 1)
+			};
+
+			vec3f nrm[24] = {
+				vec3f(-1, 0, 0),
+				vec3f(-1, 0, 0),
+				vec3f(-1, 0, 0),
+				vec3f(-1, 0, 0),
+
+				vec3f(1, 0, 0),
+				vec3f(1, 0, 0),
+				vec3f(1, 0, 0),
+				vec3f(1, 0, 0),
+
+				vec3f(0, -1, 0),
+				vec3f(0, -1, 0),
+				vec3f(0, -1, 0),
+				vec3f(0, -1, 0),
+
+				vec3f(0, 1, 0),
+				vec3f(0, 1, 0),
+				vec3f(0, 1, 0),
+				vec3f(0, 1, 0),
+
+				vec3f(0, 0, -1),
+				vec3f(0, 0, -1),
+				vec3f(0, 0, -1),
+				vec3f(0, 0, -1),
+
+				vec3f(0, 0, 1),
+				vec3f(0, 0, 1),
+				vec3f(0, 0, 1),
+				vec3f(0, 0, 1)
+			};
+
+			vec2f uv[24] = {
+				vec2f(0, 1),
+				vec2f(0, 0),
+				vec2f(1, 0),
+				vec2f(1, 1),
+
+				vec2f(0, 1),
+				vec2f(0, 0),
+				vec2f(1, 0),
+				vec2f(1, 1),
+
+				vec2f(0, 1),
+				vec2f(0, 0),
+				vec2f(1, 0),
+				vec2f(1, 1),
+
+				vec2f(0, 1),
+				vec2f(0, 0),
+				vec2f(1, 0),
+				vec2f(1, 1),
+
+				vec2f(0, 1),
+				vec2f(0, 0),
+				vec2f(1, 0),
+				vec2f(1, 1),
+
+				vec2f(0, 1),
+				vec2f(0, 0),
+				vec2f(1, 0),
+				vec2f(1, 1),
+			};
+
+			u32 indices[36];
+			for(u32 i = 0; i < 6; ++i) {
+				indices[i * 6 + 0] = i * 4 + 0;
+				indices[i * 6 + 1] = i * 4 + 1;
+				indices[i * 6 + 2] = i * 4 + 2;
+
+				indices[i * 6 + 3] = i * 4 + 0;
+				indices[i * 6 + 4] = i * 4 + 2;
+				indices[i * 6 + 5] = i * 4 + 3;
+			}
+
+			Desc desc("Box1", false, 36, indices, 24, (f32*)pos, (f32*)nrm, (f32*)uv);
+			return Build(desc);
+		}
 	}
 }
 
