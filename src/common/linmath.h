@@ -734,9 +734,10 @@ public:
 
 	static mat4<T> Perspective(float fov_x, float aspect, float n, float f) {
 		float fov_rad = deg2rad(hfov_to_vfov(aspect, fov_x));
-		float r = tanf(fov_rad * 0.5f) * n;
-		float sx = (2.f*n) / (r*aspect + r*aspect);
-		float sy = n / r;
+		float tanHalfFovy = tanf(fov_rad * 0.5f);
+		
+		float sx = 1.f / (aspect * tanHalfFovy);
+		float sy = 1.f / tanHalfFovy;
 		float sz = -(f + n) / (f - n);
 		float pz = -(2.f*f*n) / (f - n);
 
@@ -746,6 +747,7 @@ public:
 		R[2][2] = sz;
 		R[3][2] = pz;
 		R[2][3] = -1.f;
+		R[3][3] = 0.f;
 
 		return R;
 	}
@@ -776,11 +778,11 @@ public:
 		f.Normalize();
 
 		// right
-		vec3<T> r = f.Cross(up);
+		vec3<T> r = f.Cross(up); // s
 		r.Normalize();
 
 		// up
-		vec3<T> u = r.Cross(f);
+		vec3<T> u = r.Cross(f); // u
 		u.Normalize();
 
 		// translation

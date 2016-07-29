@@ -32,23 +32,6 @@ typedef uint64_t    u64;
 typedef float       f32;
 typedef double      f64;
 
-typedef char        str16[16];
-typedef char        str32[32];
-typedef char        str64[64];
-typedef char        str128[128];
-typedef char        str256[256];
-typedef char        str512[512];
-typedef char        str1024[1024];
-
-//typedef float       vec2[2];
-//typedef int         vec2i[2];
-//typedef float       vec3[3];
-//typedef float       vec4[4];
-//typedef vec3        mat3[3];
-//typedef vec4        mat4[4];
-//typedef float       quaternion[4];
-
-
 struct Rect {
     int x, y, w, h;
 };

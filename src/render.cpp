@@ -473,11 +473,20 @@ namespace Render {
 	}
 
 	void UpdateView(const mat4f &viewMatrix, const vec3f &eyePos) {
-		for(int i = Shader::_SHADER_3D_PROJECTION_START; i < Shader::_SHADER_3D_PROJECTION_END; ++i) {
+		for(int i = Shader::_SHADER_3D_PROJECTION_START; i < Shader::SHADER_SKYBOX; ++i) {
 			Shader::Bind(i);
 			Shader::SendMat4(Shader::UNIFORM_VIEWMATRIX, viewMatrix);
 			Shader::SendVec3(Shader::UNIFORM_EYEPOS, eyePos);
 		}
+
+		// Update Skybox shader
+		Shader::Bind(Shader::SHADER_SKYBOX);
+		mat4f skyboxView(viewMatrix);
+		skyboxView[3].x = 0.f;
+		skyboxView[3].y = 0.f;
+		skyboxView[3].z = 0.f;
+		skyboxView[3].w = 1.f;
+		Shader::SendMat4(Shader::UNIFORM_VIEWMATRIX, skyboxView);
 
 		// view changed, reset blend mode for Raytracing
 		if(renderer->GTMode) {

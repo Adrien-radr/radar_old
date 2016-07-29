@@ -29,7 +29,7 @@ void Log::Init() {
 		log_ss.setf(std::ios::fixed, std::ios::floatfield);
 		log_ss.precision(2);
 
-		str64 da, ti;
+		char da[64], ti[64];
 		get_date_time(da, 64, DEFAULT_DATE_FMT);
 		get_date_time(ti, 64, DEFAULT_TIME_FMT);
 		std::string dastr(da);
