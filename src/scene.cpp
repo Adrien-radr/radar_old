@@ -271,8 +271,8 @@ bool Scene::ShowGBufferWindow() {
 		if(ImGui::CollapsingHeader(ss.str().c_str())) {
 			u32 tex = Render::FBO::GetGBufferAttachment(att);
 			if(tex > 0) {
-				ImTextureID tid = reinterpret_cast<ImTextureID>(tex);
-				ImGui::Image(tid, ImVec2(320, 180), ImVec2(0,1), ImVec2(1,0), ImVec4(1,1,1,1), ImVec4(1,1,1,0.7));
+				ImTextureID tid = reinterpret_cast<ImTextureID>((u64)tex);
+				ImGui::Image(tid, ImVec2(320, 180), ImVec2(0,1), ImVec2(1,0), ImVec4(1,1,1,1), ImVec4(1,1,1,0.7f));
 			}
 		}
 	}
@@ -323,19 +323,19 @@ void Scene::UpdateGUI() {
 
 	char fpsText[512];
 	snprintf(fpsText, 512, "Average %.3f ms/frame (%.1f FPS)", mspf, fps);
-	const int fpsTLen = ImGui::CalcTextSize(fpsText).x;
+	const f32 fpsTLen = ImGui::CalcTextSize(fpsText).x;
 
 	char camText[512];
 	snprintf(camText, 512, "Camera <%.2f, %.2f, %.2f> <%.2f, %.2f, %.2f>", cpos.x, cpos.y, cpos.z, ctar.x, ctar.y, ctar.z);
-	const int camTLen = ImGui::CalcTextSize(camText).x;
+	const f32 camTLen = ImGui::CalcTextSize(camText).x;
 
 	vec2f wSizef = GetDevice().windowSize;
 	ImVec2 wSize(wSizef.x, wSizef.y);
 	const ImVec2 panelSize(410, 50);
 	const ImVec2 panelPos(wSize.x - panelSize.x, 19);
 	
-	ImGui::PushStyleColor(ImGuiCol_WindowBg, ImColor::HSV(0, 0, 0.9, 0.15));
-	ImGui::PushStyleColor(ImGuiCol_Text, ImColor::HSV(0, 0, 0.6, 1));
+	ImGui::PushStyleColor(ImGuiCol_WindowBg, ImColor::HSV(0, 0, 0.9f, 0.15f));
+	ImGui::PushStyleColor(ImGuiCol_Text, ImColor::HSV(0, 0, 0.6f, 1));
 	ImGui::SetNextWindowPos(panelPos);
 	ImGui::SetNextWindowSize(panelSize);
 	ImGui::Begin("InfoPanel", NULL, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
@@ -371,6 +371,8 @@ void Scene::Update(float dt) {
 		UpdateView();
 	}
 
+	UpdateGUI();
+
 	static f32 ai_timer = 0.f, one_sec = 0.f;
 	ai_timer += dt; one_sec += dt;
 
@@ -378,7 +380,6 @@ void Scene::Update(float dt) {
 	if (ai_timer >= 0.01f) {
 		ai_timer = 0.f;
 
-	UpdateGUI();
 		// update animation for all objects
 		//for (u32 j = 0; j < objects.size(); ++j) {
 		//	Object::Desc &object = objects[j];
@@ -720,7 +721,7 @@ PointLight::Handle Scene::Add(const PointLight::Desc &d) {
 	// look for active slot
 	for(u32 i = 0; i < SCENE_MAX_ACTIVE_LIGHTS; ++i) {
 		if(active_pointLights[i] < 0) {
-			active_pointLights[i] = index;
+			active_pointLights[i] = (int) index;
 			break;
 		}
 	}
@@ -743,7 +744,7 @@ AreaLight::Handle Scene::Add(const AreaLight::Desc &d) {
 	// look for active slot
 	for(u32 i = 0; i < SCENE_MAX_ACTIVE_LIGHTS; ++i) {
 		if(active_areaLights[i] < 0) {
-			active_areaLights[i] = index;
+			active_areaLights[i] =(int) index;
 			break;
 		}
 	}

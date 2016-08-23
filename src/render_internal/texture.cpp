@@ -113,7 +113,7 @@ namespace Render {
 			t = new _tex();//
 			t->texels = nullptr;
 
-            int rowbytes;
+            size_t rowbytes;
 			// setjmp for any png loading error
 			if (setjmp(png_jmpbuf(img)))
 				goto error;
@@ -410,7 +410,7 @@ namespace Render {
 				f.seekg(0, std::ios_base::end);
 				std::streamoff end = f.tellg();
 				f.seekg(cur, std::ios_base::beg);
-				bufSize = end - cur;
+				bufSize = (u32) (end - cur);
 			}
 
 			// bufSize = t->mipmapCount > 1 ? linearSize * 2 : linearSize;
@@ -479,7 +479,7 @@ namespace Render {
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-			glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, deviceConfig.anisotropicFiltering);
+			glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, (GLfloat) deviceConfig.anisotropicFiltering);
 
 			switch(t->format) {
 			case DXT1:

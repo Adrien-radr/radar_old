@@ -83,7 +83,7 @@ vec3f Json::ReadVec3(cJSON *parent, const std::string &name, const vec3f &defaul
 		return default_val;
 	}
 
-	return vec3f(	cJSON_GetArrayItem(item, 0)->valuedouble, 
-					cJSON_GetArrayItem(item, 1)->valuedouble, 
-					cJSON_GetArrayItem(item, 2)->valuedouble);
+	return vec3f(	(f32) cJSON_GetArrayItem(item, 0)->valuedouble, 
+					(f32) cJSON_GetArrayItem(item, 1)->valuedouble, 
+					(f32) cJSON_GetArrayItem(item, 2)->valuedouble);
 }

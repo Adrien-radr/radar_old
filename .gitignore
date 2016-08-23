@@ -4,3 +4,11 @@
 bin/radar
 bin/data/old
 .vscode
+*.tlog
+*.obj
+*.pdb
+*.user
+*.filters
+*.suo
+*.sdf
+*.opensdf

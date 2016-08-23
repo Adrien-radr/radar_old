@@ -4,6 +4,11 @@
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
 
+
+bool _ProcessAssimpNode(Scene *gameScene, ModelResource:: Data &model, aiNode *node, const aiScene *scene);
+bool _ProcessAssimpMesh(Scene *gameScene, ModelResource::Data &model, aiMesh *mesh, const aiScene *scene);
+bool _ProcessAssimpMaterials(Scene *gameScene, ModelResource::Data &model, const aiScene *scene);
+
 inline vec3f aiVector3D_To_vec3f(const aiVector3D &v) {
     return vec3f(v.x, v.y, v.z);
 }
@@ -27,17 +32,17 @@ ModelResource::Handle Scene::LoadModelResource(const std::string &fileName) {
         return -1;
     }
 
-    u32 last_slash = fileName.find_last_of('/');
+    u32 last_slash = (u32) fileName.find_last_of('/');
     model.resourceName = fileName.substr(last_slash+1, fileName.size());
     model.pathName = fileName.substr(0, last_slash+1);
 
 
 
-    if(!ModelResource::_ProcessAssimpMaterials(this, model, scene)) {
+    if(!_ProcessAssimpMaterials(this, model, scene)) {
         return -1;
     }
 
-    if(!ModelResource::_ProcessAssimpNode(this, model, scene->mRootNode, scene)) {
+    if(!_ProcessAssimpNode(this, model, scene->mRootNode, scene)) {
         return -1;
     }
 
@@ -57,7 +62,7 @@ ModelResource::Handle Scene::GetModelResource(const std::string &modelName) {
        });
 
     if(it != models.end())
-        return std::distance(models.begin(), it);
+        return (ModelResource::Handle) std::distance(models.begin(), it);
     else
         return -1;
 }
@@ -76,7 +81,7 @@ static std::string GetTexturePath(aiMaterial *material, ModelResource::Data &mod
     return path;
 }
 
-bool ModelResource::_ProcessAssimpMaterials(Scene *gameScene, Data &model, const aiScene *scene) {
+bool _ProcessAssimpMaterials(Scene *gameScene, ModelResource::Data &model, const aiScene *scene) {
     // Load Materials and Textures
     if(scene->mNumMaterials) {
         model.materials.reserve(scene->mNumMaterials);
@@ -85,7 +90,6 @@ bool ModelResource::_ProcessAssimpMaterials(Scene *gameScene, Data &model, const
             aiMaterial *material = scene->mMaterials[i];
 
             Material::Handle mat_h;
-            Render::Texture::Handle t_h;
 
             Material::Desc mat_desc;
             aiColor3D col;
@@ -110,12 +114,10 @@ bool ModelResource::_ProcessAssimpMaterials(Scene *gameScene, Data &model, const
                 // "Ks (", mat_desc.Ks.x, mat_desc.Ks.y, mat_desc.Ks.z, "), shininess: ", mat_desc.shininess);
 
             // Those are texture based. Just use defaults
-            mat_desc.uniform.Ka = col3f(0.15,0.15,0.15);
+            mat_desc.uniform.Ka = col3f(0.15f,0.15f,0.15f);
             mat_desc.uniform.Kd = col3f(1,1,1);
             mat_desc.uniform.Ks = col3f(1,1,1);
             mat_desc.uniform.shininess = 1.0;   // This gets multiplied by the Specular Texture in shader
-
-            int tCount;
 
             // Ambient texture
             // mat_desc.ambientTexPath = GetTexturePath(material, model, aiTextureType_DIFFUSE);
@@ -147,7 +149,7 @@ bool ModelResource::_ProcessAssimpMaterials(Scene *gameScene, Data &model, const
     return true;
 }
 
-bool ModelResource::_ProcessAssimpNode(Scene *gameScene, Data &model, aiNode *node, const aiScene *scene) {
+bool _ProcessAssimpNode(Scene *gameScene, ModelResource::Data &model, aiNode *node, const aiScene *scene) {
     // LogDebug("Loading ", node->mNumMeshes, " submeshes and ", node->mNumChildren, " subnodes.");
     for(u32 i = 0; i < node->mNumMeshes; ++i) {
         aiMesh *mesh = scene->mMeshes[node->mMeshes[i]];
@@ -168,7 +170,7 @@ bool ModelResource::_ProcessAssimpNode(Scene *gameScene, Data &model, aiNode *no
     return true;
 }
 
-bool ModelResource::_ProcessAssimpMesh(Scene *gameScene, Data &model, aiMesh *mesh, const aiScene *scene) {
+bool _ProcessAssimpMesh(Scene *gameScene, ModelResource::Data &model, aiMesh *mesh, const aiScene *scene) {
     u32 vertices_n = mesh->mNumVertices;
     u32 faces_n = mesh->mNumFaces;
     u32 indices_n = faces_n * 3;

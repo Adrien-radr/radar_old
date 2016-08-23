@@ -466,7 +466,7 @@ namespace SpriteSheet {
             }
         }
 
-        Handle ss_i = renderer->spritesheets.size();
+        Handle ss_i = (Handle) renderer->spritesheets.size();
         renderer->spritesheets.push_back(ss);
 
         AddResource(renderer->spritesheets_resources, free_index, ss.resource_name, ss_i);

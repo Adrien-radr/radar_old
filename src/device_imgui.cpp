@@ -371,7 +371,7 @@ void Device::ImGui_NewFrame() {
     io.DeltaTime = g_Time > 0.0 ? (float)(current_time - g_Time) : (float)(1.0f/60.0f);
     g_Time = current_time;
 
-    io.MousePos = ImVec2(mousePosition.x, mousePosition.y);
+    io.MousePos = ImVec2((f32) mousePosition.x, (f32) mousePosition.y);
 
     for (int i = 0; i < 3; i++)
     {

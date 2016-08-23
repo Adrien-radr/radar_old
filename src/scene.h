@@ -33,7 +33,7 @@ namespace Material {
 	using namespace Render;
 	struct Desc {
 		Desc() :	// Default debug material
-			uniform(col3f(0.3, 0.0, 0.3), col3f(0.51,0.4,0.51), col3f(0.7,0.04,0.7), 0.95f), 
+			uniform(col3f(0.3f, 0.f, 0.3f), col3f(0.51f,0.4f,0.51f), col3f(0.7f,0.04f,0.7f), 0.95f), 
 			diffuseTexPath(""), specularTexPath(""), normalTexPath(""), occlusionTexPath(""),
 			ltcMatrixPath(""), ltcAmplitudePath("") {}
 
@@ -135,10 +135,6 @@ namespace Object {
 	typedef int Handle;
 }
 
-class aiNode;
-class aiScene;
-class aiMesh;
-
 namespace ModelResource {
 	typedef int Handle;
 
@@ -159,10 +155,6 @@ namespace ModelResource {
 		std::string pathName;
 		u32			numSubMeshes;
 	};
-
-    bool _ProcessAssimpNode(Scene *gameScene, Data &model, aiNode *node, const aiScene *scene);
-    bool _ProcessAssimpMesh(Scene *gameScene, Data &model, aiMesh *mesh, const aiScene *scene);
-	bool _ProcessAssimpMaterials(Scene *gameScene, Data &model, const aiScene *scene);
 };
 
 namespace Text {

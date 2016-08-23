@@ -188,13 +188,13 @@ bool initFunc(Scene *scene) {
 		return false;
 	}
 
+#if 0
 	ModelResource::Handle m14Model = scene->LoadModelResource("data/ak/AK_BS_Exp.obj");
-	if(metal0Model < 0) {
-		LogErr("Error loading m14");
+	if(m14Model < 0) {
+		LogErr("Error loading AK47");
 		return false;
 	}
 
-#if 0
 	ModelResource::Handle ironmanModel = scene->LoadModelResource("data/ironman/ironman.obj");
 	if(ironmanModel < 0) {
 		LogErr("Error loading ironman");
@@ -244,13 +244,13 @@ bool initFunc(Scene *scene) {
 	coltObj->Translate(vec3f(40.5, 3, -16));
 
 
-	Object::Handle m14_h = scene->InstanciateModel(m14Model);
-	if(m14_h < 0) {
-		LogErr("Error creating m14.");
-		return false;
-	}
-	Object::Desc *m14_o = scene->GetObject(m14_h);
-	m14_o->Translate(vec3f(40.5, 1.0, -16));
+	//Object::Handle m14_h = scene->InstanciateModel(m14Model);
+	//if(m14_h < 0) {
+		//LogErr("Error creating m14.");
+		//return false;
+	//}
+	//Object::Desc *m14_o = scene->GetObject(m14_h);
+	//m14_o->Translate(vec3f(40.5, 1.0, -16));
 	// m14_o->Scale(vec3f(2));
 	
 
@@ -290,7 +290,7 @@ bool initFunc(Scene *scene) {
 	const int sphere_j = 8;
 	for(int j = 0; j < sphere_j; ++j) {
 		for(int i = 0; i < sphere_n; ++i) {
-			f32 fi = pow((i+1) / (f32)sphere_n, 0.4);
+			f32 fi = pow((i+1) / (f32)sphere_n, 0.4f);
 			f32 fj = j / (f32)sphere_j;
 
 			odesc.ClearSubmeshes();

@@ -117,8 +117,8 @@ namespace FBO {
         glBindFramebuffer(GL_FRAMEBUFFER, fbo.framebuffer);
 
         // Create all attachments
-        int numAttachments = d.textures.size();
-        for(int i = 0; i < numAttachments; ++i) {
+        size_t numAttachments = d.textures.size();
+        for(size_t i = 0; i < numAttachments; ++i) {
             Texture::Desc td;
             td.size = d.size;
             td.type = Texture::Empty;
@@ -137,11 +137,11 @@ namespace FBO {
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + i, GL_TEXTURE_2D, tex_id, 0);
+            glFramebufferTexture2D(GL_FRAMEBUFFER, (GLenum) (GL_COLOR_ATTACHMENT0 + i), GL_TEXTURE_2D, tex_id, 0);
             fbo.attachments.push_back(th);
         }     
 
-        glDrawBuffers(numAttachments, fbo_attachments);
+        glDrawBuffers((GLsizei) numAttachments, fbo_attachments);
 
         // Attach Depth Buffer
         glGenRenderbuffers(1, &fbo.depthbuffer);
