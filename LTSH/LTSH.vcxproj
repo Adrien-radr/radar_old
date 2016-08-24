@@ -132,13 +132,6 @@
   <ItemGroup>
     <ClCompile Include="main.cpp" />
   </ItemGroup>
-  <ItemGroup>
-    <None Include="bin\data\shaders\gBufferPass_frag.glsl" />
-    <None Include="bin\data\shaders\gBufferPass_vert.glsl" />
-    <None Include="bin\data\shaders\lib.glsl" />
-    <None Include="bin\data\shaders\mesh_frag.glsl" />
-    <None Include="bin\data\shaders\mesh_vert.glsl" />
-  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

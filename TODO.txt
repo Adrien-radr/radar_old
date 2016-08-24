@@ -16,12 +16,15 @@ x GGX -- fixed (smith DFG + burley's disney diffuse)
 x Assimp models
 x ImGUI
 x RTT
-x GBuffers
+x GBuffer
+	x First buffer pass
 o SH Visualisation
 	x SH Visualisation mesh creation
 	o SH Visualisation Render (shader + Scene code)
-o Mouse Object Picking (from gbuffer objectID)
-	o Vertex Picking
+		x Render as object
+		o Separate SHVis scene struct (unique one depicting mouse click pos or smthg), 1 created, gets updated by mouse click
+x Mouse Object Picking (from gbuffer objectID)
+o Mouse Vertex Picking
 x Envmaps (cubemaps)
 	o EXR image loading
     o HDR Envmaps
@@ -33,6 +36,8 @@ o Scene Hierarchy (BVH, Octree/kdTree ?)
 
 Less :
 x Shader Hot reload
+o Json scene loading
+	o (De)Serializing scene data (mesh/object/material/light)
 o Use quaternions instead of vec3 for rotation info
 o Prefiltered cubemap for ambient specular
 o Light aggregation work could be done at SceneUpdate instead of SceneRender

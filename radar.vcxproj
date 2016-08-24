@@ -190,10 +190,22 @@
     <ClInclude Include="src\scene.h" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="data\shaders\gBufferPass_frag.glsl" />
+    <None Include="data\shaders\gBufferPass_vert.glsl" />
+    <None Include="data\shaders\lib.glsl" />
+    <None Include="data\shaders\mesh_frag.glsl" />
+    <None Include="data\shaders\mesh_vert.glsl" />
+    <None Include="data\shaders\skybox_frag.glsl" />
+    <None Include="data\shaders\skybox_vert.glsl" />
+    <None Include="data\shaders\ui.fs" />
+    <None Include="data\shaders\ui.vs" />
     <None Include="src\render_internal\font.inl" />
     <None Include="src\render_internal\mesh.inl" />
     <None Include="src\render_internal\shader.inl" />
     <None Include="src\render_internal\texture.inl" />
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="TODO.txt" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -18,7 +18,7 @@ struct AreaLight {
     vec3  Ld;
     vec4  plane;
 };
-void InitRectPoints(AreaLight rect, out vec3 points[4]) {
+void InitRectPoints(in AreaLight rect, out vec3 points[4]) {
     vec3 ex = rect.hwidthx * rect.dirx;
     vec3 ey = rect.hwidthy * rect.diry;
 
@@ -26,6 +26,18 @@ void InitRectPoints(AreaLight rect, out vec3 points[4]) {
     points[1] = rect.position + ex - ey;
     points[2] = rect.position + ex + ey;
     points[3] = rect.position - ex + ey;
+}
+
+bool CullAreaLight(in AreaLight l, in vec3 points[4], in vec3 P, in vec3 N, in float w) {
+	bool P_rightSide = dot(l.plane.xyz, P) + l.plane.w > 1e-5;
+
+	bool A_rightSide =
+		(dot(N, points[0]) + w > 1e-5) ||
+		(dot(N, points[1]) + w > 1e-5) ||
+		(dot(N, points[2]) + w > 1e-5) ||
+		(dot(N, points[3]) + w > 1e-5);
+
+	return !(P_rightSide && A_rightSide);
 }
 
 // FWD Decl of functions in lib.glsl
@@ -138,12 +150,10 @@ vec3 areaLightContribution(vec3 N, vec3 V, float NdotV, vec3 diff_color, vec3 sp
         float light_dist = length(light_vec);
         vec3 L = light_vec / light_dist;
         vec3 pN = alights[i].plane.xyz;
+		
+        InitRectPoints(alights[i], points);
 
-        float lighted = dot(pN, v_position) + alights[i].plane.w;
-		//bool rightSide = dot(pN, N) < 0.0;
-
-        if(lighted > 0.0) {
-            InitRectPoints(alights[i], points);
+        if(!CullAreaLight(alights[i], points, v_position, N, -dot(v_position, N))) {
 
             // diffuse
             vec3 diffuse = LTCEvaluate(N, V, v_position, MinvDiff, points, false);
@@ -293,13 +303,10 @@ vec3 areaLightGT(vec3 N, vec3 V, float NdotV, vec3 diff_color, vec3 spec_color, 
 
     for(int i = 0; i < nAreaLights; ++i) {
         vec3 pN = alights[i].plane.xyz;
+				
+        InitRectPoints(alights[i], points);
 
-        float lighted = dot(pN, v_position) + alights[i].plane.w;
-		//bool rightSide = dot(pN, N) > 0.0;
-
-        if(lighted > 0.0 ) {
-
-            InitRectPoints(alights[i], points);
+        if(!CullAreaLight(alights[i], points, v_position, N, -dot(v_position, N))) {
             // luminaire in tangent space
             vec3 ex = points[1] - points[0];
             vec3 ey = points[3] - points[0];
