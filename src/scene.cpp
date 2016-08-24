@@ -16,10 +16,14 @@ void Camera::Update(float dt) {
 	vec3f posDiff;
 
 	// Translation
-	if(device.IsKeyHit(K_LShift))
-		speedMode = true;
-	if(device.IsKeyUp(K_LShift))
-		speedMode = false;
+	if (device.IsKeyHit(K_LShift))
+		speedMode += 1;
+	if (device.IsKeyUp(K_LShift))
+		speedMode -= 1;
+	if (device.IsKeyHit(K_LCtrl))
+		speedMode -= 1;
+	if (device.IsKeyUp(K_LCtrl))
+		speedMode += 1;
 
 	if(device.IsKeyDown(K_D))
 		posDiff += right;
@@ -29,12 +33,16 @@ void Camera::Update(float dt) {
 		posDiff += forward;
 	if(device.IsKeyDown(K_S))
 		posDiff -= forward;
+	if (device.IsKeyDown(K_Space))
+		posDiff += up;
+	if (device.IsKeyDown(K_LAlt))
+		posDiff -= up;
 
 	float len = posDiff.Len();
 	if(len > 0.f) {
 		posDiff /= len;
 		hasMoved = true;
-		posDiff *= dt * translationSpeed * (speedMode ? speedMult : 1.f);
+		posDiff *= dt * translationSpeed * (speedMode ? (speedMode > 0 ? speedMult : 0.5f / speedMult) : 1.f);
 
 		position += posDiff;
 	}
@@ -148,24 +156,15 @@ bool Scene::Init(SceneInitFunc initFunc, SceneUpdateFunc updateFunc, SceneRender
 	customUpdateFunc = updateFunc;
 	customRenderFunc = renderFunc;
 
-	// Create camera and update shader to use it
-	//camera.zoom_level = 1.f;
-	//camera.zoom_speed = 100.f;
-	//camera.pan_speed = 250.f;
-	//camera.pan_fast_speed = 1000.f;
-	//camera.pan_fast = false;
-	//camera.center = device.window_center;
-	//camera.position = vec2f(0, 0);
-
 	camera.hasMoved = false;
 	camera.speedMode = false;
 	camera.freeflyMode = false;
     camera.dist = 7.5f;
 	camera.speedMult = config.cameraSpeedMult;
     camera.translationSpeed = config.cameraBaseSpeed;
-    camera.rotationSpeed = 0.05f;
-    camera.position = config.cameraPosition;// vec3f(-21.2, 13.9, -4.1);
-    camera.target = config.cameraTarget;// vec3f(-21.889,13.9405,-3.3768);
+    camera.rotationSpeed = 0.01f * config.cameraRotationSpeed;
+    camera.position = config.cameraPosition;
+    camera.target = config.cameraTarget;
     camera.up = vec3f(0,1,0);
     camera.forward = camera.target - camera.position;
     camera.forward.Normalize();
@@ -179,6 +178,8 @@ bool Scene::Init(SceneInitFunc initFunc, SceneUpdateFunc updateFunc, SceneRender
     azimuth.Normalize();
     camera.phi = std::atan2(azimuth[1], azimuth[0]);
     camera.theta = std::atan2(camera.forward[1], std::sqrt(azimuth.Dot(azimuth)));
+
+	pickedObject = -1;
 
 	// initialize shader matrices
 	UpdateView();
@@ -194,7 +195,7 @@ bool Scene::Init(SceneInitFunc initFunc, SceneUpdateFunc updateFunc, SceneRender
 		active_areaLights[i] = -1;
 	}
 
-	Render::Font::Desc fdesc("data/DejaVuSans.ttf", 12);
+	Render::Font::Desc fdesc("../../data/DejaVuSans.ttf", 12);
 	Render::Font::Handle fhandle = Render::Font::Build(fdesc);
 	if (fhandle < 0) {
 		LogErr("Error loading DejaVuSans font.");
@@ -210,12 +211,12 @@ bool Scene::Init(SceneInitFunc initFunc, SceneUpdateFunc updateFunc, SceneRender
 
 	// Default Skybox (white)
 	Skybox::Desc sd;
-	sd.filenames[0] = "data/default_diff.png";
-	sd.filenames[1] = "data/default_diff.png";
-	sd.filenames[2] = "data/default_diff.png";
-	sd.filenames[3] = "data/default_diff.png";
-	sd.filenames[4] = "data/default_diff.png";
-	sd.filenames[5] = "data/default_diff.png";
+	sd.filenames[0] = "../../data/default_diff.png";
+	sd.filenames[1] = "../../data/default_diff.png";
+	sd.filenames[2] = "../../data/default_diff.png";
+	sd.filenames[3] = "../../data/default_diff.png";
+	sd.filenames[4] = "../../data/default_diff.png";
+	sd.filenames[5] = "../../data/default_diff.png";
 
 	Skybox::Handle sh = Add(sd);
 	if(sh < 0) {
@@ -321,13 +322,17 @@ void Scene::UpdateGUI() {
 	const vec3f cpos = camera.position;
 	const vec3f ctar = camera.target;
 
-	char fpsText[512];
+	static char fpsText[512];
 	snprintf(fpsText, 512, "Average %.3f ms/frame (%.1f FPS)", mspf, fps);
 	const f32 fpsTLen = ImGui::CalcTextSize(fpsText).x;
 
-	char camText[512];
+	static char camText[512];
 	snprintf(camText, 512, "Camera <%.2f, %.2f, %.2f> <%.2f, %.2f, %.2f>", cpos.x, cpos.y, cpos.z, ctar.x, ctar.y, ctar.z);
 	const f32 camTLen = ImGui::CalcTextSize(camText).x;
+
+	static char pickText[512];
+	snprintf(pickText, 512, "Pick Object : %d", (int)pickedObject);
+	const f32 pickTLen = ImGui::CalcTextSize(pickText).x;
 
 	vec2f wSizef = GetDevice().windowSize;
 	ImVec2 wSize(wSizef.x, wSizef.y);
@@ -335,7 +340,7 @@ void Scene::UpdateGUI() {
 	const ImVec2 panelPos(wSize.x - panelSize.x, 19);
 	
 	ImGui::PushStyleColor(ImGuiCol_WindowBg, ImColor::HSV(0, 0, 0.9f, 0.15f));
-	ImGui::PushStyleColor(ImGuiCol_Text, ImColor::HSV(0, 0, 0.6f, 1));
+	ImGui::PushStyleColor(ImGuiCol_Text, ImColor::HSV(0, 0, 0.4f, 1));
 	ImGui::SetNextWindowPos(panelPos);
 	ImGui::SetNextWindowSize(panelSize);
 	ImGui::Begin("InfoPanel", NULL, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
@@ -344,6 +349,9 @@ void Scene::UpdateGUI() {
 	ImGui::Text("%s", "");
 	ImGui::SameLine(ImGui::GetContentRegionMax().x - camTLen);
 	ImGui::Text("%s", camText);
+	ImGui::Text("%s", "");
+	ImGui::SameLine(ImGui::GetContentRegionMax().x - pickTLen);
+	ImGui::Text("%s", pickText);
 	ImGui::End();
 	ImGui::PopStyleColor(2);
 }
@@ -353,14 +361,14 @@ void Scene::Update(float dt) {
 
 
 	// Ctrl+R to hot reload shaders
-	if(device.IsKeyHit(K_R) && device.IsKeyDown(K_LControl)) {
+	if(device.IsKeyHit(K_R) && device.IsKeyDown(K_LCtrl)) {
 		Render::ReloadShaders();
 		camera.hasMoved = true; // to reupload view matrices
 		device.UpdateProjection(); // to reupload projection matrices
 	}
 
 	// Ctrl+G to toggle Ground Truth ray tracing mode
-	if(device.IsKeyHit(K_G) && device.IsKeyDown(K_LControl)) {
+	if(device.IsKeyHit(K_G) && device.IsKeyDown(K_LCtrl)) {
 		Render::ToggleGTRaytracing();
 	}
 
@@ -369,6 +377,11 @@ void Scene::Update(float dt) {
 	if(camera.hasMoved) {
 		camera.hasMoved = false;
 		UpdateView();
+	}
+
+	// Mouse Picking
+	if (device.IsMouseHit(MouseButton::MB_Left)) {
+		pickedObject = (Object::Handle) Render::FBO::ReadObjectID(device.GetMouseX(), device.windowSize.y - device.GetMouseY());
 	}
 
 	UpdateGUI();

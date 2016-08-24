@@ -38,8 +38,8 @@ namespace Render {
             SHADER_3D_MESH = 1,
 			SHADER_GBUFFERPASS = 2,
 			SHADER_SKYBOX = 3,
-            SHADER_3D_MESH_BONE = 4,
-            SHADER_3D_HEIGHTFIELD = 5,
+            //SHADER_3D_MESH_BONE = 4,
+            //SHADER_3D_HEIGHTFIELD = 5,
 
             _SHADER_END,                                    // Do not use
 
@@ -339,6 +339,9 @@ namespace Render {
 
 		/// Returns the string literal name of the given attachment
 		const char *GetGBufferAttachmentName(GBufferAttachment idx);
+
+		/// GBuffer picking : returns the object ID under the given position (x,y)
+		int ReadObjectID(u32 x, u32 y);
 	};
 
 
@@ -443,6 +446,9 @@ namespace Render {
 
 		/// Build a radius 1 box
 		Handle BuildBox();
+
+		/// Build a SH visualization mesh
+		Handle BuildSHVisualization(const float *shCoeffs, const u32 bandN, const std::string &meshName, const u32 numPhi = 48, const u32 numTheta = 96);
 
 		/// Deallocate GL data for the given mesh handle
 		void Destroy(Handle h);

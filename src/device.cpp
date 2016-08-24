@@ -302,6 +302,7 @@ static bool LoadConfig(Config &config) {
 	config.anisotropicFiltering = Json::ReadInt(conf_file.root, "iAnisotropicFiltering", 0);
 	config.cameraBaseSpeed = Json::ReadFloat(conf_file.root, "fCameraSpeedBase", 10.f);
 	config.cameraSpeedMult = Json::ReadFloat(conf_file.root, "fCameraSpeedMult", 2.f);
+	config.cameraRotationSpeed = Json::ReadFloat(conf_file.root, "fCameraRotationSpeed", 1.f);
 	config.cameraPosition = Json::ReadVec3(conf_file.root, "vCameraPosition", vec3f(10,8,10));
 	config.cameraTarget = Json::ReadVec3(conf_file.root, "vCameraTarget", vec3f(0,0.5,0));
 

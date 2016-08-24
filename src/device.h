@@ -18,6 +18,7 @@ struct Config {
 
 	f32		cameraBaseSpeed;
 	f32		cameraSpeedMult;
+	f32		cameraRotationSpeed;
 
 	vec3f 	cameraPosition;
 	vec3f	cameraTarget;

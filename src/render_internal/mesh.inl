@@ -77,6 +77,26 @@ namespace Mesh {
         // #endif
     }
 
+
+	void ComputeBoundingSphere(f32 *vp, u32 vcount, vec3f *center, float *radius) {
+		vec3f c;
+		vec3f *verts = (vec3f*)vp;
+
+		for (u32 i = 0; i < vcount; ++i) {
+			c += verts[i];
+		}
+		*center = c / (float)vcount;
+
+		*radius = 0.f;
+		for (u32 i = 0; i < vcount; ++i) {
+			const vec3f dV = verts[i] - *center;
+			const f32 len = dV.Len();
+
+			if (len > *radius)
+				*radius = len;
+		}
+	}
+
     Handle Build(const Desc &desc) {
         f32 *vp = nullptr, *vn = nullptr, *vt = nullptr, *vc = nullptr, *vtan = nullptr, *vbit = nullptr;
         u32 *idx = nullptr;
@@ -243,6 +263,9 @@ namespace Mesh {
         }
 
         glBindVertexArray(0);
+
+		// Compute BoundingSphere and store attributes
+		ComputeBoundingSphere(vp, mesh.vertices_n, &mesh.center, &mesh.radius);
 
         int mesh_i = (int)renderer->meshes.size();
         renderer->meshes.push_back(mesh);

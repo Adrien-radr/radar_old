@@ -25,7 +25,7 @@ struct Camera {
          phi;
 
 	bool hasMoved;
-	bool speedMode;
+	int speedMode;	// -1 : slower, 0 : normal, 1 : faster
 	bool freeflyMode;
 };
 
@@ -330,6 +330,8 @@ private:
 	SceneInitFunc 	customInitFunc;
 	SceneUpdateFunc customUpdateFunc;
 	SceneRenderFunc customRenderFunc;
+
+	Object::Handle pickedObject;
 };
 
 /// Listener callback function for the scene

@@ -216,4 +216,20 @@ namespace FBO {
 
         return nullptr; // should never happen if you're not idiot
     }
+
+	int ReadObjectID(u32 x, u32 y) {
+		// GBuffer is FBO 0
+		Data &fbo = renderer->fbos[0];
+		glBindFramebuffer(GL_READ_FRAMEBUFFER, fbo.framebuffer);
+		glReadBuffer((GLenum)GL_COLOR_ATTACHMENT0 + GBufferAttachment::OBJECTID);
+
+		vec3f data;
+		glReadPixels(x, y, 1, 1, GL_RGB, GL_FLOAT, (void*)&data);
+		//LogInfo(data.x, " ", data.y, " ", data.z);
+
+		glReadBuffer(GL_NONE);
+		glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
+
+		return data.z == 0 ? -1 : (int)(255 * data.x);
+	}
 }

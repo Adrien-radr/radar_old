@@ -1,6 +1,6 @@
 #include "mesh.h"
 #include "font.h"
-
+#include "common/SHEval.h"
 // GL functions
 #include "GL/glew.h"
 
@@ -333,6 +333,137 @@ namespace Render {
 
 			Desc desc("Box1", false, 36, indices, 24, (f32*)pos, (f32*)nrm, (f32*)uv);
 			return Build(desc);
+		}
+
+		Handle BuildSHVisualization(const float *shCoeffs, const u32 bandN, const std::string &meshName, const u32 numPhi, const u32 numTheta) {
+			const u32 faceCount = numPhi * 2 + (numTheta-3) * numPhi * 2;
+			const u32 indexCount = faceCount * 3;
+			const u32 vertexCount = 2 + numPhi * (numTheta - 2);
+			const u32 shCoeffsN = bandN * bandN;
+
+			std::vector<u32> indices(indexCount);
+			std::vector<vec3f> pos(vertexCount);
+			std::vector<vec3f> nrm(vertexCount);
+
+			u32 fi, vi, rvi = 0, ci;
+
+			// Triangles
+			{
+				u32 rfi = 0;
+
+				// top cap
+				for (fi = 0; fi < numPhi; ++fi) {
+					indices[fi * 3 + 0] = 0;
+					indices[fi * 3 + 1] = fi + 1;
+					indices[fi * 3 + 2] = ((fi + 1) % numPhi) + 1;
+					++rfi;
+				}
+
+				// spans
+				for (vi = 1; vi < numTheta - 2; ++vi) {
+					for (fi = 0; fi < numPhi; ++fi) {
+						indices[rfi * 3 + 0] = (1 + (vi - 1) * numPhi + fi);
+						indices[rfi * 3 + 1] = (1 + (vi)     * numPhi + fi);
+						indices[rfi * 3 + 2] = (1 + (vi)     * numPhi + ((fi + 1) % numPhi));
+						++rfi;
+						indices[rfi * 3 + 0] = (1 + (vi - 1) * numPhi + fi);
+						indices[rfi * 3 + 1] = (1 + (vi)     * numPhi + ((fi + 1) % numPhi));
+						indices[rfi * 3 + 2] = (1 + (vi - 1) * numPhi + ((fi + 1) % numPhi));
+						++rfi;
+					}
+				}
+
+				// bottom cap
+				for (fi = 0; fi < numPhi; ++fi) {
+					indices[rfi * 3 + 0] = (1 + numPhi * (numTheta - 3) + fi);
+					indices[rfi * 3 + 1] = (1 + numPhi * (numTheta - 2));
+					indices[rfi * 3 + 2] = (1 + numPhi * (numTheta - 3) + ((fi + 1) % numPhi));
+					++rfi;
+				}
+			}
+
+			// Scale function coeffs
+			std::vector<float> scaledCoeffs(shCoeffsN);
+			float normFactor = 0.5f / shCoeffs[0];
+			for (ci = 0; ci < shCoeffsN; ++ci) {
+				scaledCoeffs[ci] = shCoeffs[ci] * normFactor;
+			}
+
+			std::vector<float> shVals(shCoeffsN);
+
+			for (vi = 0; vi < numTheta; ++vi) {
+				float theta = vi * M_PI / ((float) numTheta - 1.f);
+				float cT = std::cos(theta);
+				float sT = std::sin(theta);
+
+				if (vi && (vi < numTheta - 1)) { // spans
+					for (fi = 0; fi < numPhi; ++fi) {
+						float phi = fi * 2.f * M_PI / (float) numPhi;
+						float cP = std::cos(phi);
+						float sP = std::sin(phi);
+
+						vec3f vpos(sT * cP, sT * sP, cT);
+						vec3f vnrm = vpos;
+						vnrm.Normalize();
+
+						// Get sh coeffs for this direction
+						std::fill_n(shVals.begin(), shCoeffsN, 0.f);
+						SHEval(bandN, vpos.x, vpos.z, vpos.y, &shVals[0]);
+
+						float fVal = 0.f;
+						for (ci = 0; ci < shCoeffsN; ++ci) {
+							fVal += shVals[ci] * scaledCoeffs[ci];
+						}
+
+						if (fVal < 0.f) {
+							fVal *= -1.f;
+						}
+
+						vpos *= fVal;
+
+						pos[rvi] = vpos;
+						nrm[rvi] = vnrm;
+						++rvi;
+					}
+				}
+				else { // Cap 2 points
+					if (vi) theta -= 1e-4f;
+					else theta = 1e-4f;
+
+					cT = std::cos(theta);
+					sT = std::sin(theta);
+					float cP, sP;
+					cP = sP = 0.707106769f; // sqrt(0.5)
+
+					vec3f vpos(sT * cP, sT * sP, cT);
+					vec3f vnrm = vpos;
+					vnrm.Normalize();
+
+					// Get sh coeffs for this direction
+					std::fill_n(shVals.begin(), shCoeffsN, 0.f);
+					SHEval(bandN, vpos.x, vpos.z, vpos.y, &shVals[0]);
+
+					float fVal = 0.f;
+					for (ci = 0; ci < shCoeffsN; ++ci) {
+						fVal += shVals[ci] * scaledCoeffs[ci];
+					}
+
+					if (fVal < 0.f) {
+						fVal *= -1.f;
+					}
+
+					vpos *= fVal;
+
+					pos[rvi] = vpos;
+					nrm[rvi] = vnrm;
+					++rvi;
+				}
+			}
+
+			Desc desc(meshName, false, indexCount, (u32*)(&indices[0]), vertexCount, (f32*)(&pos[0]), (f32*)(&nrm[0]));
+			Handle h = Build(desc);
+
+			return h;
 		}
 	}
 }

@@ -169,14 +169,14 @@ namespace Render {
 
 		// Create Default white texture 
 		Texture::Desc t_desc;
-		t_desc.name[0] = "data/default_diff.png";
+		t_desc.name[0] = "../../data/default_diff.png";
 		Texture::DEFAULT_DIFFUSE = Texture::Build(t_desc);
 		if(Texture::DEFAULT_DIFFUSE < 0) {
 			LogErr("Error creating default diffuse texture.");
 			return false;
 		}
 
-		t_desc.name[0] = "data/default_nrm.png";
+		t_desc.name[0] = "../../data/default_nrm.png";
 		Texture::DEFAULT_NORMAL = Texture::Build(t_desc);
 		if(Texture::DEFAULT_NORMAL < 0) {
 			LogErr("Error creating default normal texture.");
@@ -232,7 +232,7 @@ namespace Render {
 	}
 
 	bool RecompileShaderLibrary(bool inited) {
-		static std::string shaderLibraryPath = "data/shaders/lib.glsl";
+		static std::string shaderLibraryPath = "../../data/shaders/lib.glsl";
 
 		if(inited && renderer->shaderFunctionLibrary > 0) {
 			glDeleteShader(renderer->shaderFunctionLibrary);
@@ -270,8 +270,8 @@ namespace Render {
 
 		// Load standard shaders in right order
 		Shader::Desc sd_ui_shader;
-		sd_ui_shader.vertex_file = "data/shaders/ui.vs";
-		sd_ui_shader.fragment_file = "data/shaders/ui.fs";
+		sd_ui_shader.vertex_file = "../../data/shaders/ui.vs";
+		sd_ui_shader.fragment_file = "../../data/shaders/ui.fs";
 		sd_ui_shader.attribs[0] = Shader::Desc::Attrib("in_position", 0);
 		sd_ui_shader.attribs[1] = Shader::Desc::Attrib("in_texcoord", 2);
 
@@ -297,8 +297,8 @@ namespace Render {
 		}
 
 		Shader::Desc sd_mesh;
-		sd_mesh.vertex_file = "data/shaders/mesh_vert.glsl";
-		sd_mesh.fragment_file = "data/shaders/mesh_frag.glsl";
+		sd_mesh.vertex_file = "../../data/shaders/mesh_vert.glsl";
+		sd_mesh.fragment_file = "../../data/shaders/mesh_frag.glsl";
 		sd_mesh.attribs[0] = Shader::Desc::Attrib("in_position", 0);
 		sd_mesh.attribs[1] = Shader::Desc::Attrib("in_normal", 1);
 		sd_mesh.attribs[2] = Shader::Desc::Attrib("in_texcoord", 2);
@@ -350,8 +350,8 @@ namespace Render {
 		}
 
 		Shader::Desc sd_gbuf;
-		sd_gbuf.vertex_file = "data/shaders/gBufferPass_vert.glsl";
-		sd_gbuf.fragment_file = "data/shaders/gBufferPass_frag.glsl";
+		sd_gbuf.vertex_file = "../../data/shaders/gBufferPass_vert.glsl";
+		sd_gbuf.fragment_file = "../../data/shaders/gBufferPass_frag.glsl";
 		sd_gbuf.attribs[0] = Shader::Desc::Attrib("in_position", 0);
 		sd_gbuf.attribs[1] = Shader::Desc::Attrib("in_normal", 1);
 		sd_gbuf.attribs[2] = Shader::Desc::Attrib("in_texcoord", 2);
@@ -380,8 +380,8 @@ namespace Render {
 		}
 
 		Shader::Desc sd_skybox;
-		sd_skybox.vertex_file = "data/shaders/skybox_vert.glsl";
-		sd_skybox.fragment_file = "data/shaders/skybox_frag.glsl";
+		sd_skybox.vertex_file = "../../data/shaders/skybox_vert.glsl";
+		sd_skybox.fragment_file = "../../data/shaders/skybox_frag.glsl";
 		sd_skybox.attribs[0] = Shader::Desc::Attrib("in_position", 0);
 
 		sd_skybox.uniforms.push_back(Shader::Desc::Uniform("ViewMatrix", Shader::UNIFORM_VIEWMATRIX));
@@ -417,7 +417,7 @@ namespace Render {
 
 	void StopGBufferPass() {
 		glBindFramebuffer(GL_FRAMEBUFFER, 0); // use the default FB again
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		//glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	}
 
 	void StartPolygonRendering() {

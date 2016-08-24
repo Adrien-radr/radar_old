@@ -5,10 +5,16 @@ bin/radar
 bin/data/old
 .vscode
 *.tlog
-*.obj
 *.pdb
 *.user
 *.filters
 *.suo
 *.sdf
 *.opensdf
+x64/
+*.exp
+*.iobj
+*.ipdb
+TestScene/bin/imgui.ini
+LTSH/bin/imgui.ini
+ipch/

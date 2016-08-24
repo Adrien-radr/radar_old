@@ -8,23 +8,35 @@ x Specular textures
 x Normal textures
 x Area light
     x Diffuse
-    x Specular
-o GT area light lighting
+    x Specular (LTC)
+x GT area light lighting
 
 Normal :
 x GGX -- fixed (smith DFG + burley's disney diffuse)
 x Assimp models
-o ImGUI
-o Prefiltered cubemap for ambient specular
-o Envmaps (cubemaps)
+x ImGUI
+x RTT
+x GBuffers
+o SH Visualisation
+	x SH Visualisation mesh creation
+	o SH Visualisation Render (shader + Scene code)
+o Mouse Object Picking (from gbuffer objectID)
+	o Vertex Picking
+x Envmaps (cubemaps)
+	o EXR image loading
+    o HDR Envmaps
 o Directional light
-o Use quaternions instead of vec3 for rotation info
-o Light aggregation work could be done at SceneUpdate instead of SceneRender
-    - Also, could be done lazily only if light configuration changed, if not just send the same UBO
-o RTT
+o Scene Hierarchy (BVH, Octree/kdTree ?)
+	o Sphere hierarchy
+		x per-obj sphere position/radius
+	o Convex Hull hierarchy ?
 
 Less :
 x Shader Hot reload
+o Use quaternions instead of vec3 for rotation info
+o Prefiltered cubemap for ambient specular
+o Light aggregation work could be done at SceneUpdate instead of SceneRender
+    - Also, could be done lazily only if light configuration changed, if not just send the same UBO
 o Material Resources & Manager to avoid having duplicated materials and allow per-material sorting
 o Visualisation for light sources
     o point lights (debug object)

@@ -134,11 +134,11 @@ enum Key {
     K_NEnter		    ,
     K_NEqual		    ,
     K_LShift	= 340   ,
-    K_LControl	 	    ,
+    K_LCtrl   	 	    ,
     K_LAlt		 	    ,
     K_LSuper            ,
     K_RShift		    ,
-    K_RControl	 	    ,
+    K_RCtrl 	 	    ,
     K_RAlt		 	    ,
     K_RSuper            ,
 

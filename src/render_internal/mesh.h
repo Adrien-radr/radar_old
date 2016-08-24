@@ -94,6 +94,9 @@ namespace Render {
 			u32			indices_n;		//!< Number of indices it has
 			int			attrib_flags;	 //!< OR'ed enum defining which vertex attribs it has
 
+			vec3f		center;	//!< Mesh center of mass (from all vertices)
+			float		radius;	//!< Bounding sphere radius
+
 			// Animations
 			u32         animation_n;        //!< Number of loaded animations
 			_Animation  animations[ANIM_N]; //!< All animations for this mesh. Some might not be
