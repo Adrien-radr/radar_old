@@ -340,8 +340,8 @@ namespace Render {
 		/// Returns the string literal name of the given attachment
 		const char *GetGBufferAttachmentName(GBufferAttachment idx);
 
-		/// GBuffer picking : returns the object ID under the given position (x,y)
-		int ReadObjectID(u32 x, u32 y);
+		/// GBuffer picking : returns the object ID & Vertex ID under the given position (x,y)
+		vec2i ReadVertexID(u32 x, u32 y);
 	};
 
 

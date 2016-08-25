@@ -32,7 +32,7 @@ void main() {
                          rand(randSeed * (ObjectID + 1) * 3)); // object-dependant color
 
 	vec4 depth = depthBuffer();
-    gObjectID = vec4(ObjectID/255.0, ObjectID, depth.x, 1);
+    gObjectID = vec4(float(ObjectID), float(gl_PrimitiveID + 1), depth.x, 1);
     gDepth = depth;
     gNormal = vec4(v_normal, 1);
     gWorldPos = vec4(v_position, 1);

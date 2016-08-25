@@ -331,7 +331,9 @@ private:
 	SceneUpdateFunc customUpdateFunc;
 	SceneRenderFunc customRenderFunc;
 
+	// Mouse Picking (-1 for nothing)
 	Object::Handle pickedObject;
+	int			   pickedTriangle;
 };
 
 /// Listener callback function for the scene

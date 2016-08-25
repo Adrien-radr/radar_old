@@ -180,6 +180,7 @@ bool Scene::Init(SceneInitFunc initFunc, SceneUpdateFunc updateFunc, SceneRender
     camera.theta = std::atan2(camera.forward[1], std::sqrt(azimuth.Dot(azimuth)));
 
 	pickedObject = -1;
+	pickedTriangle = -1;
 
 	// initialize shader matrices
 	UpdateView();
@@ -331,7 +332,7 @@ void Scene::UpdateGUI() {
 	const f32 camTLen = ImGui::CalcTextSize(camText).x;
 
 	static char pickText[512];
-	snprintf(pickText, 512, "Pick Object : %d", (int)pickedObject);
+	snprintf(pickText, 512, "Pick Object : %d, Vertex : %d", (int)pickedObject, pickedTriangle);
 	const f32 pickTLen = ImGui::CalcTextSize(pickText).x;
 
 	vec2f wSizef = GetDevice().windowSize;
@@ -381,7 +382,9 @@ void Scene::Update(float dt) {
 
 	// Mouse Picking
 	if (device.IsMouseHit(MouseButton::MB_Left)) {
-		pickedObject = (Object::Handle) Render::FBO::ReadObjectID(device.GetMouseX(), device.windowSize.y - device.GetMouseY());
+		vec2i id = Render::FBO::ReadVertexID(device.GetMouseX(), device.windowSize.y - device.GetMouseY());
+		pickedObject = (Object::Handle) id.x;
+		pickedTriangle = id.y;
 	}
 
 	UpdateGUI();
