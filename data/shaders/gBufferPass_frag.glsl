@@ -26,10 +26,10 @@ float rand(vec2 co){
 }
 
 void main() {
-    vec2 randSeed = vec2(24.5232, 13.53242);    // fixed seed for the 'random' generator 
-    vec3 objColor = vec3(rand(randSeed * (ObjectID + 1) * 1),
-                         rand(randSeed * (ObjectID + 1) * 2),
-                         rand(randSeed * (ObjectID + 1) * 3)); // object-dependant color
+    //vec2 randSeed = vec2(24.5232, 13.53242);    // fixed seed for the 'random' generator 
+    //vec3 objColor = vec3(rand(randSeed * (ObjectID + 1) * 1),
+                         //rand(randSeed * (ObjectID + 1) * 2),
+                         //rand(randSeed * (ObjectID + 1) * 3)); // object-dependant color
 
 	vec4 depth = depthBuffer();
     gObjectID = vec4(float(ObjectID), float(gl_PrimitiveID + 1), depth.x, 1);

@@ -157,9 +157,9 @@ namespace Render {
 		FBO::Desc fdesc;
 		fdesc.size = GetDevice().windowSize;	// TODO : resize gBuffer when window change size
 		fdesc.textures.push_back(Texture::RGB16F);	// ObjectIDs
-		fdesc.textures.push_back(Texture::R8U);		// Depth
-		fdesc.textures.push_back(Texture::RGB8U);	// Normals
-		fdesc.textures.push_back(Texture::RGB8U);	// World Pos
+		fdesc.textures.push_back(Texture::R32F);	// Depth
+		fdesc.textures.push_back(Texture::RGB32F);	// Normals
+		fdesc.textures.push_back(Texture::RGB32F);	// World Pos
 
 		FBO::Handle fboh = FBO::Build(fdesc);
 		if(fboh < 0) {

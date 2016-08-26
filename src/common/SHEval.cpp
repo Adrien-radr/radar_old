@@ -6278,3 +6278,81 @@ fTmpC = 0.83052208306452402;
 pSH[224] = fTmpC*fC1;
 pSH[196] = fTmpC*fS1;
 }
+
+// order 3
+float ZHProduct3(const float fZ, float *ZHa, float *ZHb)
+{
+	float fRetVal = 0.0f;
+	float fZ2 = fZ*fZ;
+
+	fRetVal = ZHa[0] * ZHb[0] * 0.07957747154594766f;
+	fRetVal += 0.238732414637843f*fZ*ZHa[1] * ZHb[1];
+	fRetVal += (0.5968310365946077f*fZ2 + -0.1989436788648692f)*ZHa[2] * ZHb[2];
+	return fRetVal;
+}
+
+// order 3
+float ZHProductNormCos3(const float fZ, float *ZHa)
+{
+	float fRetVal = 0.0f;
+	float fZ2 = fZ*fZ;
+
+	fRetVal = ZHa[0] * 0.07957747154594766f;
+	fRetVal += 0.1591549430918953f*fZ*ZHa[1];
+	fRetVal += (0.1492077591486519f*fZ2 + -0.0497359197162173f)*ZHa[2];
+	return fRetVal;
+}
+
+// order 11
+float ZHProduct11(const float fZ, float *ZHa, float *ZHb)
+{
+	float fRetVal = 0.0f;
+	float fYL0[10];
+	float fZ2 = fZ*fZ;
+
+	fRetVal = ZHa[0] * ZHb[0] * 0.07957747154594766f;
+	fRetVal += 0.238732414637843f*fZ*ZHa[1] * ZHb[1];
+	fYL0[2] = 0.9461746957575601f*fZ2 + -0.3153915652525201f;
+	fRetVal += fYL0[2] * ZHa[2] * 0.6307831305050401f*ZHb[2];
+	fYL0[3] = fZ*(1.865881662950577f*fZ2 + -1.119528997770346f);
+	fRetVal += fYL0[3] * ZHa[3] * 0.7463526651802308f*ZHb[3];
+	fYL0[4] = 1.984313483298443f*fZ*fYL0[3] + -1.006230589874905f*fYL0[2];
+	fRetVal += fYL0[4] * ZHa[4] * 0.8462843753216345f*ZHb[4];
+	fYL0[5] = 1.98997487421324f*fZ*fYL0[4] + -1.002853072844814f*fYL0[3];
+	fRetVal += fYL0[5] * ZHa[5] * 0.9356025796273888f*ZHb[5];
+	fYL0[6] = 1.993043457183567f*fZ*fYL0[5] + -1.001542020962219f*fYL0[4];
+	fRetVal += fYL0[6] * ZHa[6] * 1.017107236282055f*ZHb[6];
+	fYL0[7] = 1.994891434824135f*fZ*fYL0[6] + -1.000927213921958f*fYL0[5];
+	fRetVal += fYL0[7] * ZHa[7] * 1.092548430592079f*ZHb[7];
+	fYL0[8] = 1.996089927833914f*fZ*fYL0[7] + -1.000600781069515f*fYL0[6];
+	fRetVal += fYL0[8] * ZHa[8] * 1.16310662292032f*ZHb[8];
+	fYL0[9] = 1.996911195067937f*fZ*fYL0[8] + -1.000411437993134f*fYL0[7];
+	fRetVal += fYL0[9] * ZHa[9] * 1.229622689841484f*ZHb[9];
+	fRetVal += (2.582207648667116f*fZ*fYL0[9] + -1.293100892540826f*fYL0[8])*ZHa[10] * ZHb[10];
+	return fRetVal;
+}
+
+// order 11
+float ZHProductNormCos11(const float fZ, float *ZHa)
+{
+	float fRetVal = 0.0f;
+	float fYL0[10];
+	float fZ2 = fZ*fZ;
+
+	fRetVal = ZHa[0] * 0.07957747154594766f;
+	fRetVal += 0.1591549430918953f*fZ*ZHa[1];
+	fYL0[2] = 0.9461746957575601f*fZ2 + -0.3153915652525201f;
+	fRetVal += fYL0[2] * ZHa[2] * 0.15769578262626f;
+	fYL0[3] = fZ*(1.865881662950577f*fZ2 + -1.119528997770346f);
+	fYL0[4] = 1.984313483298443f*fZ*fYL0[3] + -1.006230589874905f*fYL0[2];
+	fRetVal += fYL0[4] * ZHa[4] * -0.03526184897173477f;
+	fYL0[5] = 1.98997487421324f*fZ*fYL0[4] + -1.002853072844814f*fYL0[3];
+	fYL0[6] = 1.993043457183567f*fZ*fYL0[5] + -1.001542020962219f*fYL0[4];
+	fRetVal += fYL0[6] * ZHa[6] * 0.01589230056690711f;
+	fYL0[7] = 1.994891434824135f*fZ*fYL0[6] + -1.000927213921958f*fYL0[5];
+	fYL0[8] = 1.996089927833914f*fZ*fYL0[7] + -1.000600781069515f*fYL0[6];
+	fRetVal += fYL0[8] * ZHa[8] * -0.009086770491564996f;
+	fYL0[9] = 1.996911195067937f*fZ*fYL0[8] + -1.000411437993134f*fYL0[7];
+	fRetVal += (0.01176787339887358f*fZ*fYL0[9] + -0.005893037921735535f*fYL0[8])*ZHa[10];
+	return fRetVal;
+}

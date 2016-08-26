@@ -10,6 +10,7 @@ x Area light
     x Diffuse
     x Specular (LTC)
 x GT area light lighting
+o Fix GT area light
 
 Normal :
 x GGX -- fixed (smith DFG + burley's disney diffuse)
@@ -18,13 +19,14 @@ x ImGUI
 x RTT
 x GBuffer
 	x First buffer pass
-o SH Visualisation
+x SH Visualisation
 	x SH Visualisation mesh creation
-	o SH Visualisation Render (shader + Scene code)
+	x SH Visualisation Render (shader + Scene code)
 		x Render as object
-		o Separate SHVis scene struct (unique one depicting mouse click pos or smthg), 1 created, gets updated by mouse click
+		x Separate SHVis scene struct (unique one depicting mouse click pos or smthg), 1 created, gets updated by mouse click
+o Modify the Mouse SH Vis with real SH integration data
 x Mouse Object Picking (from gbuffer objectID)
-o Mouse Vertex Picking
+x Mouse Vertex Picking
 x Envmaps (cubemaps)
 	o EXR image loading
     o HDR Envmaps
@@ -36,6 +38,11 @@ o Scene Hierarchy (BVH, Octree/kdTree ?)
 
 Less :
 x Shader Hot reload
+o GUI
+	o Basic immediate mode (send draw commands from all over the code. UI aggregate once per frame and draws)
+	o Panels
+	o Labels
+	o Buttons
 o Json scene loading
 	o (De)Serializing scene data (mesh/object/material/light)
 o Use quaternions instead of vec3 for rotation info

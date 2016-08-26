@@ -56,7 +56,14 @@ vec3 FetchCorrectedNormal(sampler2D nrmTex, vec2 texcoord, mat3 TBN, vec3 V) {
 }
 
 
+float rand(vec2 co){
+    return fract(sin(dot(co.xy ,vec2(12.9898,78.233))) * 43758.5453);
+}
 
+vec3 rand3(vec3 seed) {
+	vec2 randSeed = vec2(24.5232, 13.53242);    // fixed seed for the 'random' generator
+	return vec3(rand(randSeed * seed.x), rand(randSeed * seed.y), rand(randSeed * seed.z));
+}
 // ######################################################
 // SHADING Diffuse - GGX
 

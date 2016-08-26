@@ -217,30 +217,39 @@ namespace FBO {
         return nullptr; // should never happen if you're not idiot
     }
 
-	vec2i ReadVertexID(u32 x, u32 y) {
-		// GBuffer is FBO 0
-		Data &fbo = renderer->fbos[0];
-		glBindFramebuffer(GL_READ_FRAMEBUFFER, fbo.framebuffer);
-		glReadBuffer((GLenum)GL_COLOR_ATTACHMENT0 + GBufferAttachment::OBJECTID);
+	vec2i ReadVertexID(int x, int y) {
+		vec2i ret(-1, -1);
+
+		vec4f fbpx = ReadGBuffer(GBufferAttachment::OBJECTID, x, y);
 
 		// data : 
 		// x - ObjectID
 		// y - PrimitiveID
 		// z - Depth
-		vec3f data;
-		glReadPixels(x, y, 1, 1, GL_RGB, GL_FLOAT, (void*)&data);
-
-		glReadBuffer(GL_NONE);
-		glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
-
-		vec2i ret(-1, -1);
-
-		// data.z is depth.
-		if (data.z > 0) {
-			ret.x = data.x;
-			ret.y = data.y;
+		if (fbpx.z > 0) {
+			ret.x = (int) fbpx.x;
+			ret.y = (int) fbpx.y;
 		}
 
 		return ret;
+	}
+
+	vec4f ReadGBuffer(GBufferAttachment idx, int x, int y) {
+		Device &d = GetDevice();
+		const vec2i &ws = d.windowSize;
+		if (x >= ws.x || y >= ws.y)
+			return vec4f(-1.f);
+
+		Data &fbo = renderer->fbos[0]; // GBuffer is always fbo 0
+		glBindFramebuffer(GL_READ_FRAMEBUFFER, fbo.framebuffer);
+		glReadBuffer((GLenum)GL_COLOR_ATTACHMENT0 + idx);
+
+		vec4f data;
+		glReadPixels(x, ws.y - y, 1, 1, GL_RGBA, GL_FLOAT, (void*)&data);
+		
+		glReadBuffer(GL_NONE);
+		glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
+
+		return data;
 	}
 }

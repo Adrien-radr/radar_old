@@ -109,6 +109,13 @@ namespace Object {
 			materials.clear();
 		}
 
+		void DestroyData() {
+			for (u32 i = 0; i < numSubmeshes; ++i) {
+				Render::Mesh::Destroy(meshes[i]);
+			}
+			ClearSubmeshes();
+		}
+
 		void Identity();
 		void Translate(const vec3f &t);
 		void Scale(const vec3f &s);
@@ -118,6 +125,8 @@ namespace Object {
 
 		// Mesh::AnimType   animation;
 		// Mesh::AnimState  animation_state;
+
+		Mesh::Handle GetMesh(u32 idx) const { if (idx < meshes.size()) return meshes[idx]; else return -1; }
 
 	private:
 		std::vector<Mesh::Handle>		meshes;

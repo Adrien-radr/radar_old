@@ -340,8 +340,11 @@ namespace Render {
 		/// Returns the string literal name of the given attachment
 		const char *GetGBufferAttachmentName(GBufferAttachment idx);
 
+		/// General GBuffer query. Query only 1 texel value of the idx attachment.
+		vec4f ReadGBuffer(GBufferAttachment idx, int x, int y);
+
 		/// GBuffer picking : returns the object ID & Vertex ID under the given position (x,y)
-		vec2i ReadVertexID(u32 x, u32 y);
+		vec2i ReadVertexID(int x, int y);
 	};
 
 

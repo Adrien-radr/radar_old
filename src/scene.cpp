@@ -211,6 +211,12 @@ bool Scene::Init(SceneInitFunc initFunc, SceneUpdateFunc updateFunc, SceneRender
 	}
 
 	// Default Skybox (white)
+	skyboxMesh = Render::Mesh::BuildBox();
+	if (skyboxMesh < 0) {
+		LogErr("Error creating skybox mesh.");
+		return false;
+	}
+
 	Skybox::Desc sd;
 	sd.filenames[0] = "../../data/default_diff.png";
 	sd.filenames[1] = "../../data/default_diff.png";
@@ -225,11 +231,6 @@ bool Scene::Init(SceneInitFunc initFunc, SceneUpdateFunc updateFunc, SceneRender
 		return false;
 	}
 	SetSkybox(sh);
-	skyboxMesh = Render::Mesh::BuildBox();
-	if(skyboxMesh < 0) {
-		LogErr("Error creating skybox mesh.");
-		return false;
-	}
 
 	// Light UBO init 
 	if(!InitLightUniforms()) {
@@ -382,7 +383,7 @@ void Scene::Update(float dt) {
 
 	// Mouse Picking
 	if (device.IsMouseHit(MouseButton::MB_Left)) {
-		vec2i id = Render::FBO::ReadVertexID(device.GetMouseX(), device.windowSize.y - device.GetMouseY());
+		vec2i id = Render::FBO::ReadVertexID(device.GetMouseX(), device.GetMouseY());
 		pickedObject = (Object::Handle) id.x;
 		pickedTriangle = id.y;
 	}

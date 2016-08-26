@@ -23,3 +23,8 @@ void SHEval20(const float fX, const float fY, const float fZ, float *pSH);
 void SHEval4D(const double fX, const double fY, const double fZ, double *pSH);
 void SHEval11D(const double fX, const double fY, const double fZ, double *pSH);
 void SHEval15D(const double fX, const double fY, const double fZ, double *pSH);
+
+float ZHProduct3(const float fZ, float *ZHa, float *ZHb);
+float ZHProductNormCos3(const float fZ, float *ZHa);
+float ZHProduct11(const float fZ, float *ZHa, float *ZHb);
+float ZHProductNormCos11(const float fZ, float *ZHa);

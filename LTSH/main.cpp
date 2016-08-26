@@ -1,14 +1,13 @@
-#include "src/device.h"
-#include "src/render.h"
-
-#define SWIDTH 1024
-#define SHEIGHT 768
+#include "SHIntegration.h"
 
 AreaLight::Handle alh = -1;
 AreaLight::Handle alh2;
 AreaLight::Handle alh3;
 vec3f alPos(40., 3, -20);
 vec3f alPos2(20., 7.5, 20);
+
+
+SHInt sh1;
 
 bool MakeLights(Scene *scene) {
 	PointLight::Desc light;
@@ -161,69 +160,19 @@ bool initFunc(Scene *scene) {
 		return false;
 	}
 
-	const u32 nband = 4;
-	const u32 coeffs = nband*nband;
-	float shcoeffs[coeffs];
-	std::fill_n(shcoeffs, coeffs, 0.f);
-	shcoeffs[0] = 0.5f;
-	vec3f randv(0.2, 0.7, 0.5);
-	randv.Normalize();
-	shcoeffs[1] = randv.x;
-	shcoeffs[2] = randv.y;
-	shcoeffs[3] = randv.z;
-	shcoeffs[4] = 0.7;
-	Render::Mesh::Handle shVis = Render::Mesh::BuildSHVisualization(shcoeffs, nband, "SHVis1");
-	if (shVis < 0) {
-		LogErr("Error creating sh vis");
-		return false;
-	}
 
-#if 0
-	Render::Mesh::Handle box = Render::Mesh::BuildBox();
-	if (box < 0) {
-		LogErr("Error creating box mesh");
-		return false;
-	}
-	odesc.Identity();
-	odesc.ClearSubmeshes();
-	odesc.AddSubmesh(box, Material::DEFAULT_MATERIAL);
-	Object::Handle boxo = scene->Add(odesc);
-	if (boxo < 0) {
-		LogErr("Error creating box.");
-		return false;
-	}
+	u32 nband = 4;
+	sh1.Init(scene, nband);
 
-	ModelResource::Handle metal0Model = scene->LoadModelResource("data/colt/colt.obj");
-	if(metal0Model < 0) {
-		LogErr("Error loading metal0");
-		return false;
-	}
 
-	ModelResource::Handle sponzaModel = scene->LoadModelResource("data/sponza/sponza.obj");
-	if(sponzaModel < 0) {
-		LogErr("Error loading sponza.");
-		return false;
-	}
-
-	Object::Handle sponza = scene->InstanciateModel(sponzaModel);
-	if(sponza < 0) {
-		LogErr("Error creating sponza scene");
-		return false;
-	}
-	Object::Desc *sponzaObj = scene->GetObject(sponza);
-	sponzaObj->Scale(0.08f);
-	sponzaObj->Translate(vec3f(0,-0.9,0));
-	
-#endif
 
 	Object::Desc odesc(Render::Shader::SHADER_3D_MESH);	
 	{
 		odesc.ClearSubmeshes();
 
-		Material::Desc mat_desc(col3f(0.1,0.1,0.1), col3f(1,1,1), col3f(1,1,1), 0.65);//, "data/sponza/textures/sponza_floor_a_diff.png");
+		Material::Desc mat_desc(col3f(0.1,0.1,0.1), col3f(1,1,1), col3f(1,1,1), 0.65);
 		mat_desc.diffuseTexPath = "../../data/concrete.png";
 		mat_desc.normalTexPath = "../../data/concrete_nm.png";
-		//mat_desc.specularTexPath = "data/sponza/textures/sponza_floor_a_spec.png";
 		mat_desc.ltcMatrixPath = "../../data/ltc_mat.dds";
 		mat_desc.ltcAmplitudePath = "../../data/ltc_amp.dds";
 		Material::Handle mat = scene->Add(mat_desc);
@@ -239,26 +188,6 @@ bool initFunc(Scene *scene) {
 		Object::Handle obj = scene->Add(odesc);
 		if(obj < 0) {
 			LogErr("Error registering plane");
-			return false;
-		}
-	}
-
-	{
-		odesc.ClearSubmeshes();
-		Material::Desc mat_desc(col3f(0.33, 0.2, 0), col3f(1, 0.8, 0), col3f(1, 0, 0), 0.4);
-		mat_desc.ltcMatrixPath = "../../data/ltc_mat.dds";
-		mat_desc.ltcAmplitudePath = "../../data/ltc_amp.dds";
-		Material::Handle mat = scene->Add(mat_desc);
-		if (mat < 0) {
-			LogErr("Error adding material");
-			return false;
-		}
-		odesc.AddSubmesh(shVis, mat);
-		odesc.Identity();
-
-		Object::Handle shvisO = scene->Add(odesc);
-		if (shvisO < 0) {
-			LogErr("Error registering sh vis");
 			return false;
 		}
 	}
@@ -307,15 +236,29 @@ bool initFunc(Scene *scene) {
 }
 
 void updateFunc(Scene *scene, float dt) {
-	// const Device &device = GetDevice();
-	// vec2i mouse_coord = vec2i(device.GetMouseX(), device.GetMouseY());
-	static f32 t = 0;
+	const Device &device = GetDevice();
+	vec2i mouseCoords = vec2i(device.GetMouseX(), device.GetMouseY());
+	static f32 t = 0, oneSec = 0.f;
+	
 
-#if 0
-	Object::Desc *model = scene->GetObject(crysisGuy);
-	model->Translate(vec3f(1 * dt,0,0));
-	model->Rotate(vec3f(0,M_PI * 0.5 * dt,0));
-#endif
+	if (device.IsMouseHit(MouseButton::MB_Left)) {
+		vec4f pos = Render::FBO::ReadGBuffer(Render::FBO::GBufferAttachment::WORLDPOS, mouseCoords.x, mouseCoords.y);
+		vec4f nrm = Render::FBO::ReadGBuffer(Render::FBO::GBufferAttachment::NORMAL, mouseCoords.x, mouseCoords.y);
+
+		std::vector<float> shcoeffs(16);
+		std::fill_n(shcoeffs.begin(), 16, 0.f);
+		shcoeffs[0] = 0.5f;
+		vec3f randv(0.2, 0.7, 0.5);
+		randv.Normalize();
+		shcoeffs[1] = randv.x;
+		shcoeffs[2] = randv.y;
+		shcoeffs[3] = randv.z;
+		shcoeffs[4] = 0.7;
+
+		sh1.UpdateData(shcoeffs);
+
+		sh1.UpdateCoords(vec3f(pos.x, pos.y, pos.z), vec3f(nrm.x, nrm.y, nrm.z));
+	}
 
 	AreaLight::Desc *light = scene->GetLight(alh);
 	if(light) {
@@ -331,7 +274,12 @@ void updateFunc(Scene *scene, float dt) {
 		// light3->position.x = alPos2.x + 10 * sinf(1*t);
 	}
 
+	if (oneSec > 1.f) {
+		oneSec = 0.f;
+	}
+
 	t += dt;
+	oneSec += dt;
 }
 
 void renderFunc(Scene *scene) {

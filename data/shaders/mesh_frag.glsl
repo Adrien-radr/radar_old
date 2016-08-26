@@ -48,6 +48,8 @@ vec3 LTCEvaluate(vec3 N, vec3 V, vec3 P, mat3 Minv, vec3 points[4], bool twoSide
 vec3 FetchCorrectedNormal(sampler2D nrmTex, vec2 texcoord, mat3 TBN, vec3 V);
 vec2 LTCCoords(float NdotV, float roughness);
 mat3 LTCMatrix(sampler2D ltcMatrix, vec2 coord);
+float rand(vec2 seed);
+vec3 rand3(vec3 seed);
 
 // INPUTS
 in vec4 v_color;
@@ -87,11 +89,6 @@ uniform sampler2D ltc_amp;
 
 out vec4 frag_color;
 
-
-float rand(vec2 co){
-    return fract(sin(dot(co.xy ,vec2(12.9898,78.233))) * 43758.5453);
-}
-
 vec4 depthBuffer() {
     float near = 1.0;
     float far = 100.0;
@@ -101,76 +98,6 @@ vec4 depthBuffer() {
     return vec4(vec3(z), 1.0);
 }
 
-vec3 pointLightContribution(vec3 N, vec3 V, float NdotV, vec3 Kd, vec3 Ks, float roughness) {
-    vec3 contrib = vec3(0);
-
-    float light_power = 200;
-
-    for(int i = 0; i < nPointLights; ++i) {
-        vec3 light_vec = plights[i].position - v_position;
-        vec3 light_color = plights[i].Ld * light_power;
-        float light_dist = length(light_vec);
-        float light_radius = plights[i].radius;
-
-        vec3 L = light_vec / light_dist;
-        vec3 H = normalize(V + L); 
-        float NdotL = max(dot(L, N), 0.0);
-        if(NdotL > 0.0)
-        {
-            float NdotH = max(0, dot(N, H));
-            float LdotH = max(0, dot(L, H));
-
-            float att = 1;
-            att *= getDistanceAttenuation(light_vec, 1.0/(light_radius*light_radius));
-
-            vec3 Fd = Kd * diffuseBurley(NdotL, NdotV, LdotH, roughness);
-            vec3 Fr = GGX(NdotL, NdotV, NdotH, LdotH, roughness, Ks);
-            // vec3 Fd = diffuse_color * diffuse_Lambert(NdotL);
-            // vec3 R = 2.0 * NdotL * N - L;
-            // vec3 FrPhong = Ks * pow(max(0, dot(V, R)), (1.0/(roughness*roughness)));
-
-            contrib += light_color * att * (Fd + Fr) * NdotL;
-        }
-    }
-
-    return contrib;
-}
-
-vec3 areaLightContribution(vec3 N, vec3 V, float NdotV, vec3 diff_color, vec3 spec_color, float roughness) {
-    vec3 contrib = vec3(0);
-    vec3 points[4];
-
-    vec2 ltcCoords = LTCCoords(NdotV, roughness);
-    mat3 MinvSpec = LTCMatrix(ltc_mat, ltcCoords);
-    mat3 MinvDiff = mat3(1);
-    vec2 schlick = texture2D(ltc_amp, ltcCoords).xy;
-
-    for(int i = 0; i < nAreaLights; ++i) {
-        vec3 light_vec = alights[i].position - v_position;
-        float light_dist = length(light_vec);
-        vec3 L = light_vec / light_dist;
-        vec3 pN = alights[i].plane.xyz;
-		
-        InitRectPoints(alights[i], points);
-
-        if(!CullAreaLight(alights[i], points, v_position, N, -dot(v_position, N))) {
-
-            // diffuse
-            vec3 diffuse = LTCEvaluate(N, V, v_position, MinvDiff, points, false);
-            diffuse *= diff_color;
-
-            // specular
-            vec3 specular =  LTCEvaluate(N, V, v_position, MinvSpec, points, false);
-            specular *= spec_color * schlick.x + (1.0 - spec_color) * schlick.y;
-
-            contrib += alights[i].Ld * (diffuse + specular);
-        }
-    }
-
-    contrib /= 2.0 * M_PI;
-
-    return contrib;
-}
 struct SphericalQuad
 {
     vec3 o, x, y, z;
@@ -285,17 +212,82 @@ mat3 BasisFrisvad(vec3 v)
 
     return mat3(x, y, v);
 }
-vec3 areaLightGT(vec3 N, vec3 V, float NdotV, vec3 diff_color, vec3 spec_color, float roughness) {
+
+vec3 pointLightContribution(vec3 N, vec3 V, float NdotV, vec3 Kd, vec3 Ks, float roughness) {
+    vec3 contrib = vec3(0);
+
+    float light_power = 200;
+
+    for(int i = 0; i < nPointLights; ++i) {
+        vec3 light_vec = plights[i].position - v_position;
+        vec3 light_color = plights[i].Ld * light_power;
+        float light_dist = length(light_vec);
+        float light_radius = plights[i].radius;
+
+        vec3 L = light_vec / light_dist;
+        vec3 H = normalize(V + L); 
+        float NdotL = max(dot(L, N), 0.0);
+        if(NdotL > 0.0)
+        {
+            float NdotH = max(0, dot(N, H));
+            float LdotH = max(0, dot(L, H));
+
+            float att = 1;
+            att *= getDistanceAttenuation(light_vec, 1.0/(light_radius*light_radius));
+
+            vec3 Fd = Kd * diffuseBurley(NdotL, NdotV, LdotH, roughness);
+            vec3 Fr = GGX(NdotL, NdotV, NdotH, LdotH, roughness, Ks);
+            // vec3 Fd = diffuse_color * diffuse_Lambert(NdotL);
+            // vec3 R = 2.0 * NdotL * N - L;
+            // vec3 FrPhong = Ks * pow(max(0, dot(V, R)), (1.0/(roughness*roughness)));
+
+            contrib += light_color * att * (Fd + Fr) * NdotL;
+        }
+    }
+
+    return contrib;
+}
+
+vec3 areaLightContribution(vec3 N, vec3 V, float NdotV, vec3 diff_color, vec3 spec_color, float roughness) {
     vec3 contrib = vec3(0);
     vec3 points[4];
 
-    // randVal = randVal * 2.0 - 1.0; // [-1, 1]
+    vec2 ltcCoords = LTCCoords(NdotV, roughness);
+    mat3 MinvSpec = LTCMatrix(ltc_mat, ltcCoords);
+    mat3 MinvDiff = mat3(1);
+    vec2 schlick = texture2D(ltc_amp, ltcCoords).xy;
 
-    // vec2 ltcCoords = LTCCoords(NdotV, roughness);
-    // mat3 MinvSpec = LTCMatrix(ltc_mat, ltcCoords);
-    // mat3 MinvDiff = mat3(1);
-    // vec2 schlick = texture2D(ltc_amp, ltcCoords).xy;
+    for(int i = 0; i < nAreaLights; ++i) {
+        vec3 light_vec = alights[i].position - v_position;
+        float light_dist = length(light_vec);
+        vec3 L = light_vec / light_dist;
+        vec3 pN = alights[i].plane.xyz;
+		
+        InitRectPoints(alights[i], points);
 
+        if(!CullAreaLight(alights[i], points, v_position, N, -dot(v_position, N))) {
+
+            // diffuse
+            vec3 diffuse = LTCEvaluate(N, V, v_position, MinvDiff, points, false);
+            diffuse *= diff_color;
+
+            // specular
+            vec3 specular =  LTCEvaluate(N, V, v_position, MinvSpec, points, false);
+            specular *= spec_color * schlick.x + (1.0 - spec_color) * schlick.y;
+
+            contrib += alights[i].Ld * (diffuse + specular);
+        }
+    }
+
+    contrib /= 2.0 * M_PI;
+
+    return contrib;
+}
+
+vec3 areaLightGT(vec3 N, vec3 V, float NdotV, vec3 diff_color, vec3 spec_color, float roughness) {
+    vec3 contrib = vec3(0);
+    vec3 points[4];
+    const int nSamples = 30;
 
     mat3 t2w = BasisFrisvad(N);
     mat3 w2t = transpose(t2w);
@@ -315,36 +307,35 @@ vec3 areaLightGT(vec3 N, vec3 V, float NdotV, vec3 diff_color, vec3 spec_color, 
             vec3 ez = normalize(cross(ex,ey));
             ez = w2t * ez;
 
-            const int nSamples = 15;
 
             vec3 sum = vec3(0);
             for(int s = 1; s <= nSamples; ++s) {
                 vec3 randSeed = v_position * globalTime * s;
-                vec3 randVal = vec3(rand(randSeed.xy), rand(randSeed.xz), rand(randSeed.yz));
+                vec3 randVal = vec3(rand(randSeed.xy), rand(randSeed.xz), rand(randSeed.yz));//rand3(randSeed);//
                 vec3 samplePos = SphericalQuadSample(squad, randVal.x, randVal.y);
                 vec3 wi = normalize(samplePos - v_position);
                 wi = w2t * wi;
 
                 float cosTheta = wi.z;
-                vec3 diffBRDF = diff_color / M_PI;
+                if(cosTheta > 0.0 /*&& (dot(wi,ez) < 0.0)*/) {
+					vec3 diffBRDF = diff_color / M_PI;
 
-                vec3 h = normalize(wi + wo);
-                float LdotH = max(0, dot(wi, h));
-                float NdotH = h.z;
-                vec3 specBRDF = GGX(wi.z, wo.z, NdotH, LdotH, roughness, spec_color);
+					vec3 h = normalize(wi + wo);
+					float LdotH = max(0, dot(wi, h));
+					float NdotH = h.z;
+					vec3 specBRDF = GGX(wi.z, wo.z, NdotH, LdotH, roughness, spec_color);
 
-                float pdfLight = rcpSolidAngle;
+					float pdfLight = rcpSolidAngle;
 
-                if(cosTheta > 0.0 && (dot(wi,ez) < 0.0)) {
                     sum += (diffBRDF + specBRDF) * cosTheta / (pdfLight);
                 }
             }
 
-            contrib += sum * alights[i].Ld / float(nSamples);
+            contrib += sum * alights[i].Ld;
         }
     }
 
-    return contrib;
+    return contrib / float(nSamples);
 }
 
 void main() {
