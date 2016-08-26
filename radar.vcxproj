@@ -154,6 +154,7 @@
     <ClCompile Include="ext\imgui\imgui_draw.cpp" />
     <ClCompile Include="ext\json\cJSON.c" />
     <ClCompile Include="src\common\debug.cpp" />
+    <ClCompile Include="src\common\random.cpp" />
     <ClCompile Include="src\common\resource.cpp" />
     <ClCompile Include="src\common\SHEval.cpp" />
     <ClCompile Include="src\device.cpp" />
@@ -180,6 +181,7 @@
     <ClInclude Include="src\common\debug.h" />
     <ClInclude Include="src\common\event.h" />
     <ClInclude Include="src\common\linmath.h" />
+    <ClInclude Include="src\common\random.h" />
     <ClInclude Include="src\common\resource.h" />
     <ClInclude Include="src\common\SHEval.h" />
     <ClInclude Include="src\device.h" />

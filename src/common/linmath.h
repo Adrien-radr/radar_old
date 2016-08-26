@@ -274,6 +274,7 @@ template<typename T>
 class col3 : public vec3<T> {
 public:
 	col3(T r, T g, T b) : vec3<T>(r,g,b) {}
+	col3(vec3<T> v) : vec3<T>(v) {}
 	const T &r() const { return this->x; }
 	const T &g() const { return this->y; }
 	const T &b() const { return this->z; }
@@ -286,6 +287,10 @@ public:
 typedef vec3<f32> vec3f;
 typedef vec3<int> vec3i;
 typedef col3<f32> col3f;
+
+inline f32 Luminance(const vec3f &rgb) {
+	return (0.2126f*rgb.x + 0.7152f*rgb.y + 0.0722f*rgb.z);
+}
 
 /*
 

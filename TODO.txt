@@ -24,7 +24,11 @@ x SH Visualisation
 	x SH Visualisation Render (shader + Scene code)
 		x Render as object
 		x Separate SHVis scene struct (unique one depicting mouse click pos or smthg), 1 created, gets updated by mouse click
-o Modify the Mouse SH Vis with real SH integration data
+x Modify the Mouse SH Vis with real SH integration data
+x WS arealight SH
+o Unit arealight SH
+o LTC arealight SH
+o LTC arealight ZH (ZHF)
 x Mouse Object Picking (from gbuffer objectID)
 x Mouse Vertex Picking
 x Envmaps (cubemaps)
@@ -38,6 +42,7 @@ o Scene Hierarchy (BVH, Octree/kdTree ?)
 
 Less :
 x Shader Hot reload
+o Change math stuff from v3.Dot(v3) to Dot(v3, v3) style
 o GUI
 	o Basic immediate mode (send draw commands from all over the code. UI aggregate once per frame and draws)
 	o Panels

@@ -39,6 +39,7 @@ struct Rect {
 
 // Include Linear Math Function Library
 #include "linmath.h"
+#include "random.h"
 
 // Forward declaration for cJSON
 struct cJSON;

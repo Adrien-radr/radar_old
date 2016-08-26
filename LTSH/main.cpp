@@ -163,6 +163,9 @@ bool initFunc(Scene *scene) {
 
 	u32 nband = 4;
 	sh1.Init(scene, nband);
+	sh1.AddAreaLight(alh);
+	sh1.AddAreaLight(alh2);
+	sh1.AddAreaLight(alh3);
 
 
 
@@ -244,19 +247,7 @@ void updateFunc(Scene *scene, float dt) {
 	if (device.IsMouseHit(MouseButton::MB_Left)) {
 		vec4f pos = Render::FBO::ReadGBuffer(Render::FBO::GBufferAttachment::WORLDPOS, mouseCoords.x, mouseCoords.y);
 		vec4f nrm = Render::FBO::ReadGBuffer(Render::FBO::GBufferAttachment::NORMAL, mouseCoords.x, mouseCoords.y);
-
-		std::vector<float> shcoeffs(16);
-		std::fill_n(shcoeffs.begin(), 16, 0.f);
-		shcoeffs[0] = 0.5f;
-		vec3f randv(0.2, 0.7, 0.5);
-		randv.Normalize();
-		shcoeffs[1] = randv.x;
-		shcoeffs[2] = randv.y;
-		shcoeffs[3] = randv.z;
-		shcoeffs[4] = 0.7;
-
-		sh1.UpdateData(shcoeffs);
-
+		
 		sh1.UpdateCoords(vec3f(pos.x, pos.y, pos.z), vec3f(nrm.x, nrm.y, nrm.z));
 	}
 

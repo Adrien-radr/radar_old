@@ -35,11 +35,11 @@ namespace Material {
 		Desc() :	// Default debug material
 			uniform(col3f(0.3f, 0.f, 0.3f), col3f(0.51f,0.4f,0.51f), col3f(0.7f,0.04f,0.7f), 0.95f), 
 			diffuseTexPath(""), specularTexPath(""), normalTexPath(""), occlusionTexPath(""),
-			ltcMatrixPath(""), ltcAmplitudePath("") {}
+			ltcMatrixPath(""), ltcAmplitudePath(""), dynamic(false) {}
 
 		Desc(const col3f &ka, const col3f &kd, const col3f &ks, float s, const std::string diffuse = "") : 
 			uniform(ka, kd, ks, s), diffuseTexPath(diffuse), specularTexPath(""), normalTexPath(""),
-			occlusionTexPath(""), ltcMatrixPath(""), ltcAmplitudePath("") {}
+			occlusionTexPath(""), ltcMatrixPath(""), ltcAmplitudePath(""), dynamic(false) {}
 
 		struct UniformBufferData {
 			UniformBufferData(const col3f &ka, const col3f &kd, const col3f &ks, float s) : 
@@ -63,6 +63,8 @@ namespace Material {
 		std::string occlusionTexPath;
 		std::string ltcMatrixPath;
 		std::string ltcAmplitudePath;
+
+		bool dynamic;
 	};
 
 	struct Data {
@@ -70,6 +72,8 @@ namespace Material {
 				 ltcMatrix(-1), ltcAmplitude(-1) {}
 		Desc desc;
 		UBO::Handle ubo;
+
+		void ReloadUBO();
 
 		Texture::Handle diffuseTex;
 		Texture::Handle specularTex;
@@ -242,6 +246,8 @@ namespace AreaLight {
 		Object::Handle fixture;	// link to the light fixture mesh
 	};
 
+	void GetVertices(const UniformBufferData &rect, vec3f points[4]);
+
 	/// Handle representing a area light in the scene.
 	/// This can be used to modify or delete the light after creation.
 	typedef int Handle;
@@ -298,6 +304,8 @@ public:
 	// Scene getters
 	Object::Desc *GetObject(Object::Handle h);
 	AreaLight::Desc *GetLight(AreaLight::Handle h);
+	Material::Data *GetMaterial(Material::Handle h);
+	const AreaLight::UniformBufferData *GetAreaLightUBO(AreaLight::Handle h);
 
 	bool ObjectExists(Object::Handle h);
 	bool AreaLightExists(AreaLight::Handle h);
@@ -323,6 +331,8 @@ private:
 	Render::UBO::Handle areaLightsUBO;
 	std::vector<AreaLight::Desc> areaLights;
 	int active_areaLights[SCENE_MAX_ACTIVE_LIGHTS];
+	AreaLight::UniformBufferData areaLightUBO[SCENE_MAX_ACTIVE_LIGHTS];
+	bool areaLightUBOInitialized;
 
 	std::vector<Object::Desc> objects;
 	std::vector<Material::Data> materials;

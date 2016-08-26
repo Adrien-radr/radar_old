@@ -144,7 +144,7 @@ void SceneResizeEventListener(const Event &event, void *data) {
 	// scene->UpdateProjection(event.v);
 }
 
-Scene::Scene() : customInitFunc(nullptr), customUpdateFunc(nullptr) {
+Scene::Scene() : customInitFunc(nullptr), customUpdateFunc(nullptr), areaLightUBOInitialized(false) {
 	Clean();
 }
 
@@ -435,6 +435,7 @@ bool Scene::InitLightUniforms() {
 
 	return true;
 }
+
 void InitRectPoints(AreaLight::UniformBufferData &rect, vec3f points[4]) {
     vec3f ex = rect.dirx * rect.hwidthx;
     vec3f ey = rect.diry * rect.hwidthy;
@@ -446,8 +447,19 @@ void InitRectPoints(AreaLight::UniformBufferData &rect, vec3f points[4]) {
     points[2] = rect.position + ex + ey;
     points[3] = rect.position - ex + ey;
 }
+
+void AreaLight::GetVertices(const AreaLight::UniformBufferData &rect, vec3f points[4]) {
+	vec3f ex = rect.dirx * rect.hwidthx;
+	vec3f ey = rect.diry * rect.hwidthy;
+
+	points[0] = rect.position - ex - ey;
+	points[1] = rect.position + ex - ey;
+	points[2] = rect.position + ex + ey;
+	points[3] = rect.position - ex + ey;
+}
+
 u32 Scene::AggregateAreaLightUniforms() {
-	static AreaLight::UniformBufferData fullUBO[SCENE_MAX_ACTIVE_LIGHTS];
+	areaLightUBOInitialized = true; // set to true as soon as this function is called once
 
 	u32 numActiveLights = 0;
 	for (u32 l = 0; l < SCENE_MAX_ACTIVE_LIGHTS; ++l) {
@@ -456,10 +468,10 @@ u32 Scene::AggregateAreaLightUniforms() {
 
 		++numActiveLights;
 
-		fullUBO[l].position = src.position;
-		fullUBO[l].Ld = src.Ld;
-		fullUBO[l].hwidthx = src.width.x * 0.5f;
-		fullUBO[l].hwidthy = src.width.y * 0.5f;
+		areaLightUBO[l].position = src.position;
+		areaLightUBO[l].Ld = src.Ld;
+		areaLightUBO[l].hwidthx = src.width.x * 0.5f;
+		areaLightUBO[l].hwidthy = src.width.y * 0.5f;
 
 
 		mat4f m = mat4f::Scale(vec3f(src.width.x, src.width.y, 1));
@@ -468,14 +480,14 @@ u32 Scene::AggregateAreaLightUniforms() {
 		m = m.RotateZ(src.rotation.z);
 
 
-		fullUBO[l].dirx = m * vec3f(1,0,0);
-		fullUBO[l].dirx.Normalize();
-		fullUBO[l].diry = m * vec3f(0,1,0);
-		fullUBO[l].diry.Normalize();
+		areaLightUBO[l].dirx = m * vec3f(1,0,0);
+		areaLightUBO[l].dirx.Normalize();
+		areaLightUBO[l].diry = m * vec3f(0,1,0);
+		areaLightUBO[l].diry.Normalize();
 
-		vec3f N = fullUBO[l].dirx.Cross(fullUBO[l].diry);
+		vec3f N = areaLightUBO[l].dirx.Cross(areaLightUBO[l].diry);
 		N.Normalize();
-		fullUBO[l].plane = vec4f(N.x, N.y, N.z, - N.Dot(src.position));
+		areaLightUBO[l].plane = vec4f(N.x, N.y, N.z, - N.Dot(src.position));
 
 		// Create mesh representation
 		if(src.fixture < 0) {
@@ -501,7 +513,9 @@ u32 Scene::AggregateAreaLightUniforms() {
 
 			// TODO : other shader for light fixtures
 			Object::Desc od(Render::Shader::SHADER_3D_MESH);
-			Material::Desc matd(col3f(src.Ld.x, src.Ld.y, src.Ld.z), col3f(0,0,0), col3f(0,0,0), 0);
+			Material::Desc matd(col3f(src.Ld.x, src.Ld.y, src.Ld.z), col3f(0,0,0), col3f(0,0,0), 1e-3f);
+			matd.ltcMatrixPath = "../../data/ltc_mat.dds";
+			matd.ltcAmplitudePath = "../../data/ltc_amp.dds";
 			Material::Handle math = Add(matd);
 			if(math < 0) {
 				LogErr("mat err");
@@ -530,7 +544,7 @@ u32 Scene::AggregateAreaLightUniforms() {
 	}
 
 	// Update UBO
-	Render::UBO::Desc ubo_desc((f32*)fullUBO, numActiveLights * sizeof(AreaLight::UniformBufferData), Render::UBO::ST_DYNAMIC);
+	Render::UBO::Desc ubo_desc((f32*)areaLightUBO, numActiveLights * sizeof(AreaLight::UniformBufferData), Render::UBO::ST_DYNAMIC);
 	Render::UBO::Update(areaLightsUBO, ubo_desc);
 
 	// Bind it
@@ -769,9 +783,21 @@ AreaLight::Handle Scene::Add(const AreaLight::Desc &d) {
 	return (AreaLight::Handle)index;
 }
 
+Material::Data *Scene::GetMaterial(Material::Handle h) {
+	if (MaterialExists(h))
+		return &materials[h];
+	return nullptr;
+}
+
 AreaLight::Desc *Scene::GetLight(AreaLight::Handle h) {
 	if(AreaLightExists(h))
 		return &areaLights[h];
+	return nullptr;
+}
+
+const AreaLight::UniformBufferData *Scene::GetAreaLightUBO(AreaLight::Handle h) {
+	if (areaLightUBOInitialized && AreaLightExists(h))
+		return &areaLightUBO[h];
 	return nullptr;
 }
 
@@ -804,6 +830,13 @@ Text::Handle Scene::Add(const Text::Desc &d) {
 }
 
 
+void Material::Data::ReloadUBO() {
+	if (ubo >= 0) {
+		Render::UBO::Desc ubo_desc((f32*)&desc.uniform, sizeof(Material::Desc::UniformBufferData), Render::UBO::ST_DYNAMIC);
+		Render::UBO::Update(ubo, ubo_desc);
+	}
+}
+
 Material::Handle Scene::Add(const Material::Desc &d) {
 	size_t idx = materials.size();
 
@@ -811,7 +844,7 @@ Material::Handle Scene::Add(const Material::Desc &d) {
 	mat.desc = d;
 
 	// Create UBO to accomodate it on GPU
-	Render::UBO::Desc ubo_desc((f32*)&d.uniform, sizeof(Material::Desc::UniformBufferData), Render::UBO::ST_STATIC);
+	Render::UBO::Desc ubo_desc((f32*)&d.uniform, sizeof(Material::Desc::UniformBufferData), d.dynamic ? Render::UBO::ST_DYNAMIC : Render::UBO::ST_STATIC);
 	mat.ubo = Render::UBO::Build(ubo_desc);
 	if(mat.ubo < 0) {
 		LogErr("Error creating Material");
