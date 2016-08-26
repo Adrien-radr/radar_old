@@ -131,30 +131,30 @@ vec3f SHInt::IntegrateTrisWS(const AreaLight::UniformBufferData &al, std::vector
 	// Accum
 	for (u32 tri = 0; tri < numTri; ++tri) {
 		Triangle triangle(al, points[triIdx[tri][0]], points[triIdx[tri][1]], points[triIdx[tri][2]], integrationPos);
+		f32 triWeight = Luminance(al.Ld) * triangle.solidAngle;
+		f32 triPdf = triangle.area / triWeight;
 
-		// Sample triangle
-		for (u32 i = 0; i < sampleCount; ++i) {
-			vec3f rayDir;
-			vec2f randVec = Random::Vec2f();
+		if (triPdf > 0.f) {
+			// Sample triangle
+			for (u32 i = 0; i < sampleCount; ++i) {
+				vec3f rayDir;
+				vec2f randVec = Random::Vec2f();
 
-			f32 triWeight = Luminance(al.Ld) * triangle.solidAngle;
-			f32 triPdf = triangle.area / triWeight;
-
-
-			f32 weight = triangle.GetSample(rayDir, randVec.x, randVec.y) * triPdf;
+				f32 weight = triangle.GetSample(rayDir, randVec.x, randVec.y) * triPdf;
 
 
-			if (weight > 0.f && rayDir.Dot(integrationNrm) > 0.f) {
-				areaLightNorm += triWeight;
+				if (weight > 0.f && rayDir.Dot(integrationNrm) > 0.f) {
+					areaLightNorm += 1.f / triPdf;
 
-				std::fill_n(shtmp.begin(), nCoeff, 0.f);
-				SHEval(nBand, rayDir.x, rayDir.z, rayDir.y, &shtmp[0]);
+					std::fill_n(shtmp.begin(), nCoeff, 0.f);
+					SHEval(nBand, rayDir.x, rayDir.z, rayDir.y, &shtmp[0]);
 
-				for (u32 j = 0; j < nCoeff; ++j) {
-					shvals[j] += shtmp[j] * weight;
+					for (u32 j = 0; j < nCoeff; ++j) {
+						shvals[j] += shtmp[j] * weight;
+					}
+
+					sum += vec3f(1) * weight;
 				}
-
-				sum += vec3f(1) * weight;
 			}
 		}
 	}

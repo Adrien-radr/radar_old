@@ -161,7 +161,7 @@ bool initFunc(Scene *scene) {
 	}
 
 
-	u32 nband = 4;
+	u32 nband = 6;
 	sh1.Init(scene, nband);
 	sh1.AddAreaLight(alh);
 	sh1.AddAreaLight(alh2);
