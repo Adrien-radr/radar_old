@@ -589,6 +589,7 @@ void Scene::Render() {
 	Render::StartGBufferPass();
 	for (u32 j = 0; j < objects.size(); ++j) {
 		Object::Desc &object = objects[j];
+
 		Render::Shader::SendInt(Render::Shader::UNIFORM_OBJECTID, j);
 
 		// TODO : model_matrix from TRS should be done in update function, not in render
@@ -597,7 +598,11 @@ void Scene::Render() {
 
 		// Render all submeshes
 		for(u32 m = 0; m < object.numSubmeshes; ++m) {
-			Render::Mesh::Render(object.meshes[m]);
+			const Material::Data &material = materials[object.materials[m]];
+
+			// Draw depending on the material
+			if(material.desc.gbufferDraw)
+				Render::Mesh::Render(object.meshes[m]);
 		}
 	}
 	Render::StopGBufferPass();

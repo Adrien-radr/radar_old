@@ -32,14 +32,12 @@ struct Camera {
 namespace Material {
 	using namespace Render;
 	struct Desc {
-		Desc() :	// Default debug material
-			uniform(col3f(0.3f, 0.f, 0.3f), col3f(0.51f,0.4f,0.51f), col3f(0.7f,0.04f,0.7f), 0.95f), 
-			diffuseTexPath(""), specularTexPath(""), normalTexPath(""), occlusionTexPath(""),
-			ltcMatrixPath(""), ltcAmplitudePath(""), dynamic(false) {}
-
-		Desc(const col3f &ka, const col3f &kd, const col3f &ks, float s, const std::string diffuse = "") : 
+		Desc(const col3f &ka, const col3f &kd, const col3f &ks, float s, const std::string diffuse = "") :
 			uniform(ka, kd, ks, s), diffuseTexPath(diffuse), specularTexPath(""), normalTexPath(""),
-			occlusionTexPath(""), ltcMatrixPath(""), ltcAmplitudePath(""), dynamic(false) {}
+			occlusionTexPath(""), ltcMatrixPath(""), ltcAmplitudePath(""), dynamic(false), gbufferDraw(true) {}
+
+		// Default debug material
+		Desc() : Desc(col3f(0.3f, 0.f, 0.3f), col3f(0.51f, 0.4f, 0.51f), col3f(0.7f, 0.04f, 0.7f), 0.95f) {}
 
 		struct UniformBufferData {
 			UniformBufferData(const col3f &ka, const col3f &kd, const col3f &ks, float s) : 
@@ -65,6 +63,7 @@ namespace Material {
 		std::string ltcAmplitudePath;
 
 		bool dynamic;
+		bool gbufferDraw;
 	};
 
 	struct Data {

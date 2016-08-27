@@ -11,13 +11,17 @@ public:
 		areaLights.push_back(ah);
 	}
 
+	void Recompute();
 	void UpdateCoords(const vec3f &position, const vec3f &normal);
-	void UpdateData(const std::vector<float> &coeffs);
+	void UseWorldSpaceSampling(bool b) { wsSampling = b; }
 
 private:
-	vec3f IntegrateTrisWS(const AreaLight::UniformBufferData &al, std::vector<f32> &shvals);
-	void IntegrateAreaLightsWS();
-	void IntegrateAreaLightsUnit();
+	f32 IntegrateTris(const AreaLight::UniformBufferData &al, std::vector<f32> &shvals);
+	//vec3f IntegrateTrisUnit(const AreaLight::UniformBufferData &al, std::vector<f32> &shvals);
+	void IntegrateAreaLights();
+
+	void UpdateData(const std::vector<float> &coeffs);
+
 private:
 	u32 nBand;
 	u32 nCoeff;
@@ -28,6 +32,7 @@ private:
 
 	vec3f integrationPos;
 	vec3f integrationNrm;
+	bool wsSampling;
 
 	Scene *gameScene;
 	std::vector<AreaLight::Handle> areaLights;

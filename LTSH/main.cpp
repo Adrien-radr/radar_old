@@ -1,4 +1,5 @@
 #include "SHIntegration.h"
+#include "imgui/imgui.h"
 
 AreaLight::Handle alh = -1;
 AreaLight::Handle alh2;
@@ -241,14 +242,30 @@ bool initFunc(Scene *scene) {
 void updateFunc(Scene *scene, float dt) {
 	const Device &device = GetDevice();
 	vec2i mouseCoords = vec2i(device.GetMouseX(), device.GetMouseY());
+	vec2i ws = device.windowSize;
+
 	static f32 t = 0, oneSec = 0.f;
 	
+	// UI
+	static bool wsSampling = true;
+	
+	ImGui::SetNextWindowPos(ImVec2((f32)ws.x - 200, (f32)ws.y - 400));
+	ImGui::SetNextWindowSize(ImVec2(150, 350));
+	ImGui::Begin("TweakPanel", NULL, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
+	ImGui::Checkbox("AreaLight WS", &wsSampling);
+	ImGui::End();
 
 	if (device.IsMouseHit(MouseButton::MB_Left)) {
 		vec4f pos = Render::FBO::ReadGBuffer(Render::FBO::GBufferAttachment::WORLDPOS, mouseCoords.x, mouseCoords.y);
 		vec4f nrm = Render::FBO::ReadGBuffer(Render::FBO::GBufferAttachment::NORMAL, mouseCoords.x, mouseCoords.y);
 		
+		sh1.UseWorldSpaceSampling(wsSampling);
 		sh1.UpdateCoords(vec3f(pos.x, pos.y, pos.z), vec3f(nrm.x, nrm.y, nrm.z));
+	}
+
+	if (device.IsKeyHit(K_R)) {
+		sh1.UseWorldSpaceSampling(wsSampling);
+		sh1.Recompute();
 	}
 
 	AreaLight::Desc *light = scene->GetLight(alh);

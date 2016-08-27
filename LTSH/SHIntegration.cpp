@@ -10,13 +10,15 @@ bool SHInt::Init(Scene *scene, u32 band) {
 
 	integrationPos = vec3f(0, 0, 0);
 	integrationNrm = vec3f(0, 1, 0);
+	wsSampling = true;
 
 	shCoeffs.resize(nCoeff);
 
-	Material::Desc mat_desc(col3f(0.33f, 0.2f, 0), col3f(1, 0.8f, 0), col3f(1, 0, 0), 0.4f);
+	Material::Desc mat_desc(col3f(0.6f, 0.25f, 0), col3f(1, 0.8f, 0), col3f(1, 0, 0), 0.4f);
 	mat_desc.ltcMatrixPath = "../../data/ltc_mat.dds";
 	mat_desc.ltcAmplitudePath = "../../data/ltc_amp.dds";
 	mat_desc.dynamic = true;
+	mat_desc.gbufferDraw = false;
 
 	material = scene->Add(mat_desc);
 	if (material < 0) {
@@ -34,9 +36,13 @@ bool SHInt::Init(Scene *scene, u32 band) {
 	return true;
 }
 
+void SHInt::Recompute() {
+	IntegrateAreaLights();
+}
+
 void SHInt::UpdateCoords(const vec3f &position, const vec3f &normal) {
 	// place at position, shifted in the normal's direction a bit
-	vec3f pos = position + normal * 0.3f;
+	vec3f pos = position + normal * 0.1f;
 
 	integrationPos = position;
 	integrationNrm = normal;
@@ -46,7 +52,7 @@ void SHInt::UpdateCoords(const vec3f &position, const vec3f &normal) {
 	od->Translate(pos);
 
 	// Call Integration over new position
-	IntegrateAreaLightsWS();
+	Recompute();
 }
 
 void SHInt::UpdateData(const std::vector<float> &coeffs) {
@@ -74,7 +80,38 @@ struct Triangle {
 	f32 area;
 	f32 solidAngle;
 
-	Triangle(const AreaLight::UniformBufferData &al, const vec3f &p0, const vec3f &p1, const vec3f &p2, const vec3f &intPos) {
+	void InitUnit(const AreaLight::UniformBufferData &al, const vec3f &p0, const vec3f &p1, const vec3f &p2, const vec3f &intPos) {
+		this->p0 = p0;
+		this->p1 = p1;
+		this->p2 = p2;
+		q0 = p0 - intPos;
+		q1 = p1 - intPos;
+		q2 = p2 - intPos;
+		q0.Normalize();
+		q1.Normalize();
+		q2.Normalize();
+
+		const vec3f d1 = q1 - q0;
+		const vec3f d2 = q2 - q0;
+
+		const vec3f nrm = d1.Cross(d2);
+		const f32 nrmLen = sqrtf(nrm.Dot(nrm));
+		area = solidAngle = nrmLen / 2.f;
+
+		// compute inset triangle's unit normal
+		const f32 areaThresh = 1e-5f;
+		bool badPlane = -1.0f * q0.Dot(nrm) <= 0.0f;
+
+		if (badPlane || area < areaThresh) {
+			unitNormal = -(q0 + q1 + q2);
+			unitNormal.Normalize();
+		}
+		else {
+			unitNormal = nrm / nrmLen;
+		}
+	}
+	
+	void InitWS(const AreaLight::UniformBufferData &al, const vec3f &p0, const vec3f &p1, const vec3f &p2, const vec3f &intPos) {
 		unitNormal = vec3f(al.plane.x, al.plane.y, al.plane.z);
 
 		this->p0 = p0;
@@ -114,7 +151,7 @@ private:
 
 
 
-vec3f SHInt::IntegrateTrisWS(const AreaLight::UniformBufferData &al, std::vector<f32> &shvals) {
+f32 SHInt::IntegrateTris(const AreaLight::UniformBufferData &al, std::vector<f32> &shvals) {
 	static u32 triIdx[2][3] = { {0, 1, 2}, {0, 2, 3} };
 
 	std::vector<float> shtmp(nCoeff);
@@ -130,7 +167,13 @@ vec3f SHInt::IntegrateTrisWS(const AreaLight::UniformBufferData &al, std::vector
 
 	// Accum
 	for (u32 tri = 0; tri < numTri; ++tri) {
-		Triangle triangle(al, points[triIdx[tri][0]], points[triIdx[tri][1]], points[triIdx[tri][2]], integrationPos);
+		Triangle triangle;
+
+		if (wsSampling)
+			triangle.InitWS(al, points[triIdx[tri][0]], points[triIdx[tri][1]], points[triIdx[tri][2]], integrationPos);
+		else
+			triangle.InitUnit(al, points[triIdx[tri][0]], points[triIdx[tri][1]], points[triIdx[tri][2]], integrationPos);
+
 		f32 triWeight = Luminance(al.Ld) * triangle.solidAngle;
 		f32 triPdf = triangle.area / triWeight;
 
@@ -144,7 +187,7 @@ vec3f SHInt::IntegrateTrisWS(const AreaLight::UniformBufferData &al, std::vector
 
 
 				if (weight > 0.f && rayDir.Dot(integrationNrm) > 0.f) {
-					areaLightNorm += 1.f / triPdf;
+					areaLightNorm += 1.f/triWeight;// 1.f / triPdf;
 
 					std::fill_n(shtmp.begin(), nCoeff, 0.f);
 					SHEval(nBand, rayDir.x, rayDir.z, rayDir.y, &shtmp[0]);
@@ -160,36 +203,30 @@ vec3f SHInt::IntegrateTrisWS(const AreaLight::UniformBufferData &al, std::vector
 	}
 
 	// Reduce
-	for (u32 j = 0; j < nCoeff; ++j) {
-		shvals[j] *= areaLightNorm / (float)(numTri * sampleCount);
-	}
+	//for (u32 j = 0; j < nCoeff; ++j) {
+		//shvals[j] *= areaLightNorm / (float)(numTri * sampleCount);
+	//}
 
-	sum *= areaLightNorm / (float)(numTri * sampleCount);
+	//sum *= areaLightNorm / (float)(numTri * sampleCount);
 	
-	return sum;
+	return areaLightNorm / (float)(numTri * sampleCount);
 }
 
-void SHInt::IntegrateAreaLightsWS() {
+void SHInt::IntegrateAreaLights() {
 	std::vector<float> shvals(nCoeff);
 	std::vector<float> shtmp(nCoeff);
 	std::fill_n(shvals.begin(), nCoeff, 0.f);
 
-	float weight[3] = { 0, 0, 0 };
+	f32 wtSum = 0.f;
 
 	for (u32 i = 0; i < areaLights.size(); ++i) {
 		const AreaLight::UniformBufferData *al = gameScene->GetAreaLightUBO(areaLights[i]);
 
 		if (al) {
 			std::fill_n(shtmp.begin(), nCoeff, 0.f);
-			vec3f col = IntegrateTrisWS(*al, shtmp);
-			weight[i] = col.x;
 
-			// update material color
-			Material::Data *mat = gameScene->GetMaterial(material);
-			if (mat) {
-				//mat->desc.uniform.Kd = col3f(col);
-				//mat->ReloadUBO();
-			}
+			f32 wt = IntegrateTris(*al, shtmp);
+			wtSum += wt;
 
 			// update SH
 			for (u32 j = 0; j < nCoeff; ++j) {
@@ -200,15 +237,9 @@ void SHInt::IntegrateAreaLightsWS() {
 
 	// Reduce
 	for (u32 j = 0; j < nCoeff; ++j) {
-		shvals[j] /= (f32) areaLights.size();
+		shvals[j] *= wtSum / (f32) areaLights.size();
 	}
-
-	LogInfo(weight[0], " ", weight[1], " ", weight[2]);
 
 	// Update SH Coeffs
 	UpdateData(shvals);
-}
-
-void SHInt::IntegrateAreaLightsUnit() {
-
 }
