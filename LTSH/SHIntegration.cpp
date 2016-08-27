@@ -2,6 +2,7 @@
 #include "src/common/SHEval.h"
 
 #pragma optimize("",off)
+static const float g_SubdivThreshold = 0.866f; // subdivide triangles having edges larger than 60 degrees
 
 bool SHInt::Init(Scene *scene, u32 band) {
 	nBand = band;
@@ -74,16 +75,12 @@ void SHInt::UpdateData(const std::vector<float> &coeffs) {
 }
 
 struct Triangle {
-	vec3f p0, p1, p2;
 	vec3f q0, q1, q2;
 	vec3f unitNormal;
 	f32 area;
 	f32 solidAngle;
 
-	void InitUnit(const AreaLight::UniformBufferData &al, const vec3f &p0, const vec3f &p1, const vec3f &p2, const vec3f &intPos) {
-		this->p0 = p0;
-		this->p1 = p1;
-		this->p2 = p2;
+	void InitUnit(const vec3f &p0, const vec3f &p1, const vec3f &p2, const vec3f &intPos) {
 		q0 = p0 - intPos;
 		q1 = p1 - intPos;
 		q2 = p2 - intPos;
@@ -114,9 +111,6 @@ struct Triangle {
 	void InitWS(const AreaLight::UniformBufferData &al, const vec3f &p0, const vec3f &p1, const vec3f &p2, const vec3f &intPos) {
 		unitNormal = vec3f(al.plane.x, al.plane.y, al.plane.z);
 
-		this->p0 = p0;
-		this->p1 = p1;
-		this->p2 = p2;
 		q0 = p0 - intPos;
 		q1 = p1 - intPos;
 		q2 = p2 - intPos;
@@ -130,7 +124,7 @@ struct Triangle {
 	}
 
 	/// Returns the geometry term cos(theta) / r^3
-	f32 GetSample(vec3f &rayUnitDir, const f32 s, const f32 t) {
+	f32 GetSample(vec3f &rayUnitDir, const f32 s, const f32 t) const {
 		const vec3f rayDir = q0 * (1.f - s - t) + q1 * s + q2 * t;
 		const f32 rayLenSqr = rayDir.Dot(rayDir);
 		const f32 rayLen = std::sqrtf(rayLenSqr);
@@ -139,17 +133,35 @@ struct Triangle {
 		return -rayDir.Dot(unitNormal) / (rayLenSqr * rayLen);
 	}
 
+	f32 distToOrigin() const {
+		return -1.0f * unitNormal.Dot(q0);
+	}
+
+	// subdivided is always 4-length
+	u32 Subdivide(Triangle *subdivided) const {
+		vec3f q01 = (q0 + q1);
+		vec3f q02 = (q0 + q2);
+		vec3f q12 = (q1 + q2);
+		q01.Normalize();
+		q02.Normalize();
+		q12.Normalize();
+
+		subdivided[0].InitUnit(q0, q01, q02, vec3f(0.f));
+		subdivided[1].InitUnit(q01, q1, q12, vec3f(0.f));
+		subdivided[2].InitUnit(q02, q12, q2, vec3f(0.f));
+		subdivided[3].InitUnit(q12, q02, q01, vec3f(0.f));
+
+		return 4;
+	}
+
 private:
 	void ComputeArea() {
-		const vec3f v1 = p1 - p0, v2 = p2 - p0;
+		const vec3f v1 = q1 - q0, v2 = q2 - q0;
 		const vec3f n1 = v1.Cross(v2);
 
 		area = std::fabsf(n1.Dot(unitNormal)) * 0.5f;
 	}
-
 };
-
-
 
 f32 SHInt::IntegrateTris(const AreaLight::UniformBufferData &al, std::vector<f32> &shvals) {
 	static u32 triIdx[2][3] = { {0, 1, 2}, {0, 2, 3} };
@@ -162,41 +174,64 @@ f32 SHInt::IntegrateTris(const AreaLight::UniformBufferData &al, std::vector<f32
 	AreaLight::GetVertices(al, points);
 
 	vec3f sum(0.f);
-	f32 areaLightNorm = 0.f;
+	f32 weightSum = 0.f;
 	const u32 numTri = 2; // 2 tris per arealight
+
+	Triangle subdivided[4];
+	u32 numSubdiv;
 
 	// Accum
 	for (u32 tri = 0; tri < numTri; ++tri) {
 		Triangle triangle;
 
-		if (wsSampling)
+		if (wsSampling) {
 			triangle.InitWS(al, points[triIdx[tri][0]], points[triIdx[tri][1]], points[triIdx[tri][2]], integrationPos);
-		else
-			triangle.InitUnit(al, points[triIdx[tri][0]], points[triIdx[tri][1]], points[triIdx[tri][2]], integrationPos);
+			subdivided[0] = triangle;
+			numSubdiv = 1;
+		} 
+		else {
+			triangle.InitUnit(points[triIdx[tri][0]], points[triIdx[tri][1]], points[triIdx[tri][2]], integrationPos);
 
-		f32 triWeight = Luminance(al.Ld) * triangle.solidAngle;
-		f32 triPdf = triangle.area / triWeight;
+			// Subdivide projected triangle if too large for robust integration
+			if (triangle.distToOrigin() > g_SubdivThreshold) {
+				numSubdiv = triangle.Subdivide(subdivided);
+			}
+			else {
+				subdivided[0] = triangle;
+				numSubdiv = 1;
+			}
+		}
 
-		if (triPdf > 0.f) {
-			// Sample triangle
-			for (u32 i = 0; i < sampleCount; ++i) {
-				vec3f rayDir;
-				vec2f randVec = Random::Vec2f();
-
-				f32 weight = triangle.GetSample(rayDir, randVec.x, randVec.y) * triPdf;
+		// Loop over the subdivided triangles (or the single unsubdivided triangle)
+		for (u32 subtri = 0; subtri < numSubdiv; subtri++) {
+			Triangle &sub = subdivided[subtri];
+			const f32 triWeight = Luminance(al.Ld) * sub.solidAngle;
 
 
-				if (weight > 0.f && rayDir.Dot(integrationNrm) > 0.f) {
-					areaLightNorm += 1.f/triWeight;// 1.f / triPdf;
+			if (triWeight > 0.0f) {
+				weightSum += triWeight;
 
-					std::fill_n(shtmp.begin(), nCoeff, 0.f);
-					SHEval(nBand, rayDir.x, rayDir.z, rayDir.y, &shtmp[0]);
+				const f32 triPdf = triangle.area / triWeight;
+				const u32 sc = sampleCount / numSubdiv;
 
-					for (u32 j = 0; j < nCoeff; ++j) {
-						shvals[j] += shtmp[j] * weight;
+				// Sample triangle
+				for (u32 i = 0; i < sc; ++i) {
+					vec3f rayDir;
+					vec2f randVec = Random::Vec2f();
+
+					f32 weight = triangle.GetSample(rayDir, randVec.x, randVec.y) * triPdf;
+
+					// Fill SH with impulse from that direction
+					if (weight > 0.f && rayDir.Dot(integrationNrm) > 0.f) {
+						std::fill_n(shtmp.begin(), nCoeff, 0.f);
+						SHEval(nBand, rayDir.x, rayDir.z, rayDir.y, &shtmp[0]);
+
+						for (u32 j = 0; j < nCoeff; ++j) {
+							shvals[j] += shtmp[j] * weight;
+						}
+
+						sum += vec3f(1) * weight;
 					}
-
-					sum += vec3f(1) * weight;
 				}
 			}
 		}
@@ -209,7 +244,7 @@ f32 SHInt::IntegrateTris(const AreaLight::UniformBufferData &al, std::vector<f32
 
 	//sum *= areaLightNorm / (float)(numTri * sampleCount);
 	
-	return areaLightNorm / (float)(numTri * sampleCount);
+	return 1.f / (float)(numTri * sampleCount);
 }
 
 void SHInt::IntegrateAreaLights() {
@@ -222,7 +257,7 @@ void SHInt::IntegrateAreaLights() {
 	for (u32 i = 0; i < areaLights.size(); ++i) {
 		const AreaLight::UniformBufferData *al = gameScene->GetAreaLightUBO(areaLights[i]);
 
-		if (al) {
+		if (al && !AreaLight::Cull(*al, integrationPos, integrationNrm)) {
 			std::fill_n(shtmp.begin(), nCoeff, 0.f);
 
 			f32 wt = IntegrateTris(*al, shtmp);

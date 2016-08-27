@@ -247,7 +247,7 @@ void updateFunc(Scene *scene, float dt) {
 	static f32 t = 0, oneSec = 0.f;
 	
 	// UI
-	static bool wsSampling = true;
+	static bool wsSampling = false;
 	
 	ImGui::SetNextWindowPos(ImVec2((f32)ws.x - 200, (f32)ws.y - 400));
 	ImGui::SetNextWindowSize(ImVec2(150, 350));
@@ -255,7 +255,7 @@ void updateFunc(Scene *scene, float dt) {
 	ImGui::Checkbox("AreaLight WS", &wsSampling);
 	ImGui::End();
 
-	if (device.IsMouseHit(MouseButton::MB_Left)) {
+	if (device.IsMouseDown(MouseButton::MB_Left)) {
 		vec4f pos = Render::FBO::ReadGBuffer(Render::FBO::GBufferAttachment::WORLDPOS, mouseCoords.x, mouseCoords.y);
 		vec4f nrm = Render::FBO::ReadGBuffer(Render::FBO::GBufferAttachment::NORMAL, mouseCoords.x, mouseCoords.y);
 		

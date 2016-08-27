@@ -458,6 +458,24 @@ void AreaLight::GetVertices(const AreaLight::UniformBufferData &rect, vec3f poin
 	points[3] = rect.position - ex + ey;
 }
 
+bool AreaLight::Cull(const AreaLight::UniformBufferData &al, const vec3f &P, const vec3f &N) {
+	vec3f points[4];
+	GetVertices(al, points);
+
+	const vec3f pN(al.plane.x, al.plane.y, al.plane.z);
+	const f32 w = -P.Dot(N);
+
+	bool pRightSide = P.Dot(pN) + al.plane.w > 1e-5f;
+
+	bool aRightSide =
+		(N.Dot(points[0]) + w > 1e-5f) ||
+		(N.Dot(points[1]) + w > 1e-5f) ||
+		(N.Dot(points[2]) + w > 1e-5f) ||
+		(N.Dot(points[3]) + w > 1e-5f);
+
+	return !(pRightSide && aRightSide);
+}
+
 u32 Scene::AggregateAreaLightUniforms() {
 	areaLightUBOInitialized = true; // set to true as soon as this function is called once
 

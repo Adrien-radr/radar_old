@@ -245,7 +245,11 @@ namespace AreaLight {
 		Object::Handle fixture;	// link to the light fixture mesh
 	};
 
-	void GetVertices(const UniformBufferData &rect, vec3f points[4]);
+	/// Returns the 4 vertices composing the AreaLight
+	void GetVertices(const UniformBufferData &al, vec3f points[4]);
+
+	/// Returns true if the point at P of normal N can't see the area light al
+	bool Cull(const UniformBufferData &al, const vec3f &P, const vec3f &N);
 
 	/// Handle representing a area light in the scene.
 	/// This can be used to modify or delete the light after creation.
