@@ -12,7 +12,9 @@ Material::Handle Material::DEFAULT_MATERIAL = -1;
 
 void Camera::Update(float dt) {
 	static Device &device = GetDevice();
+	ImGuiIO &io = ImGui::GetIO();
 
+	const bool captureMouse = !io.WantCaptureMouse;
 	vec3f posDiff;
 
 	// Translation
@@ -47,18 +49,19 @@ void Camera::Update(float dt) {
 		position += posDiff;
 	}
 
-	if(device.IsMouseHit(MB_Right)) {
+	if(captureMouse && device.IsMouseHit(MB_Right)) {
 		freeflyMode = true;
+		lastMousePos = vec2i(device.GetMouseX(), device.GetMouseY());
 		device.SetMouseX(device.windowCenter.x);
 		device.SetMouseY(device.windowCenter.y);
 		device.mousePosition = device.windowCenter;
 		device.ShowCursor(false);
 	}
 	
-	if(device.IsMouseUp(MB_Right)) {
+	if(captureMouse && freeflyMode && device.IsMouseUp(MB_Right)) {
 		freeflyMode = false;
-		device.SetMouseX(device.windowCenter.x);
-		device.SetMouseY(device.windowCenter.y);
+		device.SetMouseX(lastMousePos.x);
+		device.SetMouseY(lastMousePos.y);
 		device.mousePosition = device.windowCenter;
 		device.ShowCursor(true);
 	}

@@ -92,8 +92,8 @@ struct Triangle {
 		const vec3f d2 = q2 - q0;
 
 		const vec3f nrm = d1.Cross(d2);
-		const f32 nrmLen = sqrtf(nrm.Dot(nrm));
-		area = solidAngle = nrmLen / 2.f;
+		const f32 nrmLen = std::sqrtf(nrm.Dot(nrm));
+		area = solidAngle = nrmLen * 0.5f;
 
 		// compute inset triangle's unit normal
 		const f32 areaThresh = 1e-5f;
@@ -164,18 +164,17 @@ private:
 };
 
 f32 SHInt::IntegrateTris(const AreaLight::UniformBufferData &al, std::vector<f32> &shvals) {
-	static u32 triIdx[2][3] = { {0, 1, 2}, {0, 2, 3} };
+	static const u32 triIdx[2][3] = { {0, 1, 2}, {0, 2, 3} };
+	static const u32 numTri = 2; // 2 tris per arealight
+
+	const u32 sampleCount = 1024 / numTri;
 
 	std::vector<float> shtmp(nCoeff);
-
-	const u32 sampleCount = 1024;
 
 	vec3f points[4];
 	AreaLight::GetVertices(al, points);
 
-	vec3f sum(0.f);
-	f32 weightSum = 0.f;
-	const u32 numTri = 2; // 2 tris per arealight
+	//vec3f sum(0.f);
 
 	Triangle subdivided[4];
 	u32 numSubdiv;
@@ -193,7 +192,7 @@ f32 SHInt::IntegrateTris(const AreaLight::UniformBufferData &al, std::vector<f32
 			triangle.InitUnit(points[triIdx[tri][0]], points[triIdx[tri][1]], points[triIdx[tri][2]], integrationPos);
 
 			// Subdivide projected triangle if too large for robust integration
-			if (triangle.distToOrigin() > g_SubdivThreshold) {
+			if (triangle.distToOrigin() > 1e-5f/* g_SubdivThreshold*/) {
 				numSubdiv = triangle.Subdivide(subdivided);
 			}
 			else {
@@ -203,15 +202,12 @@ f32 SHInt::IntegrateTris(const AreaLight::UniformBufferData &al, std::vector<f32
 		}
 
 		// Loop over the subdivided triangles (or the single unsubdivided triangle)
-		for (u32 subtri = 0; subtri < numSubdiv; subtri++) {
+		for (u32 subtri = 0; subtri < numSubdiv; ++subtri) {
 			Triangle &sub = subdivided[subtri];
-			const f32 triWeight = Luminance(al.Ld) * sub.solidAngle;
+			const f32 triWeight = sub.area * Luminance(al.Ld);
 
 
 			if (triWeight > 0.0f) {
-				weightSum += triWeight;
-
-				const f32 triPdf = triangle.area / triWeight;
 				const u32 sc = sampleCount / numSubdiv;
 
 				// Sample triangle
@@ -219,7 +215,7 @@ f32 SHInt::IntegrateTris(const AreaLight::UniformBufferData &al, std::vector<f32
 					vec3f rayDir;
 					vec2f randVec = Random::Vec2f();
 
-					f32 weight = triangle.GetSample(rayDir, randVec.x, randVec.y) * triPdf;
+					f32 weight = sub.GetSample(rayDir, randVec.x, randVec.y) * triWeight;
 
 					// Fill SH with impulse from that direction
 					if (weight > 0.f && rayDir.Dot(integrationNrm) > 0.f) {
@@ -230,19 +226,12 @@ f32 SHInt::IntegrateTris(const AreaLight::UniformBufferData &al, std::vector<f32
 							shvals[j] += shtmp[j] * weight;
 						}
 
-						sum += vec3f(1) * weight;
+						//sum += vec3f(1.f) * weight;
 					}
 				}
 			}
 		}
 	}
-
-	// Reduce
-	//for (u32 j = 0; j < nCoeff; ++j) {
-		//shvals[j] *= areaLightNorm / (float)(numTri * sampleCount);
-	//}
-
-	//sum *= areaLightNorm / (float)(numTri * sampleCount);
 	
 	return 1.f / (float)(numTri * sampleCount);
 }

@@ -27,6 +27,7 @@ struct Camera {
 	bool hasMoved;
 	int speedMode;	// -1 : slower, 0 : normal, 1 : faster
 	bool freeflyMode;
+	vec2i lastMousePos; // mouse position before activating freeflyMode
 };
 
 namespace Material {

@@ -254,8 +254,8 @@ void updateFunc(Scene *scene, float dt) {
 	ImGui::Begin("TweakPanel", NULL, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
 	ImGui::Checkbox("AreaLight WS", &wsSampling);
 	ImGui::End();
-
-	if (device.IsMouseDown(MouseButton::MB_Left)) {
+	
+	if (device.IsMouseDown(MouseButton::MB_Left) && !ImGui::GetIO().WantCaptureMouse) {
 		vec4f pos = Render::FBO::ReadGBuffer(Render::FBO::GBufferAttachment::WORLDPOS, mouseCoords.x, mouseCoords.y);
 		vec4f nrm = Render::FBO::ReadGBuffer(Render::FBO::GBufferAttachment::NORMAL, mouseCoords.x, mouseCoords.y);
 		
