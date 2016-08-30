@@ -4,7 +4,8 @@
 #include "src/scene.h"
 
 enum AreaLightIntegrationMethod {
-	TriSampling,
+	TriSamplingUnit,
+	TriSamplingWS,
 	LTCAnalytic
 };
 
@@ -26,7 +27,6 @@ public:
 	void Recompute();
 	void UpdateCoords(const vec3f &position, const vec3f &normal);
 
-	void UseWorldSpaceSampling(bool b) { wsSampling = b; }
 	void SetGGXExponent(f32 exp) { GGXexponent = exp; }
 	void UseSHNormalization(bool b) { shNormalization = b; }
 	void SetIntegrationMethod(AreaLightIntegrationMethod m) { integrationMethod = m; }
@@ -35,7 +35,7 @@ public:
 
 private:
 	f32 IntegrateTris(const AreaLight::UniformBufferData &al, std::vector<f32> &shvals);
-	f32 IntegrateTrisSampling(const AreaLight::UniformBufferData &al, std::vector<f32> &shvals);
+	f32 IntegrateTrisSampling(const AreaLight::UniformBufferData &al, std::vector<f32> &shvals, bool wsSampling);
 	f32 IntegrateTrisLTC(const AreaLight::UniformBufferData &al, std::vector<f32> &shvals);
 	void IntegrateAreaLights();
 
@@ -54,7 +54,6 @@ private:
 	vec3f integrationNrm;
 	vec3f integrationView;
 
-	bool wsSampling;
 	bool shNormalization;
 	f32  GGXexponent;
 	AreaLightIntegrationMethod integrationMethod;

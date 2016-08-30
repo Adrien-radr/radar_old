@@ -161,10 +161,9 @@ bool SHInt::Init(Scene *scene, u32 band) {
 	Render::Texture::GetData(matData->ltcMatrix, Render::Texture::RGBA32F, ltcMat);
 	Render::Texture::GetData(matData->ltcAmplitude, Render::Texture::RG32F, ltcAmp);
 
-	wsSampling = false;
 	shNormalization = false;
 	GGXexponent = 0.5f;
-	integrationMethod = TriSampling;
+	integrationMethod = TriSamplingUnit;
 	numSamples = 1024;
 	usedBRDF = BRDF_Diffuse;
 
@@ -363,7 +362,7 @@ f32 SHInt::IntegrateTrisLTC(const AreaLight::UniformBufferData &al, std::vector<
 	return 1.f / (2.f * M_PI);
 }
 
-f32 SHInt::IntegrateTrisSampling(const AreaLight::UniformBufferData &al, std::vector<f32> &shvals) {
+f32 SHInt::IntegrateTrisSampling(const AreaLight::UniformBufferData &al, std::vector<f32> &shvals, bool wsSampling) {
 	static const u32 triIdx[2][3] = { {0, 1, 2}, {0, 2, 3} };
 	static const u32 numTri = 2; // 2 tris per arealight
 
@@ -454,8 +453,11 @@ f32 SHInt::IntegrateTris(const AreaLight::UniformBufferData &al, std::vector<f32
 	f32 ret;
 
 	switch (integrationMethod) {
-	case TriSampling:
-		ret = IntegrateTrisSampling(al, shvals);
+	case TriSamplingUnit:
+		ret = IntegrateTrisSampling(al, shvals, false);
+		break;
+	case TriSamplingWS:
+		ret = IntegrateTrisSampling(al, shvals, true);
 		break;
 	case LTCAnalytic:
 		ret = IntegrateTrisLTC(al, shvals);
@@ -473,7 +475,7 @@ void SHInt::IntegrateAreaLights() {
 	std::vector<float> shvals(nCoeff);
 	std::vector<float> shtmp(nCoeff);
 	std::fill_n(shvals.begin(), nCoeff, 0.f);
-	LogInfo(usedBRDF);
+
 	f32 wtSum = 0.f;
 
 	for (u32 i = 0; i < areaLights.size(); ++i) {

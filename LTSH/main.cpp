@@ -250,7 +250,6 @@ void updateFunc(Scene *scene, float dt) {
 	static f32 t = 0, oneSec = 0.f, aiUpdate = 0.f;;
 	
 	// UI
-	static bool wsSampling = false;
 	static bool shNormalization = false;
 	static f32 GGXexponent = 0.5f;
 	static int method = 0;
@@ -262,7 +261,6 @@ void updateFunc(Scene *scene, float dt) {
 
 	ImGui::Begin("TweakPanel", NULL, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
 	
-	ImGui::Checkbox("AreaLight WS", &wsSampling);
 	ImGui::Checkbox("SH Vis Normalization", &shNormalization);
 
 	ImGui::Text("GGX Exponent :");
@@ -272,13 +270,14 @@ void updateFunc(Scene *scene, float dt) {
 	ImGui::SliderInt("samples", &numSamples, 1, 100000);
 
 	ImGui::Text("Integration Method :");
-	ImGui::RadioButton("Tri Sampling", &method, 0);
-	ImGui::RadioButton("LTC Analytic", &method, 1);
+	ImGui::RadioButton("Tri Sampling Unit", &method, 0);
+	ImGui::RadioButton("Tri Sampling WS", &method, 1);
+	ImGui::RadioButton("LTC Analytic", &method, 2);
 
 	ImGui::Text("BRDF :");
-	ImGui::RadioButton("Diffuse", &brdfMethod, 1);
-	ImGui::RadioButton("GGX", &brdfMethod, 2);
-	ImGui::RadioButton("Both", &brdfMethod, 4);
+	ImGui::RadioButton("Diffuse", &brdfMethod, (int)BRDF_Diffuse);
+	ImGui::RadioButton("GGX", &brdfMethod, (int)BRDF_GGX);
+	ImGui::RadioButton("Both", &brdfMethod, (int)BRDF_Both);
 
 	ImGui::End();
 	
@@ -286,7 +285,6 @@ void updateFunc(Scene *scene, float dt) {
 		vec4f pos = Render::FBO::ReadGBuffer(Render::FBO::GBufferAttachment::WORLDPOS, mouseCoords.x, mouseCoords.y);
 		vec4f nrm = Render::FBO::ReadGBuffer(Render::FBO::GBufferAttachment::NORMAL, mouseCoords.x, mouseCoords.y);
 		
-		sh1.UseWorldSpaceSampling(wsSampling);
 		sh1.SetGGXExponent(GGXexponent);
 		sh1.UseSHNormalization(shNormalization);
 		sh1.SetIntegrationMethod(AreaLightIntegrationMethod(method));
@@ -296,7 +294,6 @@ void updateFunc(Scene *scene, float dt) {
 	}
 
 	if (device.IsKeyHit(K_R)) {
-		sh1.UseWorldSpaceSampling(wsSampling);
 		sh1.SetGGXExponent(GGXexponent);
 		sh1.UseSHNormalization(shNormalization);
 		sh1.SetIntegrationMethod(AreaLightIntegrationMethod(method));
@@ -306,7 +303,6 @@ void updateFunc(Scene *scene, float dt) {
 	}
 
 	if (aiUpdate > 0.01f) {
-		sh1.UseWorldSpaceSampling(wsSampling);
 		sh1.SetGGXExponent(GGXexponent);
 		sh1.UseSHNormalization(shNormalization);
 		sh1.SetIntegrationMethod(AreaLightIntegrationMethod(method));
