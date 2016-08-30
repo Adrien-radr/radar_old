@@ -335,7 +335,7 @@ namespace Render {
 			return Build(desc);
 		}
 
-		Handle BuildSHVisualization(const float *shCoeffs, const u32 bandN, const std::string &meshName, const u32 numPhi, const u32 numTheta) {
+		Handle BuildSHVisualization(const float *shCoeffs, const u32 bandN, const std::string &meshName, bool shNormalization, const u32 numPhi, const u32 numTheta) {
 			const u32 faceCount = numPhi * 2 + (numTheta-3) * numPhi * 2;
 			const u32 indexCount = faceCount * 3;
 			const u32 vertexCount = 2 + numPhi * (numTheta - 2);
@@ -384,7 +384,7 @@ namespace Render {
 
 			// Scale function coeffs
 			std::vector<float> scaledCoeffs(shCoeffsN);
-			float normFactor = 0.5f / shCoeffs[0];
+			float normFactor = shNormalization ? 0.5f/shCoeffs[0] : 10.f;
 			for (ci = 0; ci < shCoeffsN; ++ci) {
 				scaledCoeffs[ci] = shCoeffs[ci] * normFactor;
 			}

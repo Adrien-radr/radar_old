@@ -1,7 +1,8 @@
 #include "SHEval.h"
 #include <assert.h>
+
 void SHEval(unsigned int bandN, const float fX, const float fY, const float fZ, float *pSH) {
-	assert(bandN <= 6);
+	assert(bandN <= 11);
 
 	switch (bandN) {
 	case 3:
@@ -15,6 +16,21 @@ void SHEval(unsigned int bandN, const float fX, const float fY, const float fZ, 
 		break;
 	case 6:
 		SHEval6(fX, fY, fZ, pSH);
+		break;
+	case 7:
+		SHEval7(fX, fY, fZ, pSH);
+		break;
+	case 8:
+		SHEval8(fX, fY, fZ, pSH);
+		break;
+	case 9:
+		SHEval9(fX, fY, fZ, pSH);
+		break;
+	case 10:
+		SHEval10(fX, fY, fZ, pSH);
+		break;
+	case 11:
+		SHEval11(fX, fY, fZ, pSH);
 		break;
 	default: break;
 	}

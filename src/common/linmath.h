@@ -435,6 +435,165 @@ public:
 typedef vec4<f32> vec4f;
 typedef vec4<int> vec4i;
 
+template<typename T>
+class mat3 {
+public:
+	mat3() {
+		Identity();
+	}
+	mat3(vec3<T> ix, vec3<T> iy, vec3<T> iz) {
+		M[0] = ix;
+		M[1] = iy;
+		M[2] = iz;
+	}
+
+	mat3(T a11, T a21, T a31,
+		T a12, T a22, T a32,
+		T a13, T a23, T a33) {
+		M[0] = vec4<T>(a11, a12, a13);
+		M[1] = vec4<T>(a21, a22, a23);
+		M[2] = vec4<T>(a31, a32, a33);
+	}
+
+
+	mat3(const mat3<T> &v) {
+		(*this) = v;
+	}
+
+	void Identity() {
+		M[0] = vec3<T>(1, 0, 0);
+		M[1] = vec3<T>(0, 1, 0);
+		M[2] = vec3<T>(0, 0, 1);
+	}
+
+	vec3<T>& operator[](int index) {
+		Assert(index >= 0 && index < 3);
+		return M[index];
+	}
+
+	mat3<T> operator+(const mat3<T> &v) const {
+		return mat3<T>(M[0] + v.M[0], M[1] + v.M[1], M[2] + v.M[2]);
+	}
+
+	mat3<T> operator-(const mat3<T> &v) const {
+		return mat3<T>(M[0] - v.M[0], M[1] - v.M[1], M[2] - v.M[2]);
+	}
+
+	mat3<T> operator*(T v) const {
+		return mat3<T>(M[0] * v, M[1] * v, M[2] * v);
+	}
+
+	mat3<T> operator/(T v) const {
+		return mat3<T>(M[0] / v, M[1] / v, M[2] / v);
+	}
+
+	mat3<T>& operator+=(const mat3<T> &v) {
+		M[0] += v.M[0];
+		M[1] += v.M[1];
+		M[2] += v.M[2];
+		return *this;
+	}
+
+	mat3<T>& operator-=(const mat3<T> &v) {
+		M[0] -= v.M[0];
+		M[1] -= v.M[1];
+		M[2] -= v.M[2];
+		return *this;
+	}
+
+	mat3<T>& operator*=(T v) {
+		M[0] *= v.M[0];
+		M[1] *= v.M[1];
+		M[2] *= v.M[2];
+		return *this;
+	}
+
+	mat3<T>& operator/=(T v) {
+		M[0] /= v.M[0];
+		M[1] /= v.M[1];
+		M[2] /= v.M[2];
+		return *this;
+	}
+
+	bool operator==(const mat3<T> &v) const {
+		return M[0] == v.M[0] && M[1] == v.M[1] && M[2] == v.M[2];
+	}
+
+	bool operator!=(const mat3<T> &v) const {
+		return !(*this == v);
+	}
+
+	void operator=(const mat3<T> &v) {
+		M[0] = v.M[0];
+		M[1] = v.M[1];
+		M[2] = v.M[2];
+	}
+
+	mat3<T>& operator*=(const mat3<T> &v) {
+		(*this) = (*this) * v;
+		return (*this);
+	}
+
+	operator T*() {
+		return &M[0].x;
+	}
+
+	mat3<T> operator*(const mat3<T> &v) const {
+		mat3<T> r;
+		for (int row = 0; row < 3; ++row)
+			for (int col = 0; col < 3; ++col) {
+				r[col][row] = 0;
+				for (int k = 0; k < 3; ++k)
+					r[col][row] += M[k][row] * v.M[col][k];
+			}
+
+		return r;
+	}
+
+	vec3<T> operator*(const vec3<T> &v) const {
+		vec3<T> r;
+		for (int j = 0; j < 3; ++j) {
+			r[j] = 0;
+			for (int i = 0; i < 3; ++i) {
+				r[j] += M[i][j] * v[i];
+			}
+		}
+		return r;
+	}
+
+	mat3<T> Transpose() {
+		int i, j;
+		mat3 R;
+		for (j = 0; j<3; ++j) {
+			for (i = 0; i<3; ++i) {
+				R[i][j] = M[j][i];
+			}
+		}
+		return R;
+	}
+
+	mat3<T> Inverse() {
+		T oneOverDet = static_cast<T>(1) / (
+			+ M[0][0] * (M[1][1] * M[2][2] - M[2][1] * M[1][2])
+			- M[1][0] * (M[0][1] * M[2][2] - M[2][1] * M[0][2])
+			+ M[2][0] * (M[0][1] * M[1][2] - M[1][1] * M[0][2]));
+
+		mat3<T> R;
+		R[0][0] = +(M[1][1] * M[2][2] - M[2][1] * M[1][2]) * oneOverDet;
+		R[1][0] = -(M[1][0] * M[2][2] - M[2][0] * M[1][2]) * oneOverDet;
+		R[2][0] = +(M[1][0] * M[2][1] - M[2][0] * M[1][1]) * oneOverDet;
+		R[0][1] = -(M[0][1] * M[2][2] - M[2][1] * M[0][2]) * oneOverDet;
+		R[1][1] = +(M[0][0] * M[2][2] - M[2][0] * M[0][2]) * oneOverDet;
+		R[2][1] = -(M[0][0] * M[2][1] - M[2][0] * M[0][1]) * oneOverDet;
+		R[0][2] = +(M[0][1] * M[1][2] - M[1][1] * M[0][2]) * oneOverDet;
+		R[1][2] = -(M[0][0] * M[1][2] - M[1][0] * M[0][2]) * oneOverDet;
+		R[2][2] = +(M[0][0] * M[1][1] - M[1][0] * M[0][1]) * oneOverDet;
+	}
+
+	vec3<T> M[3];
+};
+
+typedef mat3<f32> mat3f;
 
 template<typename T>
 class mat4 {
@@ -589,18 +748,6 @@ public:
 		return r;
 	}
 
-	static mat4<T> RotationY(float angle) {
-		float s = sinf(angle);
-		float c = cosf(angle);
-		mat4 R = {
-			{ c, 0, s, 0 },
-			{ 0, 1, 0, 0 },
-			{ -s, 0, c, 0 },
-			{ 0, 0, 0, 1 }
-		};
-		return R;
-	}
-
 	static mat4<T> Scale(vec3<T> xyz) {
 		mat4<T> s;
 		s.Identity();
@@ -663,9 +810,9 @@ public:
 		float s = sinf(angle);
 		float c = cosf(angle);
 		mat4 R = {
-			{ c, 0, s, 0 },
+			{ c, 0, -s, 0 },
 			{ 0, 1, 0, 0 },
-			{ -s, 0, c, 0 },
+			{ s, 0, c, 0 },
 			{ 0, 0, 0, 1 }
 		};
 		return R * (*this);
@@ -695,7 +842,7 @@ public:
 	}
 
 	mat4<T> Inverse() {
-		mat4 R;
+		mat4<T> R;
 		R[0][0] = M[1][1] * (M[2][2] * M[3][3] - M[2][3] * M[3][2]) - M[2][1] * (M[1][2] * M[3][3] - M[1][3] * M[3][2]) - M[3][1] * (M[1][3] * M[2][2] - M[1][2] * M[2][3]);
 		R[0][1] = M[0][1] * (M[2][3] * M[3][2] - M[2][2] * M[3][3]) - M[2][1] * (M[0][3] * M[3][2] - M[0][2] * M[3][3]) - M[3][1] * (M[0][2] * M[2][3] - M[0][3] * M[2][2]);
 		R[0][2] = M[0][1] * (M[1][2] * M[3][3] - M[1][3] * M[3][2]) - M[1][1] * (M[0][2] * M[3][3] - M[0][3] * M[3][2]) - M[3][1] * (M[0][3] * M[1][2] - M[0][2] * M[1][3]);

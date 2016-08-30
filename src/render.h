@@ -300,6 +300,11 @@ namespace Render {
 		/// Returns the OpenGL texture ID of the given texture
 		u32 GetGLID(Handle h);
 
+		/// Retrieve data from the given texture
+		/// WARN : dst must be allocated to the right size
+		/// Returns false if the operation failed
+		bool GetData(Handle h, TextureFormat fmt, f32 *dst);
+
 		// Default 1x1 textures
 		extern Handle DEFAULT_DIFFUSE;	// white for diffuse
 		extern Handle DEFAULT_NORMAL;	// (127, 255, 127) for normal
@@ -451,7 +456,8 @@ namespace Render {
 		Handle BuildBox();
 
 		/// Build a SH visualization mesh
-		Handle BuildSHVisualization(const float *shCoeffs, const u32 bandN, const std::string &meshName, const u32 numPhi = 48, const u32 numTheta = 96);
+		/// @param shNormalization : put to true if the sh visualization should be normalized by DC
+		Handle BuildSHVisualization(const float *shCoeffs, const u32 bandN, const std::string &meshName, bool shNormalization, const u32 numPhi = 48, const u32 numTheta = 96);
 
 		/// Deallocate GL data for the given mesh handle
 		void Destroy(Handle h);

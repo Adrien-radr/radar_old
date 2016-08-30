@@ -22,10 +22,10 @@ namespace Render {
 				{ 4, 32, 4, GL_RGBA, GL_RGBA, GL_UNSIGNED_BYTE }, // RGBA8U
 
 				// float
-				{  2,  16, 1, GL_R16F, GL_RED, GL_FLOAT }, // R16F
-				{  4,  32, 2, GL_RG16F, GL_RG, GL_FLOAT }, // RG16F
-				{  6,  48, 3, GL_RGB16F, GL_RGB, GL_FLOAT }, // RGB16F
-				{  8,  64, 4, GL_RGBA16F, GL_RGBA, GL_FLOAT }, // RGBA16F
+				{  2,  16, 1, GL_R16F, GL_RED, GL_HALF_FLOAT }, // R16F
+				{  4,  32, 2, GL_RG16F, GL_RG, GL_HALF_FLOAT }, // RG16F
+				{  6,  48, 3, GL_RGB16F, GL_RGB, GL_HALF_FLOAT }, // RGB16F
+				{  8,  64, 4, GL_RGBA16F, GL_RGBA, GL_HALF_FLOAT }, // RGBA16F
 
 				{  4,  32, 1, GL_R32F, GL_RED, GL_FLOAT }, // R32F
 				{  8,  64, 2, GL_RG32F, GL_RG, GL_FLOAT }, // RG32F

@@ -104,6 +104,36 @@ namespace Texture {
         }
         return 0;
     }
+
+	bool GetData(Handle h, TextureFormat fmt, f32 *dst) {
+		if (Exists(h)) {
+			Render::Texture::Bind(h, Render::Texture::TARGET0);
+
+			GLenum glFormat;
+			GLenum glType;
+
+			switch (fmt) {
+			case RGBA32F:
+				glFormat = GL_RGBA;
+				glType = GL_FLOAT;
+				break;
+			case RG32F:
+				glFormat = GL_RG;
+				glType = GL_FLOAT;
+				break;
+			default:
+				LogErr("TextureFormat not supported for GetData. Implement it.");
+				return false;
+			}
+
+			glGetTexImage(GL_TEXTURE_2D, 0, glFormat, glType, dst);
+
+			Render::Texture::Bind(-1, Render::Texture::TARGET0);
+
+			return true;
+		}
+		return false;
+	}
 }
 
 

@@ -11,66 +11,68 @@ vec3f alPos2(20., 7.5, 20);
 SHInt sh1;
 
 bool MakeLights(Scene *scene) {
+#if 0
 	PointLight::Desc light;
-	AreaLight::Desc al;
 	PointLight::Handle light_h;
-
 	// Lights
 	light.position = vec3f(9.5, 5, 10);
 	light.Ld = vec3f(1.5, 1, 0);
 	light.radius = 1000.f;
 
 	light_h = scene->Add(light);
-	if(light_h < 0) goto err; 
+	if (light_h < 0) goto err;
 
 	light.position = vec3f(90, 15, -3);
 	light.Ld = vec3f(1.2, 1.2, 3);
 	light.radius = 1000.f;
 
 	light_h = scene->Add(light);
-	if(light_h < 0) goto err; 
+	if (light_h < 0) goto err;
 
 	light.position = vec3f(-90, 15, -3);
 	light.Ld = vec3f(1.2, 1.2, 3);
 	light.radius = 1000.f;
 
 	light_h = scene->Add(light);
-	if(light_h < 0) goto err;
-/*
+	if (light_h < 0) goto err;
+	/*
 	light.position = vec3f(40.5, 8, -10);
 	light.Ld = vec3f(2,2,2);
 	light.radius = 1000.f;
 
 	light_h = scene->Add(light);
 	if(light_h < 0) goto err;
-*/
+	*/
 	light.position = vec3f(-5, 10, -10);
 	light.Ld = vec3f(1.5, 0.8, 1.2);
 	light.radius = 1000.f;
 
 	light_h = scene->Add(light);
-	if(light_h < 0) goto err;
+	if (light_h < 0) goto err;
 
 	light.position = vec3f(20, 30, 0);
 	light.Ld = vec3f(3, 3, 3);
 	light.radius = 1000.f;
 
 	light_h = scene->Add(light);
-	if(light_h < 0) goto err;
+	if (light_h < 0) goto err;
+#endif
 
-	al.position = vec3f(60, 0, 0);
-	al.width = vec2f(10.f, 2.f);
+	AreaLight::Desc al;
+
+	al.position = alPos;
+	al.width = vec2f(8.f, 6.f);
 	al.rotation = vec3f(0, 0, 0);
-	al.Ld = vec3f(1,0.8,0);
+	al.Ld = vec3f(2.0, 1.5, 1);
 
 	alh = scene->Add(al);
 	if(alh < 0) goto area_err;
 
-
-	al.position = alPos;
-	al.width = vec2f(8.f, 6.f);
-	al.rotation = vec3f(0, 0, M_PI/4);
-	al.Ld = vec3f(2.0,1.5,1);
+#if 0
+	al.position = vec3f(60, 0, 0);
+	al.width = vec2f(10.f, 2.f);
+	al.rotation = vec3f(0, 0, 0);
+	al.Ld = vec3f(1, 0.8, 0);
 
 	alh2 = scene->Add(al);
 	if(alh2 < 0) goto area_err;
@@ -82,6 +84,7 @@ bool MakeLights(Scene *scene) {
 
 	alh3 = scene->Add(al);
 	if(alh3 < 0) goto area_err;
+#endif
 
 	return true;
 	err:
@@ -162,11 +165,11 @@ bool initFunc(Scene *scene) {
 	}
 
 
-	u32 nband = 6;
+	u32 nband = 11;
 	sh1.Init(scene, nband);
 	sh1.AddAreaLight(alh);
-	sh1.AddAreaLight(alh2);
-	sh1.AddAreaLight(alh3);
+	//sh1.AddAreaLight(alh2);
+	//sh1.AddAreaLight(alh3);
 
 
 
@@ -174,7 +177,7 @@ bool initFunc(Scene *scene) {
 	{
 		odesc.ClearSubmeshes();
 
-		Material::Desc mat_desc(col3f(0.1,0.1,0.1), col3f(1,1,1), col3f(1,1,1), 0.65);
+		Material::Desc mat_desc(col3f(0.1f,0.1f,0.1f), col3f(1,1,1), col3f(1,1,1), 0.65f);
 		mat_desc.diffuseTexPath = "../../data/concrete.png";
 		mat_desc.normalTexPath = "../../data/concrete_nm.png";
 		mat_desc.ltcMatrixPath = "../../data/ltc_mat.dds";
@@ -195,7 +198,7 @@ bool initFunc(Scene *scene) {
 			return false;
 		}
 	}
-
+#if 0
 	const vec3f arrayPos(20, 0, 0);
 
 	const int sphere_n = 10;
@@ -235,7 +238,7 @@ bool initFunc(Scene *scene) {
 			}
 		}
 	}
-
+#endif
 	return true;
 }
 
@@ -244,15 +247,39 @@ void updateFunc(Scene *scene, float dt) {
 	vec2i mouseCoords = vec2i(device.GetMouseX(), device.GetMouseY());
 	vec2i ws = device.windowSize;
 
-	static f32 t = 0, oneSec = 0.f;
+	static f32 t = 0, oneSec = 0.f, aiUpdate = 0.f;;
 	
 	// UI
 	static bool wsSampling = false;
+	static bool shNormalization = false;
+	static f32 GGXexponent = 0.5f;
+	static int method = 0;
+	static int brdfMethod = 1;
+	static int numSamples = 1024;
 	
 	ImGui::SetNextWindowPos(ImVec2((f32)ws.x - 200, (f32)ws.y - 400));
-	ImGui::SetNextWindowSize(ImVec2(150, 350));
+	ImGui::SetNextWindowSize(ImVec2(190, 390));
+
 	ImGui::Begin("TweakPanel", NULL, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
+	
 	ImGui::Checkbox("AreaLight WS", &wsSampling);
+	ImGui::Checkbox("SH Vis Normalization", &shNormalization);
+
+	ImGui::Text("GGX Exponent :");
+	ImGui::SliderFloat("shininess", &GGXexponent, 0.f, 0.9f);
+
+	ImGui::Text("Sample Count :");
+	ImGui::SliderInt("samples", &numSamples, 1, 100000);
+
+	ImGui::Text("Integration Method :");
+	ImGui::RadioButton("Tri Sampling", &method, 0);
+	ImGui::RadioButton("LTC Analytic", &method, 1);
+
+	ImGui::Text("BRDF :");
+	ImGui::RadioButton("Diffuse", &brdfMethod, 1);
+	ImGui::RadioButton("GGX", &brdfMethod, 2);
+	ImGui::RadioButton("Both", &brdfMethod, 4);
+
 	ImGui::End();
 	
 	if (device.IsMouseDown(MouseButton::MB_Left) && !ImGui::GetIO().WantCaptureMouse) {
@@ -260,16 +287,44 @@ void updateFunc(Scene *scene, float dt) {
 		vec4f nrm = Render::FBO::ReadGBuffer(Render::FBO::GBufferAttachment::NORMAL, mouseCoords.x, mouseCoords.y);
 		
 		sh1.UseWorldSpaceSampling(wsSampling);
+		sh1.SetGGXExponent(GGXexponent);
+		sh1.UseSHNormalization(shNormalization);
+		sh1.SetIntegrationMethod(AreaLightIntegrationMethod(method));
+		sh1.SetBRDF(AreaLightBRDF(brdfMethod));
+		sh1.SetSampleCount(numSamples);
 		sh1.UpdateCoords(vec3f(pos.x, pos.y, pos.z), vec3f(nrm.x, nrm.y, nrm.z));
 	}
 
 	if (device.IsKeyHit(K_R)) {
 		sh1.UseWorldSpaceSampling(wsSampling);
+		sh1.SetGGXExponent(GGXexponent);
+		sh1.UseSHNormalization(shNormalization);
+		sh1.SetIntegrationMethod(AreaLightIntegrationMethod(method));
+		sh1.SetBRDF(AreaLightBRDF(brdfMethod));
+		sh1.SetSampleCount(numSamples);
 		sh1.Recompute();
+	}
+
+	if (aiUpdate > 0.01f) {
+		sh1.UseWorldSpaceSampling(wsSampling);
+		sh1.SetGGXExponent(GGXexponent);
+		sh1.UseSHNormalization(shNormalization);
+		sh1.SetIntegrationMethod(AreaLightIntegrationMethod(method));
+		sh1.SetBRDF(AreaLightBRDF(brdfMethod));
+		sh1.SetSampleCount(numSamples);
+		sh1.Recompute();
+
+		aiUpdate = 0.f;
 	}
 
 	AreaLight::Desc *light = scene->GetLight(alh);
 	if(light) {
+		static float dir = 1.f;
+
+		if (light->rotation.x >= (M_PI * 0.8f) || light->rotation.x <= (-M_PI * 0.28f))
+			dir *= -1.f;
+
+		light->rotation.x += dir * dt * M_PI * 0.25f;
 		// light->rotation.y += dt * M_PI * 0.5f;
 	}
 	AreaLight::Desc *light2 = scene->GetLight(alh2);
@@ -288,6 +343,7 @@ void updateFunc(Scene *scene, float dt) {
 
 	t += dt;
 	oneSec += dt;
+	aiUpdate += dt;
 }
 
 void renderFunc(Scene *scene) {
