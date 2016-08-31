@@ -384,7 +384,7 @@ namespace Render {
 
 			// Scale function coeffs
 			std::vector<float> scaledCoeffs(shCoeffsN);
-			float normFactor = shNormalization ? 0.5f/shCoeffs[0] : 10.f;
+			float normFactor = shNormalization ? 0.5f/shCoeffs[0] : 1.f;
 			for (ci = 0; ci < shCoeffsN; ++ci) {
 				scaledCoeffs[ci] = shCoeffs[ci] * normFactor;
 			}

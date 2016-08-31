@@ -7,6 +7,13 @@ AreaLight::Handle alh3;
 vec3f alPos(40., 3, -20);
 vec3f alPos2(20., 7.5, 20);
 
+// UI
+static bool shNormalization = false;
+static f32 GGXexponent = 0.5f;
+static int method = 0;
+static int brdfMethod = 1;
+static int numSamples = 1024;
+static bool autoUpdate = true;
 
 SHInt sh1;
 
@@ -99,7 +106,7 @@ bool MakeLights(Scene *scene) {
 	}
 }
 
-bool initFunc(Scene *scene) {
+bool Init(Scene *scene) {
 	if(!MakeLights(scene))
 		return false;
 
@@ -242,25 +249,16 @@ bool initFunc(Scene *scene) {
 	return true;
 }
 
-void updateFunc(Scene *scene, float dt) {
+void UpdateUI(float dt) {
 	const Device &device = GetDevice();
-	vec2i mouseCoords = vec2i(device.GetMouseX(), device.GetMouseY());
 	vec2i ws = device.windowSize;
 
-	static f32 t = 0, oneSec = 0.f, aiUpdate = 0.f;;
-	
-	// UI
-	static bool shNormalization = false;
-	static f32 GGXexponent = 0.5f;
-	static int method = 0;
-	static int brdfMethod = 1;
-	static int numSamples = 1024;
-	
 	ImGui::SetNextWindowPos(ImVec2((f32)ws.x - 200, (f32)ws.y - 400));
 	ImGui::SetNextWindowSize(ImVec2(190, 390));
 
 	ImGui::Begin("TweakPanel", NULL, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
-	
+
+	ImGui::Checkbox("Auto Update", &autoUpdate);
 	ImGui::Checkbox("SH Vis Normalization", &shNormalization);
 
 	ImGui::Text("GGX Exponent :");
@@ -280,6 +278,40 @@ void updateFunc(Scene *scene, float dt) {
 	ImGui::RadioButton("Both", &brdfMethod, (int)BRDF_Both);
 
 	ImGui::End();
+}
+
+void FixedUpdate(Scene *scene, float dt) {
+	AreaLight::Desc *light = scene->GetLight(alh);
+	if (light) {
+		static float dir = 1.f;
+
+		if (light->rotation.x >= (M_PI * 0.8f) || light->rotation.x <= (-M_PI * 0.28f))
+			dir *= -1.f;
+
+		light->rotation.x += dir * dt * M_PI * 0.25f;
+	}
+
+	// 1 frame lag here. The light rotation doesn't get updated right away, it gets updated before the render
+	// add a Commit() function for those kind of changes ?
+
+	if (autoUpdate) {
+		sh1.SetGGXExponent(GGXexponent);
+		sh1.UseSHNormalization(shNormalization);
+		sh1.SetIntegrationMethod(AreaLightIntegrationMethod(method));
+		sh1.SetBRDF(AreaLightBRDF(brdfMethod));
+		sh1.SetSampleCount(numSamples);
+		sh1.Recompute();
+	}
+}
+
+void Update(Scene *scene, float dt) {
+	const Device &device = GetDevice();
+	vec2i mouseCoords = vec2i(device.GetMouseX(), device.GetMouseY());
+	vec2i ws = device.windowSize;
+
+	static f32 t = 0;
+	
+	UpdateUI(dt);
 	
 	if (device.IsMouseDown(MouseButton::MB_Left) && !ImGui::GetIO().WantCaptureMouse) {
 		vec4f pos = Render::FBO::ReadGBuffer(Render::FBO::GBufferAttachment::WORLDPOS, mouseCoords.x, mouseCoords.y);
@@ -302,44 +334,7 @@ void updateFunc(Scene *scene, float dt) {
 		sh1.Recompute();
 	}
 
-	if (aiUpdate > 0.01f) {
-		sh1.SetGGXExponent(GGXexponent);
-		sh1.UseSHNormalization(shNormalization);
-		sh1.SetIntegrationMethod(AreaLightIntegrationMethod(method));
-		sh1.SetBRDF(AreaLightBRDF(brdfMethod));
-		sh1.SetSampleCount(numSamples);
-		sh1.Recompute();
-
-		aiUpdate = 0.f;
-	}
-
-	AreaLight::Desc *light = scene->GetLight(alh);
-	if(light) {
-		static float dir = 1.f;
-
-		if (light->rotation.x >= (M_PI * 0.8f) || light->rotation.x <= (-M_PI * 0.28f))
-			dir *= -1.f;
-
-		light->rotation.x += dir * dt * M_PI * 0.25f;
-		// light->rotation.y += dt * M_PI * 0.5f;
-	}
-	AreaLight::Desc *light2 = scene->GetLight(alh2);
-	if(light2) {
-		// light2->position.y = alPos.y + 2 * sinf(1.5*t);
-		// light2->rotation.z += dt * M_PI * 0.5f;
-	}
-	AreaLight::Desc *light3 = scene->GetLight(alh3);
-	if(light3) {
-		// light3->position.x = alPos2.x + 10 * sinf(1*t);
-	}
-
-	if (oneSec > 1.f) {
-		oneSec = 0.f;
-	}
-
 	t += dt;
-	oneSec += dt;
-	aiUpdate += dt;
 }
 
 void renderFunc(Scene *scene) {
@@ -350,12 +345,15 @@ int main() {
 	Log::Init();
 
 	Device &device = GetDevice();
-	if (!device.Init(initFunc, updateFunc, renderFunc)) {
+	if (!device.Init(Init)) {
 		printf("Error initializing Device. Aborting.\n");
 		device.Destroy();
 		system("PAUSE");
 		return 1;
 	}
+
+	device.SetUpdateFunc(Update);
+	device.SetFixedUpdateFunc(FixedUpdate);
 
 	device.Run();
 

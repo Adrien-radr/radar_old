@@ -33,7 +33,7 @@ struct Config {
 class Device {
 public:
 	Device() : window(nullptr) {}
-	bool Init(SceneInitFunc sceneInitFunc = nullptr, SceneUpdateFunc sceneUpdateFunc = nullptr, SceneRenderFunc sceneRenderFunc = nullptr);
+	bool Init(SceneInitFunc initFunc);
 	void Destroy();
 
 	void Run();
@@ -71,6 +71,10 @@ public:
 	const mat4f &Get2DProjectionMatrix() const { return projection_matrix_2d; }
 
 	const Config &GetConfig() const { return config; }
+
+	void SetUpdateFunc(SceneUpdateFunc func) { scene.SetUpdateFunc(func); }
+	void SetFixedUpdateFunc(SceneUpdateFunc func) { scene.SetFixedUpdateFunc(func); }
+	void SetRenderFunc(SceneRenderFunc func) { scene.SetRenderFunc(func); }
 
 private:
 	bool ImGui_Init();

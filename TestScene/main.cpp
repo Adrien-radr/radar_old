@@ -377,12 +377,12 @@ int main() {
 	Log::Init();
 
 	Device &device = GetDevice();
-	if (!device.Init(initFunc, updateFunc, renderFunc)) {
+	if (!device.Init(initFunc)) {
 		printf("Error initializing Device. Aborting.\n");
 		device.Destroy();
 		return 1;
 	}
-
+	device.SetUpdateFunc(updateFunc);
 	device.Run();
 
 	device.Destroy();

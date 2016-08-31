@@ -5,124 +5,6 @@
 #pragma optimize("",off)
 static const float g_SubdivThreshold = 0.866f; // subdivide triangles having edges larger than 60 degrees
 
-/////////////////////////////////////////////////////////////////////////////////////////////////
-vec3f fresnelSchlick(vec3f f0, float f90, float u) {
-	return f0 + (vec3f(f90) - f0) * std::pow(1.f - u, 5.f);
-}
-
-vec3f GGX(float NdotL, float NdotV, float NdotH, float LdotH, float roughness, vec3f F0) {
-	float alpha2 = roughness * roughness;
-
-	// F 
-	vec3f F = fresnelSchlick(F0, 1.f, LdotH);
-
-	// D (Trowbridge-Reitz). Divide by PI at the end
-	float denom = NdotH * NdotH * (alpha2 - 1.f) + 1.f;
-	float D = alpha2 / (M_PI * denom * denom);
-
-	// G (Smith GGX - Height-correlated)
-	float lambda_GGXV = NdotL * std::sqrtf((-NdotV * alpha2 + NdotV) * NdotV + alpha2);
-	float lambda_GGXL = NdotV * std::sqrtf((-NdotL * alpha2 + NdotL) * NdotL + alpha2);
-	// float G = G_schlick_GGX(k, NdotL) * G_schlick_GGX(k, NdotV);
-
-	// optimized G(NdotL) * G(NdotV) / (4 NdotV NdotL)
-	// float G = 1.0 / (4.0 * (NdotL * (1 - k) + k) * (NdotV * (1 - k) + k));
-	float G = 0.5f / (lambda_GGXL + lambda_GGXV);
-
-	return F * G * D;
-}
-
-// LTC STUFF
-vec2f LTCCoords(float NdotV, float roughness) {
-	float theta = acos(NdotV);
-	vec2f coords = vec2f(roughness, theta / (0.5f*M_PI));
-
-	// corrected lookup (x - 1 + 0.5)
-	const float LUT_SIZE = 32.f;
-	coords = coords * (LUT_SIZE - 1.f) / LUT_SIZE + 0.5f / LUT_SIZE;
-
-	return coords;
-}
-
-mat3f LTCMatrix(f32 *ltcMatrix, vec2f coord) {
-	// bilinear interpolation of the ltcmatrix 
-
-	//tmp : nearest
-	const vec2i coordI((int)(32.f * coord.x), (int)(32.f * coord.y));
-	const vec4f *ltcMat4f = (vec4f*)ltcMatrix;
-
-	const u32 index = std::min(32 * 32 - 1, coordI.y * 32 + coordI.x);
-	const vec4f v = ltcMat4f[index];
-	//v = v.rgba;
-	// bgra
-	// rgba
-
-	// inverse of 
-	// a 0 b
-	// 0 c 0
-	// d 0 1
-	const mat3f Minv = mat3f(
-		vec3f(1,     0, v.y),       // 1st column
-		vec3f(0,   v.z,   0),
-		vec3f(v.w,   0, v.x)
-	);
-
-	return Minv;
-}
-
-f32 IntegrateEdge(const vec3f &P1, const vec3f &P2) {
-	f32 cosTheta = P1.Dot(P2);
-	cosTheta = std::max(-0.9999f, std::min(0.9999f, cosTheta));
-
-	f32 theta = std::acosf(cosTheta);
-	f32 r = (P1.Cross(P2)).z * theta / std::sinf(theta);
-	return r;
-}
-
-f32 LTCEvaluate(const vec3f &N, const vec3f &V, const vec3f &P, const mat3f &Minv, const vec3f points[4], bool twoSided) {
-	// N orthonormal frame
-	vec3f T, B;
-	T = V - N * V.Dot(N);
-	T.Normalize();
-	B = N.Cross(T);
-
-	mat3f LMinv = Minv * mat3f(T, B, N).Transpose();
-
-	// polygon in TBN frame 
-	vec3f L[5];
-	L[0] = LMinv * (points[0] - P);
-	L[1] = LMinv * (points[1] - P);
-	L[2] = LMinv * (points[2] - P);
-	L[3] = LMinv * (points[3] - P);
-	L[4] = L[3];
-
-	//int n;
-	//ClipQuadToHorizon(L, n);
-
-	//if (n == 0)
-		//return vec3(0, 0, 0);
-
-	// polygon projected onto sphere
-	L[0].Normalize();
-	L[1].Normalize();
-	L[2].Normalize();
-	L[3].Normalize();
-	L[4].Normalize();
-
-	// integration
-	float sum = 0.0;
-
-	sum += IntegrateEdge(L[0], L[1]);
-	sum += IntegrateEdge(L[1], L[2]);
-	sum += IntegrateEdge(L[2], L[3]);
-	sum += IntegrateEdge(L[3], L[0]);
-
-	sum = twoSided ? std::abs(sum) : std::max(0.f, -sum);
-
-	return sum;
-}
-/////////////////////////////////////////////////////////////////////////////////////////////////
-
 bool SHInt::Init(Scene *scene, u32 band) {
 	nBand = band;
 	nCoeff = band * band;
@@ -310,14 +192,12 @@ f32 SHInt::IntegrateTrisLTC(const AreaLight::UniformBufferData &al, std::vector<
 	vec3f points[4];
 	AreaLight::GetVertices(al, points);
 
-
-
 	// Integrate the polygon for diffuse & ggx brdf
 	f32 contrib = 0.f;
 
 	if (usedBRDF & (AreaLightBRDF::BRDF_Diffuse | AreaLightBRDF::BRDF_Both)) {
 		mat3f MinvDiff; // identity for diffuse
-		contrib += LTCEvaluate(integrationNrm, integrationView, integrationPos, MinvDiff, points, false);
+		contrib += Render::BRDF::LTC_Evaluate(integrationNrm, integrationView, integrationPos, MinvDiff, points, false);
 	}
 	if (usedBRDF & (AreaLightBRDF::BRDF_GGX | AreaLightBRDF::BRDF_Both)) {
 		// indexing variables
@@ -325,18 +205,11 @@ f32 SHInt::IntegrateTrisLTC(const AreaLight::UniformBufferData &al, std::vector<
 		const f32 roughness = std::max(1e-3f, 1.f - GGXexponent);
 		const f32 Ks = 1.f;
 
-		const vec2f ltcCoords = LTCCoords(NdotV, roughness);
-		const vec2i coordI((int)(32.f * ltcCoords.x), (int)(32.f * ltcCoords.y));
+		const vec2f ltcCoords = Render::BRDF::LTC_Coords(NdotV, roughness, 32);
+		const mat3f MinvSpec = Render::BRDF::LTC_Matrix(ltcMat, ltcCoords, 32);
+		const vec2f schlick = BilinearLookup<vec2f>(ltcAmp, ltcCoords, vec2i(32, 32));
 
-		// nearest ltcMat
-		const mat3f MinvSpec = LTCMatrix(ltcMat, ltcCoords);
-
-		// nearest ltcAmp
-		const vec2f *ltcAmp2f = (vec2f*)ltcAmp;
-		const u32 index = std::min(32 * 32 - 1, coordI.y * 32 + coordI.x);
-		const vec2f schlick = ltcAmp[index];
-
-		f32 spec = LTCEvaluate(integrationNrm, integrationView, integrationPos, MinvSpec, points, false);
+		f32 spec = Render::BRDF::LTC_Evaluate(integrationNrm, integrationView, integrationPos, MinvSpec, points, false);
 		spec *= Ks * schlick.x + (1.f - Ks) * schlick.y;
 
 		contrib += spec;
@@ -359,7 +232,7 @@ f32 SHInt::IntegrateTrisLTC(const AreaLight::UniformBufferData &al, std::vector<
 	}
 	//}
 
-	return 1.f / (2.f * M_PI);
+	return 1.f;// / (2.f * M_PI);
 }
 
 f32 SHInt::IntegrateTrisSampling(const AreaLight::UniformBufferData &al, std::vector<f32> &shvals, bool wsSampling) {
@@ -426,7 +299,7 @@ f32 SHInt::IntegrateTrisSampling(const AreaLight::UniformBufferData &al, std::ve
 						f32 contrib = 0.f;
 
 						if (usedBRDF & (AreaLightBRDF::BRDF_Diffuse | AreaLightBRDF::BRDF_Both)) {
-							contrib += 1.f / M_PI;
+							contrib += Render::BRDF::Diffuse();
 						}
 						if (usedBRDF & (AreaLightBRDF::BRDF_GGX | AreaLightBRDF::BRDF_Both)) {
 							vec3f H = integrationView + rayDir;
@@ -434,7 +307,7 @@ f32 SHInt::IntegrateTrisSampling(const AreaLight::UniformBufferData &al, std::ve
 
 							const f32 NdotH = std::max(0.f, integrationNrm.Dot(H));
 							const f32 LdotH = std::max(0.f, rayDir.Dot(H));
-							contrib += GGX(NdotL, NdotV, NdotH, LdotH, roughness, vec3f(1, 1, 1)).x;
+							contrib += Render::BRDF::GGX(NdotL, NdotV, NdotH, LdotH, roughness, vec3f(1, 1, 1)).x;
 						}
 
 						for (u32 j = 0; j < nCoeff; ++j) {

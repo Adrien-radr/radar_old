@@ -330,7 +330,7 @@ Device &GetDevice() {
 	return *gDevice;
 }
 
-bool Device::Init(SceneInitFunc sceneInitFunc, SceneUpdateFunc sceneUpdateFunc, SceneRenderFunc sceneRenderFunc) {
+bool Device::Init(SceneInitFunc initFunc) {
     int v;
 
     // Open and parse config file
@@ -472,7 +472,7 @@ bool Device::Init(SceneInitFunc sceneInitFunc, SceneUpdateFunc sceneUpdateFunc, 
     engineTime = 0.0;
 
     // Initialize Game Scene
-	if (!scene.Init(sceneInitFunc, sceneUpdateFunc, sceneRenderFunc)) {
+	if (!scene.Init(initFunc)) {
 		LogErr("Error initializing Device's Scene.");
 		goto err;
 	}

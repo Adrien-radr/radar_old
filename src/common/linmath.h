@@ -435,6 +435,30 @@ public:
 typedef vec4<f32> vec4f;
 typedef vec4<int> vec4i;
 
+
+template<typename T>
+inline T BilinearLookup(const f32 *f32Texture, const vec2f &coord, const vec2i &texSize) {
+	const vec2i coordI((int)std::floorf(texSize.y * coord.x), (int)std::floorf(texSize.y * coord.y));
+	const vec2f offset(coord.x - coordI.x, coord.y - coordI.y);
+
+	const T *texture = (T*)f32Texture;
+
+	T res = texture[coordI.y * texSize.x + coordI.x];
+	if (coordI.x < (texSize.x - 1) && coordI.y < (texSize.y - 1)) {
+		T res_tr = texture[coordI.y * texSize.x + coordI.x + 1];
+		T res_bl = texture[(coordI.y + 1) * texSize.x + coordI.x];
+		T res_br = texture[(coordI.y + 1) * texSize.x + coordI.x + 1];
+
+		res = res * (1.f - offset.x) + res_tr * offset.x;
+		res_bl = res_bl * (1.f - offset.x) + res_br * offset.x;
+		res = res * (1.f - offset.y) + res_bl * offset.y;
+	}
+	else {
+		LogErr("Out of texture.");
+	}
+	return res;
+}
+
 template<typename T>
 class mat3 {
 public:

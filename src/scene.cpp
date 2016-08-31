@@ -147,18 +147,17 @@ void SceneResizeEventListener(const Event &event, void *data) {
 	// scene->UpdateProjection(event.v);
 }
 
-Scene::Scene() : customInitFunc(nullptr), customUpdateFunc(nullptr), areaLightUBOInitialized(false) {
+Scene::Scene() : customInitFunc(nullptr), customUpdateFunc(nullptr), customFixedUpdateFunc(nullptr),
+	customRenderFunc(nullptr), areaLightUBOInitialized(false) {
 	Clean();
 }
 
-bool Scene::Init(SceneInitFunc initFunc, SceneUpdateFunc updateFunc, SceneRenderFunc renderFunc) {
+bool Scene::Init(SceneInitFunc initFunc) {
 	const Device &device = GetDevice();
 	const Config &config = device.GetConfig();
 
 	customInitFunc = initFunc;
-	customUpdateFunc = updateFunc;
-	customRenderFunc = renderFunc;
-
+	
 	camera.hasMoved = false;
 	camera.speedMode = false;
 	camera.freeflyMode = false;
@@ -361,7 +360,7 @@ void Scene::UpdateGUI() {
 	ImGui::PopStyleColor(2);
 }
 
-void Scene::Update(float dt) {
+void Scene::Update(f32 dt) {
 	Device &device = GetDevice();
 
 
@@ -399,6 +398,9 @@ void Scene::Update(float dt) {
 	// Updates 100 times per second
 	if (ai_timer >= 0.01f) {
 		ai_timer = 0.f;
+
+		if (customFixedUpdateFunc)
+			customFixedUpdateFunc(this, 0.01f);
 
 		// update animation for all objects
 		//for (u32 j = 0; j < objects.size(); ++j) {

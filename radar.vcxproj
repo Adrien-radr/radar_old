@@ -161,6 +161,7 @@
     <ClCompile Include="src\device_imgui.cpp" />
     <ClCompile Include="src\model.cpp" />
     <ClCompile Include="src\render.cpp" />
+    <ClCompile Include="src\render_internal\BRDF.cpp" />
     <ClCompile Include="src\render_internal\font.cpp" />
     <ClCompile Include="src\render_internal\mesh.cpp" />
     <ClCompile Include="src\render_internal\texture.cpp" />
@@ -186,6 +187,7 @@
     <ClInclude Include="src\common\SHEval.h" />
     <ClInclude Include="src\device.h" />
     <ClInclude Include="src\render.h" />
+    <ClInclude Include="src\render_internal\BRDF.h" />
     <ClInclude Include="src\render_internal\font.h" />
     <ClInclude Include="src\render_internal\mesh.h" />
     <ClInclude Include="src\render_internal\texture.h" />

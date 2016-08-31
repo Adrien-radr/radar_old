@@ -278,12 +278,16 @@ class Scene {
 public:
 	Scene();
 
-	bool Init(SceneInitFunc initFunc, SceneUpdateFunc updateFunc, SceneRenderFunc renderFunc);
+	bool Init(SceneInitFunc initFunc);
 	void Clean();
 
 	void Update(f32 dt);
 	void UpdateGUI();
 	void Render();
+
+	void SetUpdateFunc(SceneUpdateFunc func) { customUpdateFunc = func; }
+	void SetFixedUpdateFunc(SceneUpdateFunc func) { customFixedUpdateFunc = func; }
+	void SetRenderFunc(SceneRenderFunc func) { customRenderFunc = func; }
 
 	void UpdateView();
 
@@ -352,6 +356,7 @@ private:
 
 	SceneInitFunc 	customInitFunc;
 	SceneUpdateFunc customUpdateFunc;
+	SceneUpdateFunc customFixedUpdateFunc;
 	SceneRenderFunc customRenderFunc;
 
 	// Mouse Picking (-1 for nothing)

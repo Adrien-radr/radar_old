@@ -125,7 +125,7 @@ float diffuseBurley(float NdotL, float NdotV, float LdotH, float roughness) {
 }
 
 float diffuseLambert(float NdotL) {
-    return NdotL * M_INV_PI;
+    return M_INV_PI;
 }
 
 float smoothDistanceAttenuation(float sqrDist, float invSqrAttRadius) {

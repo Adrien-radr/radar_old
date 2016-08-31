@@ -1,6 +1,7 @@
 #pragma once
 
 #include "common/common.h"
+#include "render_internal\BRDF.h"
 
 // Renderer constants
 #define SHADER_MAX_UNIFORMS 64
