@@ -191,6 +191,7 @@
     <ClInclude Include="src\render_internal\font.h" />
     <ClInclude Include="src\render_internal\mesh.h" />
     <ClInclude Include="src\render_internal\texture.h" />
+    <ClInclude Include="src\render_internal\triangle.h" />
     <ClInclude Include="src\scene.h" />
   </ItemGroup>
   <ItemGroup>

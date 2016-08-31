@@ -3,6 +3,8 @@
 #include "render.h"
 #include "common/event.h"
 
+#include "render_internal/triangle.h"
+
 #define SCENE_MAX_ACTIVE_LIGHTS 8
 
 class Scene;
