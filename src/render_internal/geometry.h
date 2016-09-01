@@ -1,12 +1,15 @@
 #pragma once
 #include "common/common.h"
 
+/// Represents a spherical or WS triangle of three coordinates q0, q1, q2.
+/// depending on the Init function used
 struct Triangle {
 	vec3f q0, q1, q2;
 	vec3f unitNormal;
 	f32 area;
 	f32 solidAngle;
 
+	/// intPos is the world space origin of the spherical projection of world space coordinate vertices p0, p1, p2
 	void InitUnit(const vec3f &p0, const vec3f &p1, const vec3f &p2, const vec3f &intPos) {
 		q0 = p0 - intPos;
 		q1 = p1 - intPos;
@@ -35,6 +38,8 @@ struct Triangle {
 		}
 	}
 
+	/// Same as InitUnit, except the resulting triangle is kept in world space. 
+	/// triNormal is the normal of the plane collinear with the triangle
 	void InitWS(const vec3f &triNormal, const vec3f &p0, const vec3f &p1, const vec3f &p2, const vec3f &intPos) {
 		unitNormal = triNormal;
 
@@ -60,12 +65,14 @@ struct Triangle {
 		return -rayDir.Dot(unitNormal) / (rayLenSqr * rayLen);
 	}
 
+	/// Returns the distance of the triangle to the integration Point. Only works robustly for Unit triangles
 	f32 distToOrigin() const {
 		return -1.0f * unitNormal.Dot(q0);
 	}
 
+	/// Subdivide the triangle into 4 sub triangles (stored in the given vector.
 	// subdivided is always 4-length
-	u32 Subdivide(Triangle *subdivided) const {
+	u32 Subdivide4(Triangle subdivided[4]) const {
 		vec3f q01 = (q0 + q1);
 		vec3f q02 = (q0 + q2);
 		vec3f q12 = (q1 + q2);

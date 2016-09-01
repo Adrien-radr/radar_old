@@ -3,7 +3,7 @@
 #include "render.h"
 #include "common/event.h"
 
-#include "render_internal/triangle.h"
+#include "render_internal/geometry.h"
 
 #define SCENE_MAX_ACTIVE_LIGHTS 8
 

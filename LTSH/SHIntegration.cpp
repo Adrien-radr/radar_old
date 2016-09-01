@@ -178,7 +178,7 @@ f32 SHInt::IntegrateTrisSampling(const AreaLight::UniformBufferData &al, std::ve
 
 			// Subdivide projected triangle if too large for robust integration
 			if (triangle.distToOrigin() > 1e-5f/* g_SubdivThreshold*/) {
-				numSubdiv = triangle.Subdivide(subdivided);
+				numSubdiv = triangle.Subdivide4(subdivided);
 			}
 			else {
 				subdivided[0] = triangle;
