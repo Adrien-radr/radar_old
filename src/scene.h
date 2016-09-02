@@ -248,6 +248,9 @@ namespace AreaLight {
 		Object::Handle fixture;	// link to the light fixture mesh
 	};
 
+	/// Returns the Area Light as a Rectangle structure
+	Rectangle GetRectangle(const UniformBufferData &al);
+
 	/// Returns the 4 vertices composing the AreaLight
 	void GetVertices(const UniformBufferData &al, vec3f points[4]);
 

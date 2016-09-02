@@ -156,6 +156,7 @@
     <ClCompile Include="src\common\debug.cpp" />
     <ClCompile Include="src\common\random.cpp" />
     <ClCompile Include="src\common\resource.cpp" />
+    <ClCompile Include="src\common\sampling.cpp" />
     <ClCompile Include="src\common\SHEval.cpp" />
     <ClCompile Include="src\device.cpp" />
     <ClCompile Include="src\device_imgui.cpp" />
@@ -163,6 +164,7 @@
     <ClCompile Include="src\render.cpp" />
     <ClCompile Include="src\render_internal\BRDF.cpp" />
     <ClCompile Include="src\render_internal\font.cpp" />
+    <ClCompile Include="src\render_internal\geometry.cpp" />
     <ClCompile Include="src\render_internal\mesh.cpp" />
     <ClCompile Include="src\render_internal\texture.cpp" />
     <ClCompile Include="src\scene.cpp" />
@@ -184,14 +186,15 @@
     <ClInclude Include="src\common\linmath.h" />
     <ClInclude Include="src\common\random.h" />
     <ClInclude Include="src\common\resource.h" />
+    <ClInclude Include="src\common\sampling.h" />
     <ClInclude Include="src\common\SHEval.h" />
     <ClInclude Include="src\device.h" />
     <ClInclude Include="src\render.h" />
     <ClInclude Include="src\render_internal\BRDF.h" />
     <ClInclude Include="src\render_internal\font.h" />
+    <ClInclude Include="src\render_internal\geometry.h" />
     <ClInclude Include="src\render_internal\mesh.h" />
     <ClInclude Include="src\render_internal\texture.h" />
-    <ClInclude Include="src\render_internal\triangle.h" />
     <ClInclude Include="src\scene.h" />
   </ItemGroup>
   <ItemGroup>

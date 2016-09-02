@@ -453,6 +453,20 @@ void InitRectPoints(AreaLight::UniformBufferData &rect, vec3f points[4]) {
     points[3] = rect.position - ex + ey;
 }
 
+Rectangle AreaLight::GetRectangle(const UniformBufferData & al) {
+	Rectangle r;
+	r.position = al.position;
+	r.ex = al.dirx;
+	r.ey = al.diry;
+	r.hx = al.hwidthx;
+	r.hy = al.hwidthy;
+	
+	// store the rectangle's vertices in p0, p1, p2, p3
+	GetVertices(al, &r.p0);
+
+	return r;
+}
+
 void AreaLight::GetVertices(const AreaLight::UniformBufferData &rect, vec3f points[4]) {
 	vec3f ex = rect.dirx * rect.hwidthx;
 	vec3f ey = rect.diry * rect.hwidthy;

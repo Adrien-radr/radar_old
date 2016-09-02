@@ -7,6 +7,8 @@ AreaLight::Handle alh3;
 vec3f alPos(40., 3, -20);
 vec3f alPos2(20., 7.5, 20);
 
+u32 nBand = 6;
+
 // UI
 static bool shNormalization = false;
 static f32 GGXexponent = 0.5f;
@@ -14,6 +16,7 @@ static int method = 0;
 static int brdfMethod = 1;
 static int numSamples = 1024;
 static bool autoUpdate = true;
+static bool movement = true;
 
 SHInt sh1;
 
@@ -171,9 +174,7 @@ bool Init(Scene *scene) {
 		return false;
 	}
 
-
-	u32 nband = 11;
-	sh1.Init(scene, nband);
+	sh1.Init(scene, nBand);
 	sh1.AddAreaLight(alh);
 	//sh1.AddAreaLight(alh2);
 	//sh1.AddAreaLight(alh3);
@@ -260,6 +261,7 @@ void UpdateUI(float dt) {
 
 	ImGui::Checkbox("Auto Update", &autoUpdate);
 	ImGui::Checkbox("SH Vis Normalization", &shNormalization);
+	ImGui::Checkbox("Light Rotation", &movement);
 
 	ImGui::Text("GGX Exponent :");
 	ImGui::SliderFloat("shininess", &GGXexponent, 0.f, 0.9f);
@@ -268,9 +270,11 @@ void UpdateUI(float dt) {
 	ImGui::SliderInt("samples", &numSamples, 1, 100000);
 
 	ImGui::Text("Integration Method :");
-	ImGui::RadioButton("Tri Sampling Unit", &method, 0);
-	ImGui::RadioButton("Tri Sampling WS", &method, 1);
-	ImGui::RadioButton("LTC Analytic", &method, 2);
+	ImGui::RadioButton("Uniform Random", &method, 0);
+	ImGui::RadioButton("Angular Stratification", &method, 1);
+	ImGui::RadioButton("Tri Sampling Unit", &method, 2);
+	ImGui::RadioButton("Tri Sampling WS", &method, 3);
+	ImGui::RadioButton("LTC Analytic", &method, 4);
 
 	ImGui::Text("BRDF :");
 	ImGui::RadioButton("Diffuse", &brdfMethod, (int)BRDF_Diffuse);
@@ -285,10 +289,12 @@ void FixedUpdate(Scene *scene, float dt) {
 	if (light) {
 		static float dir = 1.f;
 
-		if (light->rotation.x >= (M_PI * 0.8f) || light->rotation.x <= (-M_PI * 0.28f))
-			dir *= -1.f;
+		if (movement) {
+			if (light->rotation.x >= (M_PI * 0.8f) || light->rotation.x <= (-M_PI * 0.28f))
+				dir *= -1.f;
 
-		light->rotation.x += dir * dt * M_PI * 0.25f;
+			light->rotation.x += dir * dt * M_PI * 0.25f;
+		}
 	}
 
 	// 1 frame lag here. The light rotation doesn't get updated right away, it gets updated before the render

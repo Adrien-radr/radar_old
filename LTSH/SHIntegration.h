@@ -4,6 +4,8 @@
 #include "src/scene.h"
 
 enum AreaLightIntegrationMethod {
+	UniformRandom,
+	AngularStratification,
 	TriSamplingUnit,
 	TriSamplingWS,
 	LTCAnalytic
