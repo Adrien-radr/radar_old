@@ -13,6 +13,17 @@ static int sign(f32 b) {
 	return (b >= 0) - (b < 0);
 }
 
+//////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////
+
+vec3f Plane::RayIntersection(const vec3f &rayOrg, const vec3f &rayDir) {
+	const f32 distance = N.Dot(P - rayOrg) / N.Dot(rayDir);
+	return rayOrg + rayDir * distance;
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////
+
 f32 Polygon::SolidAngle(const vec3f &A, const vec3f &B, const vec3f &C) {
 	// Arvo solid angle : alpha + beta + gamma - pi
 	// Oosterom & Strackee 83 method
@@ -274,6 +285,32 @@ f32 Rectangle::IntegrateStructuredSampling(const vec3f & integrationPos, const v
 		std::max(0.f, q3.Dot(integrationNrm)) +
 		std::max(0.f, q4.Dot(integrationNrm))
 		);
+}
+
+f32 Rectangle::IntegrateMRP(const vec3f & integrationPos, const vec3f & integrationNrm) const {
+	const vec3f d0p = -ez;
+	const vec3f d1p = integrationNrm;
+
+	const f32 nDotpN = std::max(0.f, integrationNrm.Dot(ez));
+
+	vec3f d0 = d0p + integrationNrm * nDotpN;
+	vec3f d1 = d1p - ez * nDotpN;
+	d0.Normalize();
+	d1.Normalize();
+
+	vec3f dh = d0 + d1;
+	dh.Normalize();
+
+	Plane rectPlane = { position, ez };
+	const vec3f pH = rectPlane.RayIntersection(integrationPos, dh);
+	// todo : clamp pH in the rectangle defined by the light
+
+	const f32 solidAngle = SolidAngle(integrationPos);
+
+	vec3f rayDir = pH - integrationPos;
+	rayDir.Normalize();
+
+	return solidAngle * std::max(0.f, integrationNrm.Dot(rayDir));
 }
 
 f32 Rectangle::IntegrateAngularStratification(const vec3f & integrationPos, const vec3f & integrationNrm, u32 sampleCount, std::vector<f32> &shvals, int nBand) const {

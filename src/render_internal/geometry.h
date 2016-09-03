@@ -1,6 +1,13 @@
 #pragma once
 #include "common/common.h"
 
+struct Plane {
+	vec3f P;
+	vec3f N;
+
+	vec3f RayIntersection(const vec3f &rayOrg, const vec3f &rayDir);
+};
+
 struct Edge {
 	vec3f A, B;
 };
@@ -88,6 +95,10 @@ struct Rectangle {
 	/// from Frostbite
 	/// This auto performs horizon-cliping
 	f32 IntegrateStructuredSampling(const vec3f &integrationPos, const vec3f &integrationNrm) const;
+
+	/// Analytic Approximation to the Rect integral,
+	/// from Drobot's Most Representative Point
+	f32 IntegrateMRP(const vec3f &integrationPos, const vec3f &integrationNrm) const;
 
 	/// Numerical Integration with the technique from Pixar [Pekelis & Hery 2014]
 	f32 IntegrateAngularStratification(const vec3f &integrationPos, const vec3f &integrationNrm, u32 sampleCount, std::vector<f32> &shvals, int nBand) const;
