@@ -1,5 +1,7 @@
 #include "SHIntegration.h"
 #include "src/common/SHEval.h"
+#include "src/common/sampling.h"
+
 #include <algorithm>
 
 #pragma optimize("",off)
@@ -129,7 +131,6 @@ f32 SHInt::IntegrateTrisLTC(const AreaLight::UniformBufferData &al, std::vector<
 	// project AL's center with integration weight onto SH
 	vec3f alBary = al.position - integrationPos;
 	alBary.Normalize();
-	std::fill_n(shtmp.begin(), nCoeff, 0.f);
 
 	//for (u32 i = 0; i < 4; ++i) {
 		//vec3f rayDir = points[i] - integrationPos;
@@ -143,7 +144,7 @@ f32 SHInt::IntegrateTrisLTC(const AreaLight::UniformBufferData &al, std::vector<
 	}
 	//}
 
-	return 1.f;// / (2.f * M_PI);
+	return 1.f / (2.f * M_PI);
 }
 
 f32 SHInt::IntegrateTrisSampling(const AreaLight::UniformBufferData &al, std::vector<f32> &shvals, bool wsSampling) {
@@ -156,6 +157,7 @@ f32 SHInt::IntegrateTrisSampling(const AreaLight::UniformBufferData &al, std::ve
 
 	vec3f points[4];
 	AreaLight::GetVertices(al, points);
+	const vec3f pN(al.plane.x, al.plane.y, al.plane.z);
 
 	const f32 NdotV = std::max(0.f, integrationNrm.Dot(integrationView));
 	const f32 roughness = std::max(1e-3f, 1.f - GGXexponent);
@@ -165,79 +167,81 @@ f32 SHInt::IntegrateTrisSampling(const AreaLight::UniformBufferData &al, std::ve
 
 	// Accum
 	for (u32 tri = 0; tri < numTri; ++tri) {
-		Triangle triangle;
-
 		if (wsSampling) {
-			const vec3f pN(al.plane.x, al.plane.y, al.plane.z);
-			triangle.InitWS(pN, points[triIdx[tri][0]], points[triIdx[tri][1]], points[triIdx[tri][2]], integrationPos);
-			subdivided[0] = triangle;
+			subdivided[0].InitWS(pN, points[triIdx[tri][0]], points[triIdx[tri][1]], points[triIdx[tri][2]], integrationPos);
+
 			numSubdiv = 1;
 		} 
 		else {
+			Triangle triangle;
 			triangle.InitUnit(points[triIdx[tri][0]], points[triIdx[tri][1]], points[triIdx[tri][2]], integrationPos);
 
 			// Subdivide projected triangle if too large for robust integration
-			if (triangle.distToOrigin() > 1e-5f/* g_SubdivThreshold*/) {
-				numSubdiv = triangle.Subdivide4(subdivided);
-			}
-			else {
+			if (triangle.distToOrigin() > g_SubdivThreshold) {
 				subdivided[0] = triangle;
 				numSubdiv = 1;
+			}
+			else {
+				numSubdiv = triangle.Subdivide4(subdivided);
 			}
 		}
 
 		// Loop over the subdivided triangles (or the single unsubdivided triangle)
 		for (u32 subtri = 0; subtri < numSubdiv; ++subtri) {
-			Triangle &sub = subdivided[subtri];
-			const f32 triWeight = sub.area * Luminance(al.Ld);
+			const Triangle &sub = subdivided[subtri];
+			const u32 sc = sampleCount / numSubdiv;
 
+			// Sample triangle
+			for (u32 i = 0; i < sc; ++i) {
+				vec2f randVec = Random::Vec2f();
 
-			if (triWeight > 0.0f) {
-				const u32 sc = sampleCount / numSubdiv;
+				vec3f rayDir;
+				f32 invPdf = sub.SampleDir(rayDir, randVec.x, randVec.y) * sub.area / sc;
+				//f32 NdotL = rayDir.Dot(integrationNrm);
 
-				// Sample triangle
-				for (u32 i = 0; i < sc; ++i) {
-					vec3f rayDir;
-					vec2f randVec = Random::Vec2f();
+				// Fill SH with impulse from that direction
+				if (invPdf > 0.f) {// && NdotL > 0.f) {
+					SHEval(nBand, rayDir.x, rayDir.z, rayDir.y, &shtmp[0]);
 
-					f32 weight = sub.GetSample(rayDir, randVec.x, randVec.y) * triWeight;
-					f32 NdotL = rayDir.Dot(integrationNrm);
+					/*
+					f32 contrib = 0.f;
 
-					// Fill SH with impulse from that direction
-					if (weight > 0.f && NdotL > 0.f) {
-						std::fill_n(shtmp.begin(), nCoeff, 0.f);
-						SHEval(nBand, rayDir.x, rayDir.z, rayDir.y, &shtmp[0]);
+					if (usedBRDF & (AreaLightBRDF::BRDF_Diffuse | AreaLightBRDF::BRDF_Both)) {
+						contrib += Render::BRDF::Diffuse();
+					}
+					if (usedBRDF & (AreaLightBRDF::BRDF_GGX | AreaLightBRDF::BRDF_Both)) {
+						vec3f H = integrationView + rayDir;
+						H.Normalize();
 
-						f32 contrib = 0.f;
+						const f32 NdotH = std::max(0.f, integrationNrm.Dot(H));
+						const f32 LdotH = std::max(0.f, rayDir.Dot(H));
+						contrib += Render::BRDF::GGX(NdotL, NdotV, NdotH, LdotH, roughness, vec3f(1, 1, 1)).x;
+					}
+					*/
 
-						if (usedBRDF & (AreaLightBRDF::BRDF_Diffuse | AreaLightBRDF::BRDF_Both)) {
-							contrib += Render::BRDF::Diffuse();
-						}
-						if (usedBRDF & (AreaLightBRDF::BRDF_GGX | AreaLightBRDF::BRDF_Both)) {
-							vec3f H = integrationView + rayDir;
-							H.Normalize();
-
-							const f32 NdotH = std::max(0.f, integrationNrm.Dot(H));
-							const f32 LdotH = std::max(0.f, rayDir.Dot(H));
-							contrib += Render::BRDF::GGX(NdotL, NdotV, NdotH, LdotH, roughness, vec3f(1, 1, 1)).x;
-						}
-
-						for (u32 j = 0; j < nCoeff; ++j) {
-							shvals[j] += shtmp[j] * weight * NdotL * contrib;
-						}
+					for (u32 j = 0; j < nCoeff; ++j) {
+						shvals[j] += shtmp[j] * invPdf;// *NdotL * contrib;
 					}
 				}
 			}
 		}
 	}
 	
-	return 1.f / (float)(numTri * sampleCount);
+	return 1.f;
 }
 
-f32 SHInt::IntegrateTris(const AreaLight::UniformBufferData &al, std::vector<f32> &shvals) {
+f32 SHInt::IntegrateLight(const AreaLight::UniformBufferData &al, std::vector<f32> &shvals) {
 	f32 ret;
 
+	Rectangle arect = AreaLight::GetRectangle(al);
+
 	switch (integrationMethod) {
+	case UniformRandom:
+		ret = arect.IntegrateRandom(integrationPos, integrationNrm, numSamples, shvals, nBand);
+		break;
+	case AngularStratification:
+		ret = arect.IntegrateAngularStratification(integrationPos, integrationNrm, numSamples, shvals, nBand);
+		break;
 	case TriSamplingUnit:
 		ret = IntegrateTrisSampling(al, shvals, false);
 		break;
@@ -263,27 +267,87 @@ void SHInt::IntegrateAreaLights() {
 
 	f32 wtSum = 0.f;
 
-	for (u32 i = 0; i < areaLights.size(); ++i) {
-		const AreaLight::UniformBufferData *al = gameScene->GetAreaLightUBO(areaLights[i]);
+	const AreaLight::UniformBufferData *al = gameScene->GetAreaLightUBO(areaLights[0]);
 
-		if (al && !AreaLight::Cull(*al, integrationPos, integrationNrm)) {
-			std::fill_n(shtmp.begin(), nCoeff, 0.f);
+	if (al && !AreaLight::Cull(*al, integrationPos, integrationNrm)) {
+		vec3f points[4];
+		AreaLight::GetVertices(*al, points);
 
-			f32 wt = IntegrateTris(*al, shtmp);
-			wtSum += wt;
+		// Transform as spherical polygon
+		for (u32 i = 0; i < 4; ++i) {
+			points[i] -= integrationPos;
+			points[i].Normalize();
+		}
 
-			// update SH
-			for (u32 j = 0; j < nCoeff; ++j) {
-				shvals[j] += shtmp[j];
+		Polygon p1;
+		p1.edges.push_back(Edge{ points[0], points[1] });
+		p1.edges.push_back(Edge{ points[1], points[2] });
+		p1.edges.push_back(Edge{ points[2], points[0] });
+		Polygon p2;
+		p2.edges.push_back(Edge{ points[0], points[2] });
+		p2.edges.push_back(Edge{ points[2], points[3] });
+		p2.edges.push_back(Edge{ points[3], points[0] });
+
+		const u32 dirCount = 2 * nBand + 1;
+		const f32 norm = 1.f / (f32) dirCount;
+		const u32 order = 2 * nBand + 1;
+
+#if 1
+		for (u32 i = 0; i < areaLights.size(); ++i) {
+			const AreaLight::UniformBufferData *al = gameScene->GetAreaLightUBO(areaLights[i]);
+
+			if (al && !AreaLight::Cull(*al, integrationPos, integrationNrm)) {
+				std::fill_n(shtmp.begin(), nCoeff, 0.f);
+
+				f32 wt = IntegrateLight(*al, shtmp);
+				wtSum += wt;
+
+				// update SH
+				for (u32 j = 0; j < nCoeff; ++j) {
+					shvals[j] += shtmp[j];
+				}
 			}
 		}
+
+		// Reduce
+		for (u32 j = 0; j < nCoeff; ++j) {
+			shvals[j] *= wtSum / (f32) areaLights.size();
 	}
 
-	// Reduce
-	for (u32 j = 0; j < nCoeff; ++j) {
-		shvals[j] *= wtSum / (f32) areaLights.size();
-	}
+#elif
+		std::vector<vec3f> dirs;
+		Sampling::SampleSphereRandom(dirs, dirCount);
 
+		for (u32 i = 0; i < dirCount; ++i) {
+			std::fill_n(shtmp.begin(), nCoeff, 0.f);
+			SHEval(nBand, dirs[i].x, dirs[i].z, dirs[i].y, &shtmp[0]);
+
+			f32 wt = 0.f;
+			wt += p1.AxialMoment(dirs[i], order);
+			wt += p2.AxialMoment(dirs[i], order);
+
+			for (u32 j = 0; j < nCoeff; ++j) {
+				shvals[j] += shtmp[j] * norm * wt;
+			}
+		}
+
+
+#elif // testing random direction
+		std::vector<vec3f> dirs;
+		Sampling::SampleSphereRandom(dirs, dirCount);
+
+		for (u32 i = 0; i < dirCount; ++i) {
+			std::fill_n(shtmp.begin(), nCoeff, 0.f);
+			SHEval(nBand, dirs[i].x, dirs[i].z, dirs[i].y, &shtmp[0]);
+
+			for (u32 j = 0; j < nCoeff; ++j) {
+				shvals[j] += shtmp[j] * norm * Sampling::SampleSphereRandomPDF();
+			}
+		}
+
+#elif
+#endif
+	}
 	// Update SH Coeffs
 	UpdateData(shvals);
 }

@@ -36,7 +36,7 @@ public:
 	void SetBRDF(AreaLightBRDF brdf) { usedBRDF = brdf; }
 
 private:
-	f32 IntegrateTris(const AreaLight::UniformBufferData &al, std::vector<f32> &shvals);
+	f32 IntegrateLight(const AreaLight::UniformBufferData &al, std::vector<f32> &shvals);
 	f32 IntegrateTrisSampling(const AreaLight::UniformBufferData &al, std::vector<f32> &shvals, bool wsSampling);
 	f32 IntegrateTrisLTC(const AreaLight::UniformBufferData &al, std::vector<f32> &shvals);
 	void IntegrateAreaLights();

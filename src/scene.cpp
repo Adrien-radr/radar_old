@@ -458,6 +458,7 @@ Rectangle AreaLight::GetRectangle(const UniformBufferData & al) {
 	r.position = al.position;
 	r.ex = al.dirx;
 	r.ey = al.diry;
+	r.ez = vec3f(al.plane.x, al.plane.y, al.plane.z);
 	r.hx = al.hwidthx;
 	r.hy = al.hwidthy;
 	
