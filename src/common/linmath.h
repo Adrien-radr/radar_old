@@ -71,6 +71,14 @@ public:
 		return *this;
 	}
 
+	vec2<T> operator*(const vec2<T> &v) const {
+		return vec2<T>(x * v.x, y * v.y);
+	}
+
+	vec2<T> operator/(const vec2<T> &v) const {
+		return vec2<T>(x / v.x, y / v.y);
+	}
+
 	vec2<T>& operator*=(T v) {
 		x *= v;
 		y *= v;

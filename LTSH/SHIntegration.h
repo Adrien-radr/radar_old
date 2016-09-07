@@ -6,6 +6,7 @@
 enum AreaLightIntegrationMethod {
 	UniformRandom,
 	AngularStratification,
+	SphericalRectangles,
 	TriSamplingUnit,
 	TriSamplingWS,
 	LTCAnalytic
@@ -28,6 +29,7 @@ public:
 
 	void Recompute();
 	void UpdateCoords(const vec3f &position, const vec3f &normal);
+	void TestConvergence(const std::string &outputFileName, u32 numPasses, u32 numSamplesEqual, f32 numSecondsEqual);
 
 	void SetGGXExponent(f32 exp) { GGXexponent = exp; }
 	void UseSHNormalization(bool b) { shNormalization = b; }
@@ -37,6 +39,7 @@ public:
 
 private:
 	f32 IntegrateLight(const AreaLight::UniformBufferData &al, std::vector<f32> &shvals);
+	f32 IntegrateLightSmart(const AreaLight::UniformBufferData &al, const Rectangle &rect, const SphericalRectangle &sphrect, std::vector<f32> &shvals);
 	f32 IntegrateTrisSampling(const AreaLight::UniformBufferData &al, std::vector<f32> &shvals, bool wsSampling);
 	f32 IntegrateTrisLTC(const AreaLight::UniformBufferData &al, std::vector<f32> &shvals);
 	void IntegrateAreaLights();

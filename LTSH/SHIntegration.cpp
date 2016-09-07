@@ -81,6 +81,193 @@ void SHInt::UpdateCoords(const vec3f &position, const vec3f &normal) {
 	Recompute();
 }
 
+void SHInt::TestConvergence(const std::string & outputFileName, u32 numPasses, u32 numSamplesEqual, f32 numSecondsEqual) {
+	std::vector<float> shvals(nCoeff);
+	std::vector<float> shcmp(nCoeff);
+	std::vector<float> shtmp(nCoeff);
+	std::fill_n(shvals.begin(), nCoeff, 0.f);
+
+	const u32 maximumSamples = 10000;
+	const u32 nMethods = (u32) LTCAnalytic - (u32) UniformRandom;
+
+	const AreaLight::UniformBufferData *al = gameScene->GetAreaLightUBO(areaLights[0]);
+
+	if (al && !AreaLight::Cull(*al, integrationPos, integrationNrm)) {		
+		AreaLightIntegrationMethod prevMethod = integrationMethod;
+		u32 prevSamples = numSamples;
+
+		const Rectangle arect = AreaLight::GetRectangle(*al);
+		SphericalRectangle sphrect;
+		sphrect.Init(arect, integrationPos);
+
+		std::vector<f32> l1[nMethods];
+		std::vector<f32> l2[nMethods];
+
+		static const char* methodNames[LTCAnalytic] = {
+			"Random",
+			"AS",
+			"SR",
+			"TriUnit",
+			"TriWS"
+		};
+
+		auto WriteResult = [&](CSV &csv) {
+			for (u32 j = 0; j < nMethods; ++j) {
+				csv.WriteCell(methodNames[j]);
+				for (u32 i = 0; i < l1[j].size(); ++i) {
+					csv.WriteCell<float>(l1[j][i] / (f32) numPasses);
+				}
+				csv.WriteNewLine();
+			}
+			csv.WriteNewLine();
+			for (u32 j = 0; j < nMethods; ++j) {
+				csv.WriteCell(methodNames[j]);
+				for (u32 i = 0; i < l2[j].size(); ++i) {
+					csv.WriteCell<float>(l2[j][i] / (f32) numPasses);
+				}
+				csv.WriteNewLine();
+			}
+			csv.Close();
+		};
+
+		auto ResetArrays = [&]() {
+			for (u32 m = (u32) UniformRandom; m < nMethods; ++m) {
+				l1[m].clear();
+				l2[m].clear();
+				l1[m].resize(maximumSamples, 0.f);
+				l2[m].resize(maximumSamples, 0.f);
+			}
+		};
+
+		auto TestMethods = [&](const std::vector<f32> &GT, f32 mEpsilon, u32 mSamples, f64 mSeconds) {
+			const f64 maxTime = mSeconds > 0.f ? mSeconds : 60.f; // 60 seconds max by default
+			const u32 maxSamples = mSamples > 0 ? mSamples : maximumSamples; // 100k samples max by default
+			const f32 epsilon = mEpsilon > 0.f ? mEpsilon : 1e-4f; // 1e-4 epsilon by default
+
+			for (u32 j = 0; j < numPasses; ++j) {
+				for (u32 m = (u32) UniformRandom; m < nMethods; ++m) {
+					integrationMethod = (AreaLightIntegrationMethod) m;
+					numSamples = 10; // 10 samples increments
+					std::fill_n(shvals.begin(), nCoeff, 0.f);
+
+					u32 totalSamples = 0;
+					u32 pass = 1;
+					f32 error, error2;
+					f32 wt = 0.f;
+					f64 startTime = glfwGetTime();
+					f64 timeElapsed = 0.0;
+
+					do {
+						std::fill_n(shtmp.begin(), nCoeff, 0.f);
+						f32 subWt = IntegrateLightSmart(*al, arect, sphrect, shtmp);
+						wt += subWt;
+
+						// normalize, accumulate and compare with GT
+						error = 0.f; error2 = 0.f;
+						for (u32 i = 0; i < nCoeff; ++i) {
+							shvals[i] += shtmp[i] * subWt;
+							shcmp[i] = shvals[i] / (f32) pass;
+
+							// L2 norm
+							f32 nrm = GT[i] - shcmp[i];
+							error += nrm;
+							nrm *= nrm;
+							error2 += nrm;
+						}
+						error = std::fabsf(error);
+						error2 = std::sqrtf(error2);
+						l1[m][pass - 1] += error;
+						l2[m][pass - 1] += error2;
+
+						totalSamples += 10;
+						timeElapsed = glfwGetTime() - startTime;
+						++pass;
+
+					} while (error2 > epsilon && totalSamples < maxSamples && timeElapsed < maxTime);
+				}
+			}
+		};
+
+		LogInfo("Tests begin, averaging over ", numPasses, " passes.");
+
+		// Computing Ground Truth
+		std::vector<f32> shGT(nCoeff);
+		{
+			integrationMethod = UniformRandom;
+			numSamples = 1000000;
+
+			f32 wt = IntegrateLight(*al, shGT);
+			for (u32 j = 0; j < nCoeff; ++j) {
+				shGT[j] *= wt;
+			}
+		}
+
+		// Test convergence rate
+		const bool testConvergence = true;
+		if(testConvergence) {
+			CSV csv;
+			std::string convergenceFile = outputFileName + "_convergence.csv";
+			if (!csv.Open(convergenceFile, CSV::OpenWrite)) {
+				return;
+			}
+
+			LogInfo("Epsilon Test (e=", 5e-3f, ")");
+
+			ResetArrays();
+
+			TestMethods(shGT, 5e-3f, 0, 0.0);
+
+			// Write result, normalized across passes
+			WriteResult(csv);
+		}
+
+		// Test Equal-SampleCount
+		const bool testEqualSample = false;
+		if (testEqualSample) {
+			CSV csv;
+			std::string convergenceFile = outputFileName + "_equalSamples.csv";
+			if (!csv.Open(convergenceFile, CSV::OpenWrite)) {
+				return;
+			}
+
+			LogInfo("Equal samples Test (s=", numSamplesEqual, ")");
+
+			ResetArrays();
+
+			TestMethods(shGT, 0.f, numSamplesEqual, 0.0);
+
+			// Write result, normalized across passes
+			WriteResult(csv);
+		}
+
+		// Test Equal-Time
+		const bool testEqualTime = false;
+		if (testEqualTime) {
+			CSV csv;
+			std::string convergenceFile = outputFileName + "_equalTime.csv";
+			if (!csv.Open(convergenceFile, CSV::OpenWrite)) {
+				return;
+			}
+
+			LogInfo("Equal time Test (t=", numSecondsEqual, "s)");
+
+			ResetArrays();
+
+			TestMethods(shGT, 0.f, 0, (f64) numSecondsEqual);
+
+			// Write result, normalized across passes
+			WriteResult(csv);
+		}
+
+		LogInfo("Tests End.");
+
+		// Reset params as it was
+		integrationMethod = prevMethod;
+		numSamples = prevSamples;
+	}
+
+}
+
 void SHInt::UpdateData(const std::vector<float> &coeffs) {
 	std::fill_n(shCoeffs.begin(), nCoeff, 0.f);
 	std::copy_n(coeffs.begin(), nCoeff, shCoeffs.begin());
@@ -230,6 +417,37 @@ f32 SHInt::IntegrateTrisSampling(const AreaLight::UniformBufferData &al, std::ve
 	return 1.f;
 }
 
+f32 SHInt::IntegrateLightSmart(const AreaLight::UniformBufferData &al, const Rectangle &rect, const SphericalRectangle &sphrect, std::vector<f32> &shvals) {
+	f32 ret;
+	
+	switch (integrationMethod) {
+	case UniformRandom:
+		ret = rect.IntegrateRandom(integrationPos, integrationNrm, numSamples, shvals, nBand);
+		break;
+	case AngularStratification:
+		ret = rect.IntegrateAngularStratification(integrationPos, integrationNrm, numSamples, shvals, nBand);
+		break;
+	case SphericalRectangles:
+		ret = sphrect.Integrate(integrationNrm, numSamples, shvals, nBand);
+		break;
+	case TriSamplingUnit:
+		ret = IntegrateTrisSampling(al, shvals, false);
+		break;
+	case TriSamplingWS:
+		ret = IntegrateTrisSampling(al, shvals, true);
+		break;
+	case LTCAnalytic:
+		ret = IntegrateTrisLTC(al, shvals);
+		break;
+	default:
+		ret = 0.f;
+		LogErr("Unknown Tri integration method.");
+		break;
+	}
+
+	return ret;
+}
+
 f32 SHInt::IntegrateLight(const AreaLight::UniformBufferData &al, std::vector<f32> &shvals) {
 	f32 ret;
 
@@ -241,6 +459,13 @@ f32 SHInt::IntegrateLight(const AreaLight::UniformBufferData &al, std::vector<f3
 		break;
 	case AngularStratification:
 		ret = arect.IntegrateAngularStratification(integrationPos, integrationNrm, numSamples, shvals, nBand);
+		break;
+	case SphericalRectangles:
+	{
+		SphericalRectangle sphRect;
+		sphRect.Init(arect, integrationPos);
+		ret = sphRect.Integrate(integrationNrm, numSamples, shvals, nBand);
+	}
 		break;
 	case TriSamplingUnit:
 		ret = IntegrateTrisSampling(al, shvals, false);
@@ -312,7 +537,7 @@ void SHInt::IntegrateAreaLights() {
 		// Reduce
 		for (u32 j = 0; j < nCoeff; ++j) {
 			shvals[j] *= wtSum / (f32) areaLights.size();
-	}
+		}
 
 #elif
 		std::vector<vec3f> dirs;

@@ -1,7 +1,7 @@
 #include "resource.h"
 #include "json/cJSON.h"
 
-#include <fstream>
+#include <iomanip>
 
 bool Resource::CheckExtension(const std::string &file_path, const std::string &ext) {
     size_t pos = file_path.find_last_of('.');
@@ -86,4 +86,77 @@ vec3f Json::ReadVec3(cJSON *parent, const std::string &name, const vec3f &defaul
 	return vec3f(	(f32) cJSON_GetArrayItem(item, 0)->valuedouble, 
 					(f32) cJSON_GetArrayItem(item, 1)->valuedouble, 
 					(f32) cJSON_GetArrayItem(item, 2)->valuedouble);
+}
+
+bool CSV::Open(const std::string & fileName, OpenType type) {
+	this->type = type;
+	this->fileName = fileName;
+
+	file.open(fileName, type == OpenRead ? std::ios::in : std::ios::out);
+
+	if (!file.good()) {
+		LogErr("Error reading file ", fileName, " for ", type == OpenRead ? "reading." : "writing.");
+		return false;
+	}
+
+	int s = GetSize();
+	if (s < 0) {
+		size = 0;
+	} else {
+		size = s;
+	}
+
+	SetPrecision(10);
+
+	return true;
+}
+
+void CSV::Close() {
+	file.close();
+}
+
+void CSV::ReadCells() {
+	if (file.good()) {
+		while (file) {
+			std::string line;
+			if (!std::getline(file, line))
+				break;
+
+			int n = 0;
+			std::stringstream ss(line);
+
+			while (ss) {
+				std::string cell;
+				if (!std::getline(ss, cell, ','))
+					break;
+
+				cells.push_back(cell);
+				++n;
+			}
+			lineCells.push_back(n);
+		}
+
+		cellPos = 0;
+		cellCount = (u32) cells.size();
+	}
+}
+
+void CSV::SetPrecision(int n) {
+	if (n != writePrecision) {
+		writePrecision = n;
+	}
+
+	if (type == OpenRead)
+		file >> std::setprecision(writePrecision);
+	else
+		file << std::setprecision(writePrecision);
+}
+
+int CSV::GetSize() {
+	std::streampos start = file.tellg();
+	file.seekg(0, std::ios::end);
+	std::streampos len = file.tellg() - start;
+	file.seekg(0, std::ios::beg);
+
+	return (int) len;
 }

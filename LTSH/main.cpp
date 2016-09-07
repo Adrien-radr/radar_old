@@ -17,8 +17,10 @@ static int brdfMethod = 1;
 static int numSamples = 1024;
 static bool autoUpdate = true;
 static bool movement = true;
+static bool doTests = false;
 
 SHInt sh1;
+
 
 bool MakeLights(Scene *scene) {
 #if 0
@@ -178,7 +180,7 @@ bool Init(Scene *scene) {
 	sh1.AddAreaLight(alh);
 	//sh1.AddAreaLight(alh2);
 	//sh1.AddAreaLight(alh3);
-
+	
 
 
 	Object::Desc odesc(Render::Shader::SHADER_3D_MESH);	
@@ -254,27 +256,29 @@ void UpdateUI(float dt) {
 	const Device &device = GetDevice();
 	vec2i ws = device.windowSize;
 
-	ImGui::SetNextWindowPos(ImVec2((f32)ws.x - 200, (f32)ws.y - 400));
-	ImGui::SetNextWindowSize(ImVec2(190, 390));
+	ImGui::SetNextWindowPos(ImVec2((f32)ws.x - 200, (f32)ws.y - 420));
+	ImGui::SetNextWindowSize(ImVec2(190, 410));
 
 	ImGui::Begin("TweakPanel", NULL, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
 
 	ImGui::Checkbox("Auto Update", &autoUpdate);
 	ImGui::Checkbox("SH Vis Normalization", &shNormalization);
 	ImGui::Checkbox("Light Rotation", &movement);
+	ImGui::Checkbox("Convergence Tests", &doTests);
 
 	ImGui::Text("GGX Exponent :");
 	ImGui::SliderFloat("shininess", &GGXexponent, 0.f, 0.9f);
 
 	ImGui::Text("Sample Count :");
-	ImGui::SliderInt("samples", &numSamples, 1, 100000);
+	ImGui::SliderInt("samples", &numSamples, 1, 30000);
 
 	ImGui::Text("Integration Method :");
 	ImGui::RadioButton("Uniform Random", &method, 0);
 	ImGui::RadioButton("Angular Stratification", &method, 1);
-	ImGui::RadioButton("Tri Sampling Unit", &method, 2);
-	ImGui::RadioButton("Tri Sampling WS", &method, 3);
-	ImGui::RadioButton("LTC Analytic", &method, 4);
+	ImGui::RadioButton("Spherical Rectangles", &method, 2);
+	ImGui::RadioButton("Tri Sampling Unit", &method, 3);
+	ImGui::RadioButton("Tri Sampling WS", &method, 4);
+	ImGui::RadioButton("LTC Analytic", &method, 5);
 
 	ImGui::Text("BRDF :");
 	ImGui::RadioButton("Diffuse", &brdfMethod, (int)BRDF_Diffuse);
@@ -329,6 +333,7 @@ void Update(Scene *scene, float dt) {
 		sh1.SetBRDF(AreaLightBRDF(brdfMethod));
 		sh1.SetSampleCount(numSamples);
 		sh1.UpdateCoords(vec3f(pos.x, pos.y, pos.z), vec3f(nrm.x, nrm.y, nrm.z));
+		if(doTests) sh1.TestConvergence("data/arealight", 600, 4000, 0.25f);
 	}
 
 	if (device.IsKeyHit(K_R)) {

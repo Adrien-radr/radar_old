@@ -1,13 +1,6 @@
 #pragma once
 #include "common/common.h"
 
-struct Plane {
-	vec3f P;
-	vec3f N;
-
-	vec3f RayIntersection(const vec3f &rayOrg, const vec3f &rayDir);
-};
-
 struct Edge {
 	vec3f A, B;
 };
@@ -17,13 +10,20 @@ struct Polygon {
 
 	/// Oosterom & Strackee 83' triangle solidangle
 	/// A, B & C in unit space (spherical triangle)
-	f32 SolidAngle(const vec3f &A, const vec3f &B, const vec3f &C);
+	f32 SolidAngle() const;
 
-	f32 CosSumIntegral(f32 x, f32 y, f32 c, int nMin, int nMax);
-	f32 LineIntegral(const vec3f &A, const vec3f &B, const vec3f &w, int nMin, int nMax);
-	f32 BoundaryIntegral(const vec3f &w, const vec3f &v, int nMin, int nMax);
-	f32 AxialMoment(const vec3f &w, int order);
-	f32 DoubleAxisMoment(const vec3f &w, const vec3f &v, int order);
+	f32 CosSumIntegralArvo(f32 x, f32 y, f32 c, int nMin, int nMax) const;
+	f32 LineIntegralArvo(const vec3f &A, const vec3f &B, const vec3f &w, int nMin, int nMax) const;
+	f32 BoundaryIntegralArvo(const vec3f &w, const vec3f &v, int nMin, int nMax) const;
+	f32 AxialMomentArvo(const vec3f &w, int order);
+	f32 DoubleAxisMomentArvo(const vec3f &w, const vec3f &v, int order);
+
+	// R is a n+2 zero vector that will be filled with all moments up to n
+	void CosSumIntegral(f32 x, f32 y, f32 c, int n, std::vector<f32> &R) const;
+	void LineIntegral(const vec3f &A, const vec3f &B, const vec3f &w, int n, std::vector<f32> &R) const;
+	void BoundaryIntegral(const vec3f &w, const vec3f &v, int n, std::vector<f32> &R) const;
+	void AxialMoment(const vec3f &w, int order, std::vector<f32> &R) const;
+	std::vector<f32> AxialMoments(const std::vector<vec3f> &directions) const;
 };
 
 
@@ -101,8 +101,40 @@ struct Rectangle {
 	f32 IntegrateMRP(const vec3f &integrationPos, const vec3f &integrationNrm) const;
 
 	/// Numerical Integration with the technique from Pixar [Pekelis & Hery 2014]
+	/// This is the preferred method between good results and speed.
 	f32 IntegrateAngularStratification(const vec3f &integrationPos, const vec3f &integrationNrm, u32 sampleCount, std::vector<f32> &shvals, int nBand) const;
 
 	/// Numerical integration for Ground Truth, True random world space rectangle sampling
 	f32 IntegrateRandom(const vec3f &integrationPos, const vec3f &integrationNrm, u32 sampleCount, std::vector<f32> &shvals, int nBand) const;
 };
+
+// For use with SphericalRectangle sampling [Urena13]
+struct SphericalRectangle {
+	vec3f o, x, y, z; // local reference system 'R'
+	f32   z0, z0sq;
+	f32   x0, y0, y0sq; // rectangle coords in 'R'
+	f32   x1, y1, y1sq;
+	f32   b0, b1, b0sq, k; // misc precomputed constants
+	f32   S; // solid angle
+	void Init(const Rectangle &rect, const vec3f &org);
+	vec3f Sample(f32 u1, f32 u2) const;
+
+	/// Numerical Integration using the technique from Urena et al., 2013
+	/// This is more robust at grazing angles, but a bit slower than AS.
+	f32 Integrate(const vec3f &integrationNrm, u32 sampleCount, std::vector<f32> &shvals, int nBand) const;
+
+};
+
+/// Defines a plan from an origin point and a normal
+struct Plane {
+	vec3f P;
+	vec3f N;
+
+	/// Returns the intersection point of the given ray on the plane
+	vec3f RayIntersection(const vec3f &rayOrg, const vec3f &rayDir);
+
+	/// Returns the closest point inside the given rectangle for the given point.
+	/// If the input point is outside of of the 2D frame of the plan, it is projected on it
+	vec3f ClampPointInRect(const Rectangle &rect, const vec3f &point);
+};
+

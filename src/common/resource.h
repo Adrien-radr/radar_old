@@ -1,6 +1,8 @@
 #pragma once
 
 #include "common.h"
+#include <fstream>
+#include <sstream>
 
 class Resource {
 public:
@@ -33,3 +35,58 @@ struct Json {
 	std::string	contents;
 	bool opened;
 };
+
+struct CSV {
+	enum OpenType {
+		OpenRead,
+		OpenWrite
+	};
+
+	enum {
+		EndOfCells
+	};
+
+	std::fstream file;
+	std::string fileName;
+	u32 size;
+	OpenType type;
+
+	CSV() : writePrecision(1), cellPos(0), cellCount(0) {}
+	bool Open(const std::string &file, OpenType type);
+	void Close();
+
+	void ReadCells();
+
+	void SetPrecision(int n);
+	int GetSize();
+	u32 GetCellCount() const { return (u32) cells.size(); }
+
+	template<typename T>
+	void WriteCell(T t);
+
+	void WriteNewLine() { file << "\n"; }
+
+	template<typename T>
+	T ReadNextCell();
+
+	std::vector<std::string> cells;
+	std::vector<int> lineCells;		//!< Number of cells for each line
+private:
+	int writePrecision;
+	u32 cellPos;
+	u32 cellCount;
+};
+
+template<typename T>
+inline void CSV::WriteCell(T t) {
+	file << t << ",";
+}
+
+template<typename T>
+inline T CSV::ReadNextCell() {
+	if (cellPos < cellCount) {
+		return cells[celPos++];
+	} else {
+		return EndOfCells;
+	}
+}
