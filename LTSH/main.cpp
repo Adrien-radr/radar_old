@@ -1,6 +1,11 @@
 #include "SHIntegration.h"
 #include "imgui/imgui.h"
 
+#include "src/render_internal/geometry.h"
+#include "src/common/sampling.h"
+
+#pragma optimize("", off)
+
 AreaLight::Handle alh = -1;
 AreaLight::Handle alh2;
 AreaLight::Handle alh3;
@@ -21,6 +26,112 @@ static bool doTests = false;
 
 SHInt sh1;
 
+
+std::vector<f32> MonteCarloMoments(const Triangle& triangle, const vec3f& w, int n) {
+	// Number of MC samples
+	const int M = 10000000;
+	std::vector<f32> mean(n + 1, 0.f);
+
+	for (int k = 0; k<M; ++k) {
+		vec2f randV = Random::Vec2f();
+
+		vec3f d;
+		f32 invPdf = triangle.SampleDir(d, randV.x, randV.y) * triangle.area;
+
+		//if (HitTriangle(triangle, d)) {
+			for (int p = 0; p <= n; ++p) {
+				const f32 val = /*std::pow(d.Dot(w), p) **/ 1.f * invPdf;
+				mean[p] += val / f32(M);
+			}
+		//}
+	}
+
+	return mean;
+}
+
+bool TestMoments(const vec3f &dir, const std::vector<vec3f> &v, int nMin, int nMax) {
+	bool fails = false;
+
+	std::vector<vec3f> verts(v);
+
+	Rectangle rect(verts);
+
+	for (u32 i = 0; i < verts.size(); ++i)
+		verts[i].Normalize();
+
+	Polygon P(verts);
+
+	// Test with axial moments
+	LogInfo("Computing Analytical Axial Moments.");
+	std::vector<f32> moments(nMax + 1, 0.f);
+	P.AxialMoment(dir, nMax, moments);
+
+	// Test with Ground Truth
+	LogInfo("Computing MC Ground Truth.");
+	/*
+	Triangle t1, t2;
+	t1.InitUnit(P.edges[0].A, P.edges[1].A, P.edges[2].A, vec3f(0.f));
+	t2.InitUnit(P.edges[0].A, P.edges[2].A, P.edges[3].A, vec3f(0.f));
+	std::vector<f32> mcMoments = MonteCarloMoments(t1, dir, nMax);
+	{
+		std::vector<f32> tmp = MonteCarloMoments(t2, dir, nMax);
+		for (u32 i = 0; i < mcMoments.size(); ++i)
+			mcMoments[i] += tmp[i];
+	}
+	*/
+
+	std::vector<f32> shvals((nMax + 1)*(nMax + 1), 0.f);
+	f32 weight = rect.IntegrateAngularStratification(vec3f(0.f), vec3f(0, 1, 0), 10000, shvals, nMax+1);
+	
+
+	// Test difference for each order
+	for (int i = nMin; i <= nMax; ++i) {
+		f32 analyticalMoment = moments[i];
+		f32 mcMoment = shvals[i * (i + 1)] * weight;
+
+		f32 error = analyticalMoment - mcMoment;
+		error *= error;
+
+		if (error > 1e-2f)
+			fails = true;
+		LogInfo("Order ", i, " : (AM) ", analyticalMoment, " | ", mcMoment, " (MC). L2 : ", error);
+	}
+
+	return fails;
+}
+
+bool DoTests() {
+	//return true;
+
+	const int nMin = 0;
+	const int nMax = 4;
+
+	std::vector<vec3f> verts;
+	verts.push_back(vec3f(-0.5, -0.5, 1.0));
+	verts.push_back(vec3f(0.5, -0.5, 1.0));
+	verts.push_back(vec3f(0.5, 0.5, 1.0));
+	verts.push_back(vec3f(-0.5, 0.5, 1.0));
+
+	// Test for normal direction
+	LogInfo("Testing for axis (0, 1, 0)");
+	vec3f w(0, 0, 1);
+	int fail = (int) TestMoments(w, verts, nMin, nMax);
+
+	// Test for a grazing direction. This should give zero moments for
+	// odd orders.
+	LogInfo("Testing for axis (1, 0, 0)");
+	w = vec3f(1, 0, 0);
+	fail += (int) TestMoments(w, verts, nMin, nMax);
+
+	if (fail != 0) LogErr("Errors while testing moments.");
+	// Random direction testing.
+	//for (int nb_rand = 0; nb_rand<10; ++nb_rand) {
+		//w = glm::normalize(glm::vec3(2.0f*(dist(gen) - 0.5f), 2.0f*(dist(gen) - 0.5f), 2.0f*(dist(gen) - 0.5f)));
+		//nb_fails += TestMoments<Quad>(w, quad, nMin, nMax, Epsilon);
+	//}
+
+	return false;
+}
 
 bool MakeLights(Scene *scene) {
 #if 0
@@ -354,6 +465,11 @@ void renderFunc(Scene *scene) {
 
 int main() {
 	Log::Init();
+
+	if (!DoTests()) {
+		system("PAUSE");
+		return 0;
+	}
 
 	Device &device = GetDevice();
 	if (!device.Init(Init)) {

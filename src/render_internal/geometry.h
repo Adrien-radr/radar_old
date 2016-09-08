@@ -8,6 +8,9 @@ struct Edge {
 struct Polygon {
 	std::vector<Edge> edges;
 
+	Polygon() {}
+	Polygon(const std::vector<vec3f> &pts);
+
 	/// Oosterom & Strackee 83' triangle solidangle
 	/// A, B & C in unit space (spherical triangle)
 	f32 SolidAngle() const;
@@ -64,21 +67,29 @@ private:
 };
 
 struct Rectangle {
-	/// --------------------- ^
-	/// |         ^ ey      | | hy
-	/// |         |         | |
-	/// |         p-->ex    | v
-	/// |                   |
-	/// |                   |
-	/// ---------------------
+	/// p3---------------------p2 ^
+	///   |         ^ ey      |   | hy
+	///   |         |         |   |
+	///   |         p-->ex    |   v
+	///   |                   |
+	///   |                   |
+	/// p0---------------------p1
 	///			  <---------> hx
 
 	vec3f position;	// world-space position of light center
 	vec3f ex, ey;	// direction vectors tangent to the light plane
-	vec3f ez;		// normal to the rectangle, (cross(ex, ey))
+	vec3f ez;		// normal to the rectangle, (-cross(ex, ey))
 	f32   hx, hy;	// half-width and -height of the rectangle
 
 	vec3f p0, p1, p2, p3;	// world-space corners of the rectangle
+
+	Rectangle() {}
+
+	/// Create a Rectangle from 4 points
+	Rectangle(const std::vector<vec3f> &verts);
+
+	/// Creates a Rectangle from a Polygon. This only works if intended.
+	Rectangle(const Polygon &P);
 
 	/// Returns a point on the rectangle sampled according to (u1, u2)
 	vec3f SamplePoint(f32 u1, f32 u2) const;

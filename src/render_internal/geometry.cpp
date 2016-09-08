@@ -34,6 +34,14 @@ vec3f Plane::ClampPointInRect(const Rectangle &rect, const vec3f &point) {
 //////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////
 
+Polygon::Polygon(const std::vector<vec3f> &pts) {
+	int nv = (int) pts.size();
+	for (int i = 0; i < nv-1; ++i) {
+		edges.push_back(Edge{ pts[i], pts[i + 1] });
+	}
+	edges.push_back(Edge{ pts[nv - 1], pts[0] });
+}
+
 f32 Polygon::SolidAngle() const {
 
 	if (edges.size() == 3) {
@@ -229,6 +237,7 @@ void Polygon::BoundaryIntegral(const vec3f &w, const vec3f &v, int n, std::vecto
 }
 
 void Polygon::AxialMoment(const vec3f &w, int order, std::vector<f32> &R) const {
+	// Compute the Boundary Integral of the polygon
 	BoundaryIntegral(w, w, order - 1, R);
 
 	// - boundary + solidangle for even orders
@@ -243,7 +252,7 @@ void Polygon::AxialMoment(const vec3f &w, int order, std::vector<f32> &R) const 
 		}
 
 		// normalize by order+1
-		R[i] /= (f32) (i + 1);
+		R[i] *= -1.f/ (f32) (i + 1);
 	}
 }
 
@@ -276,7 +285,7 @@ void Triangle::InitUnit(const vec3f &p0, const vec3f &p1, const vec3f &p2, const
 	const vec3f d1 = q1 - q0;
 	const vec3f d2 = q2 - q0;
 
-	const vec3f nrm = d1.Cross(d2);
+	const vec3f nrm = -d1.Cross(d2);
 	const f32 nrmLen = std::sqrtf(nrm.Dot(nrm));
 	area = solidAngle = nrmLen * 0.5f;
 
@@ -349,6 +358,38 @@ f32 Triangle::SampleDir(vec3f &rayDir, const f32 s, const f32 t) const {
 
 //////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////
+
+Rectangle::Rectangle(const std::vector<vec3f>& verts) {
+	Assert(verts.size() == 4);
+	p0 = verts[0];
+	p1 = verts[1];
+	p2 = verts[2];
+	p3 = verts[3];
+
+	position = (p0 + p1 + p2 + p3) / 4.f;
+	ex = p1 - p0;
+	hx = 0.5f * ex.Len();
+	ex.Normalize();
+	ey = p3 - p0;
+	hy = 0.5f * ex.Len();
+	ey.Normalize();
+
+	ez = -ex.Cross(ey);
+	ez.Normalize();
+}
+
+Rectangle::Rectangle(const Polygon & P) {
+	Assert(P.edges.size() == 4);
+
+	std::vector<vec3f> verts(4);
+
+	verts[0] = P.edges[0].A;
+	verts[1] = P.edges[1].A;
+	verts[2] = P.edges[2].A;
+	verts[3] = P.edges[3].A;
+
+	*this = Rectangle(verts);
+}
 
 vec3f Rectangle::SamplePoint(f32 u1, f32 u2) const{
 	const vec3f bl = position - ex * hx - ey * hy;
@@ -477,10 +518,6 @@ f32 Rectangle::IntegrateAngularStratification(const vec3f & integrationPos, cons
 	const f32 lh1 = std::sqrtf(lh1_2);
 	const f32 lh2 = std::sqrtf(lh2_2);
 
-	// normal pointing away from rectangle (in same direction as exiting light)
-	vec3f unitNormal = ex.Cross(ey);
-	unitNormal.Normalize();
-
 	const f32 cosx = -W1.Dot(ex) / lw1;
 	const f32 sinx = std::sqrtf(1.f - cosx * cosx);
 	const f32 cosy = -H1.Dot(ey) / lh1;
@@ -538,6 +575,32 @@ f32 Rectangle::IntegrateAngularStratification(const vec3f & integrationPos, cons
 	}
 
 	return 1.f / (f32) sampleCount;
+}
+
+f32 Rectangle::IntegrateRandom(const vec3f & integrationPos, const vec3f & integrationNrm, u32 sampleCount, std::vector<f32>& shvals, int nBand) const {
+	// Rectangle area
+	const f32 area = 4.f * hx * hy;
+	
+	const int nCoeff = nBand * nBand;
+	std::vector<f32> shtmp(nCoeff);
+
+	// costheta * A / r^3
+	for (u32 i = 0; i < sampleCount; ++i) {
+		const vec2f randV = Random::Vec2f();
+
+		vec3f rayDir;
+		const f32 invPdf = SampleDir(rayDir, integrationPos, randV.x, randV.y);
+
+		if (invPdf > 0.f) {
+			SHEval(nBand, rayDir.x, rayDir.z, rayDir.y, &shtmp[0]);
+
+			for (int j = 0; j < nCoeff; ++j) {
+				shvals[j] += shtmp[j] * invPdf; // constant luminance of 1 for now
+			}
+		}
+	}
+
+	return area / (f32) sampleCount;
 }
 
 
@@ -644,36 +707,6 @@ f32 SphericalRectangle::Integrate(const vec3f & integrationNrm, u32 sampleCount,
 
 		for (int j = 0; j < nCoeff; ++j) {
 			shvals[j] += shtmp[j];
-		}
-	}
-
-	return area / (f32) sampleCount;
-}
-
-f32 Rectangle::IntegrateRandom(const vec3f & integrationPos, const vec3f & integrationNrm, u32 sampleCount, std::vector<f32>& shvals, int nBand) const {
-	// Rectangle area
-	const f32 area = 4.f * hx * hy;
-
-	// normal pointing away from rectangle (in same direction as exiting light)
-	vec3f unitNormal = ex.Cross(ey);
-	unitNormal.Normalize();
-
-	const int nCoeff = nBand * nBand;
-	std::vector<f32> shtmp(nCoeff);
-
-	// costheta * A / r^3
-	for (u32 i = 0; i < sampleCount; ++i) {
-		const vec2f randV = Random::Vec2f();
-
-		vec3f rayDir;
-		const f32 invPdf = SampleDir(rayDir, integrationPos, randV.x, randV.y);
-
-		if (invPdf > 0.f) {
-			SHEval(nBand, rayDir.x, rayDir.z, rayDir.y, &shtmp[0]);
-
-			for (int j = 0; j < nCoeff; ++j) {
-				shvals[j] += shtmp[j] * invPdf; // constant luminance of 1 for now
-			}
 		}
 	}
 
