@@ -127,6 +127,7 @@ struct SphericalRectangle {
 	f32   x1, y1, y1sq;
 	f32   b0, b1, b0sq, k; // misc precomputed constants
 	f32   S; // solid angle
+
 	void Init(const Rectangle &rect, const vec3f &org);
 	vec3f Sample(f32 u1, f32 u2) const;
 

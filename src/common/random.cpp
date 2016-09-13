@@ -1,15 +1,19 @@
 #include "random.h"
 #include <random>
-#include <ctime>
+#include <array>
+#include <algorithm>
 
 namespace Random {
 	std::mt19937 twister;
 	std::uniform_real_distribution<float> rd(0, 1);
 
-
+	// Feed the twister with enough entropy (state size of 19968 bits == 624 ints)
 	void InitRandom() {
 		std::random_device r;
-		std::seed_seq seed{ r(), r(), r(), r(), r(), r(), r(), r() };
+		std::array<int, 624> seed_data;
+		std::generate(seed_data.begin(), seed_data.end(), std::ref(r));
+
+		std::seed_seq seed(std::begin(seed_data), std::end(seed_data));
 		twister = std::mt19937(seed);
 	}
 

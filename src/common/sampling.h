@@ -15,4 +15,5 @@ namespace Sampling {
 	f32 SampleHemisphereRandomPDF();
 
 	/// BlueNoise
+	void SampleSphereBluenoise(std::vector<vec3f> &dirs, u32 count);
 }

@@ -12,16 +12,28 @@ public:
 
 	template <typename... M>
 	static void Err(const char *file, int line, const M &...msg_list) {
+		std::string path(file);
+#ifdef _WIN32
+		std::string filename = path.substr(path.find_last_of('\\')+1);
+#else
+		std::string filename = path.substr(path.find_last_of('/')+1);
+#endif
 		log_ss.precision(2);
-		LogMsg("<", get_engine_time(), "> EE (", file, ":", line, ") ");
+		LogMsg("<", get_engine_time(), "> EE (", filename, ":", line, ") ");
 		log_ss.precision(4);
 		LogMsg( msg_list..., "\n");
 	}
 
 	template <typename... M>
 	static void Info(const char *file, int line, const M &...msg_list) {
+		std::string path(file);
+#ifdef _WIN32
+		std::string filename = path.substr(path.find_last_of('\\')+1);
+#else
+		std::string filename = path.substr(path.find_last_of('/')+1);
+#endif
 		log_ss.precision(2);
-		LogMsg("<", get_engine_time(), "> II (", file, ":", line, ") ");
+		LogMsg("<", get_engine_time(), "> II (", filename, ":", line, ") ");
 		log_ss.precision(4);
 		LogMsg(msg_list..., "\n");
 	}

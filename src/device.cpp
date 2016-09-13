@@ -333,6 +333,8 @@ Device &GetDevice() {
 bool Device::Init(SceneInitFunc initFunc) {
     int v;
 
+	Random::InitRandom();
+
     // Open and parse config file
 	if (!LoadConfig(config)) {
 		LogErr("Error loading config file.");

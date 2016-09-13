@@ -1,4 +1,4 @@
-#include "SHIntegration.h"
+﻿#include "SHIntegration.h"
 #include "imgui/imgui.h"
 
 #include "src/render_internal/geometry.h"
@@ -12,7 +12,7 @@ AreaLight::Handle alh3;
 vec3f alPos(40., 3, -20);
 vec3f alPos2(20., 7.5, 20);
 
-u32 nBand = 6;
+u32 nBand = 4;
 
 // UI
 static bool shNormalization = false;
@@ -26,10 +26,14 @@ static bool doTests = false;
 
 SHInt sh1;
 
+#include "Tests.h"
+#include "AxialMoments.hpp"
+#include "eigen\Eigen\Core"
+
 
 std::vector<f32> MonteCarloMoments(const Triangle& triangle, const vec3f& w, int n) {
 	// Number of MC samples
-	const int M = 10000000;
+	const int M = 100000;
 	std::vector<f32> mean(n + 1, 0.f);
 
 	for (int k = 0; k<M; ++k) {
@@ -39,18 +43,18 @@ std::vector<f32> MonteCarloMoments(const Triangle& triangle, const vec3f& w, int
 		f32 invPdf = triangle.SampleDir(d, randV.x, randV.y) * triangle.area;
 
 		//if (HitTriangle(triangle, d)) {
-			for (int p = 0; p <= n; ++p) {
-				const f32 val = /*std::pow(d.Dot(w), p) **/ 1.f * invPdf;
-				mean[p] += val / f32(M);
-			}
+		for (int p = 0; p <= n; ++p) {
+			const f32 val = std::pow(d.Dot(w), p) * 1.f * invPdf;
+			mean[p] += val / f32(M);
+		}
 		//}
 	}
 
 	return mean;
 }
 
-bool TestMoments(const vec3f &dir, const std::vector<vec3f> &v, int nMin, int nMax) {
-	bool fails = false;
+int TestMoments(const vec3f &dir, const std::vector<vec3f> &v, int nMin, int nMax) {
+	int errors = 0;
 
 	std::vector<vec3f> verts(v);
 
@@ -68,7 +72,7 @@ bool TestMoments(const vec3f &dir, const std::vector<vec3f> &v, int nMin, int nM
 
 	// Test with Ground Truth
 	LogInfo("Computing MC Ground Truth.");
-	/*
+	
 	Triangle t1, t2;
 	t1.InitUnit(P.edges[0].A, P.edges[1].A, P.edges[2].A, vec3f(0.f));
 	t2.InitUnit(P.edges[0].A, P.edges[2].A, P.edges[3].A, vec3f(0.f));
@@ -78,33 +82,140 @@ bool TestMoments(const vec3f &dir, const std::vector<vec3f> &v, int nMin, int nM
 		for (u32 i = 0; i < mcMoments.size(); ++i)
 			mcMoments[i] += tmp[i];
 	}
-	*/
-
-	std::vector<f32> shvals((nMax + 1)*(nMax + 1), 0.f);
-	f32 weight = rect.IntegrateAngularStratification(vec3f(0.f), vec3f(0, 1, 0), 10000, shvals, nMax+1);
-	
 
 	// Test difference for each order
 	for (int i = nMin; i <= nMax; ++i) {
 		f32 analyticalMoment = moments[i];
-		f32 mcMoment = shvals[i * (i + 1)] * weight;
+		//f32 mcMoment = shvals[i * (i + 1)] * weight;
+		f32 mcMoment = mcMoments[i];
 
 		f32 error = analyticalMoment - mcMoment;
 		error *= error;
 
-		if (error > 1e-2f)
-			fails = true;
-		LogInfo("Order ", i, " : (AM) ", analyticalMoment, " | ", mcMoment, " (MC). L2 : ", error);
+		if (error > 1e-2f) {
+			errors++;
+			LogInfo("Order ", i, " : (AM) ", analyticalMoment, " | ", mcMoment, " (MC). L2 : ", error);
+		}
 	}
 
-	return fails;
+
+	LogInfo("Computing Eigen Axial Moment.");
+	// Compare with Eigen Axial moments
+	auto momentsEigen = AxialMomentEigen(P, dir, nMax);
+
+	// Test difference for each order
+	for (int i = nMin; i <= nMax; ++i) {
+		f32 analyticalMoment = moments[i];
+		//f32 mcMoment = shvals[i * (i + 1)] * weight;
+		f32 eigenMoment = -momentsEigen[i];
+
+		f32 error = analyticalMoment - eigenMoment;
+		error *= error;
+
+		if (error > 1e-2f) {
+			errors++;
+			LogInfo("Order ", i, " : (AM) ", analyticalMoment, " | ", eigenMoment, " (EI). L2 : ", error);
+		}
+	}
+
+
+	LogInfo("Comparing axial moments on several directions.");
+	// Doing Moments on several directions
+	std::vector<vec3f> directions;
+	u32 dirCount = 2.f * nMax + 1;
+	Sampling::SampleSphereBluenoise(directions, dirCount);
+
+	std::vector<f32> momentsDirs = P.AxialMoments(directions);
+	auto momentsDirsEigen = AxialMomentsEigen(P, directions);
+
+	// Test difference for each order
+	for (int i = nMin; i < dirCount; ++i) {
+		for (int j = 0; j < nMax + 1; ++j) {
+			f32 analyticalMoment = momentsDirs[i*(nMax+1)+j];
+			//f32 mcMoment = shvals[i * (i + 1)] * weight;
+			f32 eigenMoment = -momentsDirsEigen[i*(nMax+1)+j];
+
+			f32 error = analyticalMoment - eigenMoment;
+			error *= error;
+
+			if (error > 1e-2f) {
+				errors++;
+				LogInfo("Dir ", i, " Order ", j, " : (AM) ", analyticalMoment, " | ", eigenMoment, " (EI). L2 : ", error);
+			}
+		}
+	}
+
+	return errors;
+}
+
+int TestZHIntegral(const std::vector<vec3f> &v, int n) {
+	const u32 dirCount = 2 * (u32) n + 1;
+	const u32 order = (dirCount - 1) / 2 + 1;
+	const u32 mrows = order*order;
+	const u32 mcols = dirCount*order;
+
+	LogInfo("Testing Axial Moment polygon unit integral. Order ", n);
+
+	std::vector<vec3f> sampleDirs;
+	//Sampling::SampleSphereRandom(sampleDirs, dirCount);
+	Sampling::SampleSphereBluenoise(sampleDirs, dirCount);
+
+	// Get AP matrix from product of the Zonal Weights, and Zonal Expansion coeffs
+	//f32 *AP = new f32[mrows*mcols]();
+	//ComputeAPMatrix((f32*) &sampleDirs[0], dirCount, AP); // of size mcols*mrows
+	const auto ZW = ZonalWeightsEigen(sampleDirs);
+	const auto Y = ZonalExpansionEigen(sampleDirs);
+	const auto A = computeInverseEigen(Y);
+	const auto AP = A*ZW;
+	
+	int errors = 0;
+
+	// Compute product of AxialMoments and AP matrix
+	std::vector<vec3f> verts(v);
+	Rectangle rect(verts);
+	
+	for (u32 i = 0; i < verts.size(); ++i)
+		verts[i].Normalize();
+	
+	Polygon P(verts);
+	//std::vector<f32> moments = P.AxialMoments(sampleDirs); // of size mcols
+	const auto moments = AxialMomentsEigen(P, sampleDirs);
+
+	//std::vector<f32> shvals(mrows, 0.f); // order^2 SH coefficients
+	//MatrixProduct(AP, &moments[0], &shvals[0], mrows, mcols, 1);
+	const Eigen::MatrixXf shvals = AP * moments;
+	Eigen::Matrix<typename float, Eigen::Dynamic, Eigen::Dynamic> tmp = shvals;
+	f32 *rawAP = tmp.data();
+
+	// Compare with full SH expansion
+	std::vector<f32> shvalsGT(mrows, 0.f);
+	f32 weight = rect.IntegrateAngularStratification(vec3f(0.f), vec3f(0, 1, 0), 10000, shvalsGT, order);
+
+	// Test difference for each coeff
+	for (int i = 0; i < mrows; ++i) {
+		f32 analyticalMoments = -shvals(i);
+		f32 sh = shvalsGT[i] * weight;
+
+		f32 error = analyticalMoments - sh;
+		error *= error;
+
+		if (error > 1e-2f) {
+			errors++;
+			LogInfo("Coeff ", i, " : (AM) ", analyticalMoments, " | ", sh, " (SH). L2 : ", error);
+		}
+	}
+
+	//delete[] AP;
+	std::cout << std::endl;
+
+	return errors;
 }
 
 bool DoTests() {
-	//return true;
+	return true;
 
 	const int nMin = 0;
-	const int nMax = 4;
+	const int nMax = 3;
 
 	std::vector<vec3f> verts;
 	verts.push_back(vec3f(-0.5, -0.5, 1.0));
@@ -114,22 +225,26 @@ bool DoTests() {
 
 	// Test for normal direction
 	LogInfo("Testing for axis (0, 1, 0)");
-	vec3f w(0, 0, 1);
-	int fail = (int) TestMoments(w, verts, nMin, nMax);
+	vec3f w = Random::Vec3f();
+	w.Normalize();
+	int fail = TestMoments(w, verts, nMin, nMax);
 
 	// Test for a grazing direction. This should give zero moments for
 	// odd orders.
-	LogInfo("Testing for axis (1, 0, 0)");
-	w = vec3f(1, 0, 0);
-	fail += (int) TestMoments(w, verts, nMin, nMax);
+	//LogInfo("Testing for axis (1, 0, 0)");
+	//w = vec3f(1, 0, 0);
+	//fail += (int) TestMoments(w, verts, nMin, nMax);
 
-	if (fail != 0) LogErr("Errors while testing moments.");
-	// Random direction testing.
-	//for (int nb_rand = 0; nb_rand<10; ++nb_rand) {
-		//w = glm::normalize(glm::vec3(2.0f*(dist(gen) - 0.5f), 2.0f*(dist(gen) - 0.5f), 2.0f*(dist(gen) - 0.5f)));
-		//nb_fails += TestMoments<Quad>(w, quad, nMin, nMax, Epsilon);
-	//}
+	LogErr(fail, " errors while testing moments.\n");
 
+	fail = TestZHValidation(nMax);
+
+	LogErr(fail, " errors while testing ZH validation.\n");
+
+	fail = TestZHIntegral(verts, nMax);
+
+	LogErr(fail, " errors while testing ZH integration.\n");
+	
 	return false;
 }
 
@@ -389,7 +504,8 @@ void UpdateUI(float dt) {
 	ImGui::RadioButton("Spherical Rectangles", &method, 2);
 	ImGui::RadioButton("Tri Sampling Unit", &method, 3);
 	ImGui::RadioButton("Tri Sampling WS", &method, 4);
-	ImGui::RadioButton("LTC Analytic", &method, 5);
+	ImGui::RadioButton("Arvo Moments", &method, 5);
+	ImGui::RadioButton("LTC Analytic", &method, 6);
 
 	ImGui::Text("BRDF :");
 	ImGui::RadioButton("Diffuse", &brdfMethod, (int)BRDF_Diffuse);
@@ -444,7 +560,7 @@ void Update(Scene *scene, float dt) {
 		sh1.SetBRDF(AreaLightBRDF(brdfMethod));
 		sh1.SetSampleCount(numSamples);
 		sh1.UpdateCoords(vec3f(pos.x, pos.y, pos.z), vec3f(nrm.x, nrm.y, nrm.z));
-		if(doTests) sh1.TestConvergence("data/arealight", 600, 4000, 0.25f);
+		if(doTests) sh1.TestConvergence("data/arealight", 500, 4000, 0.25f);
 	}
 
 	if (device.IsKeyHit(K_R)) {
@@ -466,10 +582,6 @@ void renderFunc(Scene *scene) {
 int main() {
 	Log::Init();
 
-	if (!DoTests()) {
-		system("PAUSE");
-		return 0;
-	}
 
 	Device &device = GetDevice();
 	if (!device.Init(Init)) {
@@ -477,6 +589,13 @@ int main() {
 		device.Destroy();
 		system("PAUSE");
 		return 1;
+	}
+
+	if (!DoTests()) {
+		device.Destroy();
+		Log::Close();
+		system("PAUSE");
+		return 0;
 	}
 
 	device.SetUpdateFunc(Update);

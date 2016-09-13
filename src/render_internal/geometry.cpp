@@ -238,7 +238,7 @@ void Polygon::BoundaryIntegral(const vec3f &w, const vec3f &v, int n, std::vecto
 
 void Polygon::AxialMoment(const vec3f &w, int order, std::vector<f32> &R) const {
 	// Compute the Boundary Integral of the polygon
-	BoundaryIntegral(w, w, order - 1, R);
+	BoundaryIntegral(w, w, order, R);
 
 	// - boundary + solidangle for even orders
 	f32 sA = SolidAngle();
@@ -252,7 +252,7 @@ void Polygon::AxialMoment(const vec3f &w, int order, std::vector<f32> &R) const 
 		}
 
 		// normalize by order+1
-		R[i] *= -1.f/ (f32) (i + 1);
+		R[i] *= -1.f / (f32) (i + 1);
 	}
 }
 
@@ -260,13 +260,16 @@ std::vector<f32> Polygon::AxialMoments(const std::vector<vec3f> &directions) con
 	const u32 dsize = (u32) directions.size();
 	const u32 order = (dsize - 1) / 2 + 1;
 
-	std::vector<f32> result(dsize * order);
-	std::vector<f32> dirResult(order);
+	std::vector<f32> result(dsize * order, 0.f);
 
 	for (u32 i = 0; i < dsize; ++i) {
+		std::vector<f32> dirResult(order, 0.f);
 		const vec3f &d = directions[i];
 		AxialMoment(d, order - 1, dirResult);
-		std::copy(dirResult.begin(), dirResult.end(), result.begin() + i * order);
+
+		for (u32 j = 0; j < order; ++j) {
+			result[i*order + j] = dirResult[j];
+		}
 	}
 	
 	return result;
@@ -582,7 +585,8 @@ f32 Rectangle::IntegrateRandom(const vec3f & integrationPos, const vec3f & integ
 	const f32 area = 4.f * hx * hy;
 	
 	const int nCoeff = nBand * nBand;
-	std::vector<f32> shtmp(nCoeff);
+
+	std::vector<f32> shtmp(nCoeff, 0.f);
 
 	// costheta * A / r^3
 	for (u32 i = 0; i < sampleCount; ++i) {

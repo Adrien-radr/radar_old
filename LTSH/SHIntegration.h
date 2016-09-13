@@ -9,6 +9,7 @@ enum AreaLightIntegrationMethod {
 	SphericalRectangles,
 	TriSamplingUnit,
 	TriSamplingWS,
+	ArvoMoments,
 	LTCAnalytic
 };
 
@@ -20,6 +21,7 @@ enum AreaLightBRDF {
 
 class SHInt {
 public:
+	SHInt() : ltcMat(nullptr), ltcAmp(nullptr), APMatrix(nullptr) {}
 	~SHInt();
 	bool Init(Scene *scene, u32 band);
 
@@ -39,9 +41,10 @@ public:
 
 private:
 	f32 IntegrateLight(const AreaLight::UniformBufferData &al, std::vector<f32> &shvals);
-	f32 IntegrateLightSmart(const AreaLight::UniformBufferData &al, const Rectangle &rect, const SphericalRectangle &sphrect, std::vector<f32> &shvals);
+	f32 IntegrateLightSmart(const AreaLight::UniformBufferData &al, const Rectangle &rect, const SphericalRectangle &sphrect, const Polygon &P, std::vector<f32> &shvals);
 	f32 IntegrateTrisSampling(const AreaLight::UniformBufferData &al, std::vector<f32> &shvals, bool wsSampling);
 	f32 IntegrateTrisLTC(const AreaLight::UniformBufferData &al, std::vector<f32> &shvals);
+	f32 IntegrateArvoMoments(const Polygon &P, std::vector<f32> &shvals);
 	void IntegrateAreaLights();
 
 
@@ -65,8 +68,12 @@ private:
 	AreaLightBRDF usedBRDF;
 	u32 numSamples;
 
+	// Precomputed stuff for analytical methods
 	f32 *ltcMat;
 	f32 *ltcAmp;
+
+	f32 *APMatrix;
+	std::vector<vec3f> sampleDirs;
 
 	Scene *gameScene;
 	std::vector<AreaLight::Handle> areaLights;

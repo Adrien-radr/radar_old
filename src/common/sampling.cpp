@@ -56,3 +56,59 @@ f32 Sampling::SampleHemisphereRandomPDF() {
 	static f32 pdf = 1.f / (2.f * M_PI);
 	return pdf;
 }
+
+f32 MinDotDistance(const std::vector<vec3f>& dirs, const vec3f& w) {
+
+	// The set of testing direction is empty.
+	if (dirs.size() == 0) {
+		return 0.0f;
+	}
+
+	// Got a least one direction in `dirs`
+	float dist = std::numeric_limits<float>::max();
+	for (auto& d : dirs) {
+		const float dot = d.Dot(w);
+		dist = std::min(dist, dot);
+	}
+	return dist;
+}
+
+void Sampling::SampleSphereBluenoise(std::vector<vec3f>& dirs, u32 count) {
+	const u32 maxTry = 1000;
+	dirs.reserve(count);
+
+	float max_dist = 0.5;
+	int n = 0;
+	while (n<count) {
+
+		// Vector to add
+		vec3f w;
+
+		int nb_try = 0;
+		while (nb_try < maxTry) {
+			vec2f randV = Random::Vec2f();
+
+			// Generate a random direction by uniformly sampling the sphere.
+			float z = 2.0f * randV.x - 1.0f;
+			float y = sqrt(1.0f - z*z);
+			float p = 2.0f * M_PI * randV.y;
+			w = vec3f(y*cos(p), z, y * sin(p));
+			w.Normalize();
+
+			// Testing if the distance satisfy blue noise properties.
+			float dot_dist = MinDotDistance(dirs, w);
+			if (dot_dist < max_dist) {
+				break;
+			} else {
+				++nb_try;
+			}
+		}
+
+		if (nb_try == maxTry) {
+			max_dist = sqrt(max_dist);
+		} else {
+			dirs.push_back(w);
+			++n;
+		}
+	}
+}
