@@ -150,109 +150,112 @@ typedef vec2<int> vec2i;
 template<typename T>
 class vec3 {
 public:
-	vec3(T v = 0) : x(v), y(v), z(v) {}
-	vec3(T ix, T iy, T iz) : x(ix), y(iy), z(iz) {}
-	vec3(const vec3<T> &v) {
+	__forceinline vec3() {}
+	__forceinline vec3(T v) : x(v), y(v), z(v) {}
+	__forceinline vec3(T ix, T iy, T iz) : x(ix), y(iy), z(iz) {}
+	__forceinline vec3(const vec3<T> &v) {
 		(*this) = v;
 	}
 
 	template<typename T2>
-	vec3(const vec3<T2> &v) {
+	__forceinline vec3(const vec3<T2> &v) {
 		x = (T)v.x;
 		y = (T)v.y;
 		z = (T)v.z;
 	}
 
-	vec3<T> operator+(const vec3<T> &v) const {
+	__forceinline vec3<T> operator+(const vec3<T> &v) const {
 		return vec3<T>(x + v.x, y + v.y, z + v.z);
 	}
 
-	vec3<T> operator-(const vec3<T> &v) const {
+	__forceinline vec3<T> operator-(const vec3<T> &v) const {
 		return vec3<T>(x - v.x, y - v.y, z - v.z);
 	}
 
-	vec3<T> operator*(T v) const {
+	__forceinline vec3<T> operator*(T v) const {
 		return vec3<T>(x * v, y * v, z * v);
 	}
 
-	vec3<T> operator/(T v) const {
-		return vec3<T>(x / v, y / v, z / v);
+	__forceinline vec3<T> operator/(T v) const {
+		const T div = T(1) / v;
+		return vec3<T>(x * div, y * div, z * div);
 	}
 
-	vec3<T>& operator+=(const vec3<T> &v) {
+	__forceinline vec3<T>& operator+=(const vec3<T> &v) {
 		x += v.x;
 		y += v.y;
 		z += v.z;
 		return *this;
 	}
 
-	vec3<T>& operator-=(const vec3<T> &v) {
+	__forceinline vec3<T>& operator-=(const vec3<T> &v) {
 		x -= v.x;
 		y -= v.y;
 		z -= v.z;
 		return *this;
 	}
 
-	vec3<T>& operator*=(T v) {
+	__forceinline vec3<T>& operator*=(T v) {
 		x *= v;
 		y *= v;
 		z *= v;
 		return *this;
 	}
 
-	vec3<T>& operator*=(const vec3<T> &v) {
+	__forceinline vec3<T>& operator*=(const vec3<T> &v) {
 		x *= v.x;
 		y *= v.y;
 		z *= v.z;
 		return *this;
 	}
 
-	vec3<T>& operator/=(T v) {
-		x /= v;
-		y /= v;
-		z /= v;
+	__forceinline vec3<T>& operator/=(T v) {
+		const T div = T(1) / v;
+		x *= div;
+		y *= div;
+		z *= div;
 		return *this;
 	}
 
-	bool operator==(const vec3<T> &v) const {
+	__forceinline bool operator==(const vec3<T> &v) const {
 		return std::abs(float(x - v.x)) <= std::numeric_limits<T>::epsilon() &&
 			std::abs(float(y - v.y)) <= std::numeric_limits<T>::epsilon() &&
 			std::abs(float(z - v.z)) <= std::numeric_limits<T>::epsilon();
 	}
 
-	bool operator!=(const vec3<T> &v) const{
+	__forceinline bool operator!=(const vec3<T> &v) const{
 		return !(*this == v);
 	}
 
-	void operator=(const vec3<T> &v) {
+	__forceinline void operator=(const vec3<T> &v) {
 		x = v.x;
 		y = v.y;
 		z = v.z;
 	}
 
-	vec3<T> operator-() const {
+	__forceinline vec3<T> operator-() const {
 		return vec3<T>(-x, -y, -z);
 	}
 
-	operator T*() {
+	__forceinline operator T*() {
 		return &x;
 	}
 
-	T& operator[](int index) {
+	__forceinline T& operator[](int index) {
 		Assert(index < 3);
 		return *((&x) + index);
 	}
 
-	const T& operator[](int index) const {
+	__forceinline const T& operator[](int index) const {
 		Assert(index < 3);
 		return *((&x) + index);
 	}
 
-	float Dot(const vec3<T> &v) const {
+	__forceinline float Dot(const vec3<T> &v) const {
 		return x*v.x + y*v.y + z*v.z;
 	}
 
-	vec3<T> Cross(const vec3<T> &v) const {
+	__forceinline vec3<T> Cross(const vec3<T> &v) const {
 		vec3<T> r;
 		r.x = y * v.z - z * v.y;
 		r.y = z * v.x - x * v.z;
@@ -260,12 +263,12 @@ public:
 		return r;
 	}
 
-	float Len() const {
+	__forceinline float Len() const {
 		const float dot = Dot(*this);
 		return dot > 0.f ? std::sqrt(dot) : 0.f;
 	}
 
-	void Normalize() {
+	__forceinline void Normalize() {
 		const float len = Len();
 		if (len > 0.f) {
 			float k = 1.f / len;

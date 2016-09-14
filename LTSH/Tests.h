@@ -1,9 +1,11 @@
 ﻿#pragma once
 
-#include "src/common/SHEval.h"
 #include "eigen\Eigen\Core"
 #include "eigen/Eigen/LU"
+
 #include "src/common/common.h"
+#include "src/common/sampling.h"
+#include "src/common/SHEval.h"
 #include "src/render_internal/geometry.h"
 
 inline int SHTerms(int band) {

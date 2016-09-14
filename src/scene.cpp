@@ -15,7 +15,7 @@ void Camera::Update(float dt) {
 	ImGuiIO &io = ImGui::GetIO();
 
 	const bool captureMouse = !io.WantCaptureMouse;
-	vec3f posDiff;
+	vec3f posDiff(0);
 
 	// Translation
 	if (device.IsKeyHit(K_LShift))
@@ -107,8 +107,8 @@ void Camera::Update(float dt) {
 namespace Object {
 	void Desc::Identity() {
 		model_matrix.Identity();
-		position = vec3f();
-		rotation = vec3f();
+		position = vec3f(0);
+		rotation = vec3f(0);
 		scale = 1.f;
 	}
 

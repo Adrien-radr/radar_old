@@ -79,7 +79,7 @@ namespace Mesh {
 
 
 	void ComputeBoundingSphere(f32 *vp, u32 vcount, vec3f *center, float *radius) {
-		vec3f c;
+		vec3f c(0);
 		vec3f *verts = (vec3f*)vp;
 
 		for (u32 i = 0; i < vcount; ++i) {

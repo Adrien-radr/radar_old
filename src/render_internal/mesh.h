@@ -79,7 +79,7 @@ namespace Render {
 
 		/// Can use animation or not.
 		struct Data {
-			Data() : vao(0), indices_n(0), attrib_flags(MESH_POSITIONS), animation_n(0) {
+			Data() : vao(0), indices_n(0), attrib_flags(MESH_POSITIONS), center(0), radius(0), animation_n(0) {
 				vbo[0] = vbo[1] = vbo[2] = vbo[3] = vbo[4] = vbo[5] = 0;
 				ibo = 0;
 			}

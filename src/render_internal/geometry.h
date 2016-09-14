@@ -58,9 +58,15 @@ struct Triangle {
 	/// Returns a point on the triangle sampled according to (u1, u2)
 	vec3f SamplePoint(f32 u1, f32 u2) const;
 
+	/// Same but by providing the 2D barycentric point
+	vec3f SamplePointBary(f32 baryX, f32 baryY) const;
+
 	/// Returns a random direction toward the triangle from the given position
 	/// Returns the geometry term costheta / r^2 for this sample
 	f32 SampleDir(vec3f &rayDir, const f32 s, const f32 t) const;
+
+	/// Same but by providing the 3D point on the triangle
+	f32 SampleDir(vec3f &rayDir, const vec3f &pt) const;
 
 private:
 	void ComputeArea();
@@ -117,6 +123,21 @@ struct Rectangle {
 
 	/// Numerical integration for Ground Truth, True random world space rectangle sampling
 	f32 IntegrateRandom(const vec3f &integrationPos, const vec3f &integrationNrm, u32 sampleCount, std::vector<f32> &shvals, int nBand) const;
+};
+
+/// Rectangle projected to a plane
+struct PlanarRectangle {
+	vec3f p0, p1, p2, p3;
+	vec3f ex, ey, ez;
+	f32 w, h;
+	f32 area;
+
+	PlanarRectangle(const Rectangle &rect, const vec3f &integrationPoint);
+
+	vec3f SamplePoint(f32 u1, f32 u2) const;
+	f32 SampleDir(vec3f & rayDir, const f32 u1, const f32 u2) const;
+
+	f32 IntegrateRandom(u32 sampleCount, std::vector<f32> &shvals, int nBand) const;
 };
 
 // For use with SphericalRectangle sampling [Urena13]

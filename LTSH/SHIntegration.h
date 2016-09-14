@@ -2,6 +2,7 @@
 
 #include "src/device.h"
 #include "src/scene.h"
+#include "eigen/Eigen/Core"
 
 enum AreaLightIntegrationMethod {
 	UniformRandom,
@@ -9,6 +10,7 @@ enum AreaLightIntegrationMethod {
 	SphericalRectangles,
 	TriSamplingUnit,
 	TriSamplingWS,
+	TangentPlane,
 	ArvoMoments,
 	LTCAnalytic
 };
@@ -21,7 +23,8 @@ enum AreaLightBRDF {
 
 class SHInt {
 public:
-	SHInt() : ltcMat(nullptr), ltcAmp(nullptr), APMatrix(nullptr) {}
+	SHInt() : integrationPos(0), integrationNrm(0, 1, 0), integrationView(0, -1, 0),
+		ltcMat(nullptr), ltcAmp(nullptr) {}
 	~SHInt();
 	bool Init(Scene *scene, u32 band);
 
@@ -41,7 +44,8 @@ public:
 
 private:
 	f32 IntegrateLight(const AreaLight::UniformBufferData &al, std::vector<f32> &shvals);
-	f32 IntegrateLightSmart(const AreaLight::UniformBufferData &al, const Rectangle &rect, const SphericalRectangle &sphrect, const Polygon &P, std::vector<f32> &shvals);
+	f32 IntegrateLightSmart(const AreaLight::UniformBufferData &al, const Rectangle &rect, const SphericalRectangle &sphrect, 
+		const Polygon &P, const PlanarRectangle &prect, std::vector<f32> &shvals);
 	f32 IntegrateTrisSampling(const AreaLight::UniformBufferData &al, std::vector<f32> &shvals, bool wsSampling);
 	f32 IntegrateTrisLTC(const AreaLight::UniformBufferData &al, std::vector<f32> &shvals);
 	f32 IntegrateArvoMoments(const Polygon &P, std::vector<f32> &shvals);
@@ -72,8 +76,10 @@ private:
 	f32 *ltcMat;
 	f32 *ltcAmp;
 
-	f32 *APMatrix;
+	Eigen::Matrix<typename float, Eigen::Dynamic, Eigen::Dynamic> APMap;
 	std::vector<vec3f> sampleDirs;
+
+	Random::Pool<vec2f> triPool; // (1 - sqrt(s), sqrt(s) * t) for triangle sampling
 
 	Scene *gameScene;
 	std::vector<AreaLight::Handle> areaLights;

@@ -1,12 +1,12 @@
 #include "SHIntegration.h"
 #include "src/common/SHEval.h"
 #include "src/common/sampling.h"
+#include "Tests.h"
+#include "AxialMoments.hpp"
 
 #include <algorithm>
-#include "AxialMoments.hpp"
-#include "Tests.h"
 
-#pragma optimize("",off)
+//#pragma optimize("",off)
 static const float g_SubdivThreshold = 0.866f; // subdivide triangles having edges larger than 60 degrees
 
 bool SHInt::Init(Scene *scene, u32 band) {
@@ -48,12 +48,18 @@ bool SHInt::Init(Scene *scene, u32 band) {
 	const auto ZW = ZonalWeightsEigen(sampleDirs);
 	const auto Y = ZonalExpansionEigen(sampleDirs);
 	const auto A = computeInverseEigen(Y);
-	const auto AP = A*ZW;
-	Eigen::Matrix<typename float, Eigen::Dynamic, Eigen::Dynamic> APMap = AP;
-	APMatrix = new float[order*order*order*dirCount]();
-	std::memcpy(APMatrix, APMap.data(), sizeof(f32) * order * order * order * dirCount);
+	APMap = A*ZW;
+	//Eigen::Matrix<typename float, Eigen::Dynamic, Eigen::Dynamic> APMap = AP;
+	//APMatrix = new float[order*order*order*dirCount]();
+	//std::memcpy(APMatrix, APMap.data(), sizeof(f32) * order * order * order * dirCount);
 
+	//ComputeAPMatrix((f32*) &sampleDirs[0], dirCount, APMatrix); // of size mcols*mrows
 
+	// precompute random values
+	triPool.Init(4096, [](vec2f v) { 
+		const f32 sqrtu1 = std::sqrtf(v.x);
+		return vec2f(1.f - sqrtu1, v.y * sqrtu1); 
+	});
 
 	// Get ltc data from GL textures
 	Material::Data *matData = gameScene->GetMaterial(material);
@@ -73,7 +79,7 @@ bool SHInt::Init(Scene *scene, u32 band) {
 SHInt::~SHInt() {
 	if(ltcMat) delete[] ltcMat;
 	if(ltcAmp) delete[] ltcAmp;
-	if(APMatrix) delete[] APMatrix;
+	//if(APMatrix) delete[] APMatrix;
 }
 
 void SHInt::Recompute() {
@@ -104,7 +110,7 @@ void SHInt::TestConvergence(const std::string & outputFileName, u32 numPasses, u
 	std::vector<float> shtmp(nCoeff);
 	std::fill_n(shvals.begin(), nCoeff, 0.f);
 
-	const u32 sampleSteps = 50;
+	const u32 sampleSteps = 100;
 	const u32 sampleCountStep = 4;
 	const u32 maximumSamples = 5000;
 	const u32 nMethods = (u32) LTCAnalytic - (u32) UniformRandom;
@@ -117,6 +123,9 @@ void SHInt::TestConvergence(const std::string & outputFileName, u32 numPasses, u
 
 		// Construct Rectangle for numerical techniques
 		const Rectangle arect = AreaLight::GetRectangle(*al);
+
+		// Construct planar rectangle for Tangent Plane sampling
+		const PlanarRectangle prect(arect, integrationPos);
 
 		// COnstruct spherical rectangle for Spherical Rectangles sampling strategy
 		SphericalRectangle sphrect;
@@ -135,6 +144,7 @@ void SHInt::TestConvergence(const std::string & outputFileName, u32 numPasses, u
 		std::vector<f32> l2[nMethods];
 		std::vector<f32> l3[nMethods];
 		std::vector<f32> l4[nMethods];
+		std::vector<f32> t1[nMethods];
 
 		static const char* methodNames[LTCAnalytic] = {
 			"Random",
@@ -142,13 +152,14 @@ void SHInt::TestConvergence(const std::string & outputFileName, u32 numPasses, u
 			"SR",
 			"TriUnit",
 			"TriWS",
+			"PlaneRandom",
 			"ArvoMoments"
 		};
 
 		auto WriteResult = [&](CSV &csv) {
 			csv.WriteCell("L2-Norm Mean"); csv.WriteNewLine();
 			csv.WriteCell("SampleCount:");
-			for (u32 i = 0; i < sampleSteps; ++i) {
+			for (u32 i = 1; i <= sampleSteps; ++i) {
 				csv.WriteCell<int>(i*sampleCountStep);
 			}
 			csv.WriteNewLine();
@@ -170,7 +181,7 @@ void SHInt::TestConvergence(const std::string & outputFileName, u32 numPasses, u
 			csv.WriteNewLine();
 			csv.WriteCell("L2-Norm Variance"); csv.WriteNewLine();
 			csv.WriteCell("SampleCount:");
-			for (u32 i = 0; i < sampleSteps; ++i) {
+			for (u32 i = 1; i <= sampleSteps; ++i) {
 				csv.WriteCell<int>(i*sampleCountStep);
 			}
 			csv.WriteNewLine();
@@ -190,11 +201,12 @@ void SHInt::TestConvergence(const std::string & outputFileName, u32 numPasses, u
 			}
 
 			// DC
+			csv.WriteNewLine();
 			csv.WriteCell("DC Only");csv.WriteNewLine();
 			csv.WriteNewLine();
 			csv.WriteCell("L2-Norm Mean"); csv.WriteNewLine();
 			csv.WriteCell("SampleCount:");
-			for (u32 i = 0; i < sampleSteps; ++i) {
+			for (u32 i = 1; i <= sampleSteps; ++i) {
 				csv.WriteCell<int>(i*sampleCountStep);
 			}
 			csv.WriteNewLine();
@@ -215,7 +227,7 @@ void SHInt::TestConvergence(const std::string & outputFileName, u32 numPasses, u
 			csv.WriteNewLine();
 			csv.WriteCell("L2-Norm Variance"); csv.WriteNewLine();
 			csv.WriteCell("SampleCount:");
-			for (u32 i = 0; i < sampleSteps; ++i) {
+			for (u32 i = 1; i <= sampleSteps; ++i) {
 				csv.WriteCell<int>(i*sampleCountStep);
 			}
 			csv.WriteNewLine();
@@ -233,6 +245,31 @@ void SHInt::TestConvergence(const std::string & outputFileName, u32 numPasses, u
 				}
 				csv.WriteNewLine();
 			}
+
+			// Timings
+			csv.WriteNewLine();
+			csv.WriteCell("Times"); csv.WriteNewLine();
+			csv.WriteNewLine();
+			csv.WriteCell("SampleCount:");
+			for (u32 i = 1; i <= sampleSteps; ++i) {
+				csv.WriteCell<int>(i*sampleCountStep);
+			}
+			csv.WriteNewLine();
+			for (u32 j = 0; j < nMethods; ++j) {
+				csv.WriteCell(methodNames[j]);
+				if (j >= ArvoMoments) {
+					f32 val = t1[j][0];
+					for (u32 i = 0; i < sampleSteps; ++i) {
+						csv.WriteCell<float>(val);
+					}
+				} else {
+					for (u32 i = 0; i < sampleSteps; ++i) {
+						csv.WriteCell<float>(t1[j][i]);
+					}
+				}
+				csv.WriteNewLine();
+			}
+
 			csv.Close();
 		};
 
@@ -242,10 +279,12 @@ void SHInt::TestConvergence(const std::string & outputFileName, u32 numPasses, u
 				l2[m].clear();
 				l3[m].clear();
 				l4[m].clear();
+				t1[m].clear();
 				l1[m].resize(sampleSteps, 0.f);
 				l2[m].resize(sampleSteps, 0.f);
 				l3[m].resize(sampleSteps, 0.f);
 				l4[m].resize(sampleSteps, 0.f);
+				t1[m].resize(sampleSteps, 0.f);
 			}
 		};
 
@@ -257,66 +296,51 @@ void SHInt::TestConvergence(const std::string & outputFileName, u32 numPasses, u
 
 			for (u32 m = (u32) UniformRandom; m < nMethods; ++m) {
 				integrationMethod = (AreaLightIntegrationMethod) m;
-				numSamples = 0;
 
 				LogInfo("Testing ", methodNames[m]);
 
 				// loop incrementing the number of samples used
 				for (u32 i = 0; i < sampleSteps; ++i) {
-					numSamples += sampleCountStep;
+					numSamples = (i+1) * sampleCountStep;
 
-					f64 dc_mean_err = 0.f;
-					f64 dc_mean_err2 = 0.f;
-					f64 dc_var_err = 0.f;
-					f64 mean_err = 0.f;
-					f64 mean_err2 = 0.f;
-					f64 var_err = 0.f;
+					f64 dc_mean_err = 0.;
+					f64 dc_mean_err2 = 0.;
+					f64 dc_var_err = 0.;
+					f64 mean_err = 0.;
+					f64 mean_err2 = 0.;
+					f64 var_err = 0.;
+					f64 mean_timing = 0.;
 
 					// loop over subpasses averaging mean and variance for the current number of samples
 					for (u32 j = 0; j < numPasses; ++j) {
-						//std::fill_n(shvals.begin(), nCoeff, 0.f);
-
-
-						f32 wt = 0.f;
-						//f64 startTime = glfwGetTime();
-						//f64 timeElapsed = 0.0;
-
-
-						//do {
-
 						std::fill_n(shtmp.begin(), nCoeff, 0.f);
-						f32 subWt = IntegrateLightSmart(*al, arect, sphrect, P, shtmp);
-						wt += subWt;
+						f64 t1 = glfwGetTime();
+						f32 wt = IntegrateLightSmart(*al, arect, sphrect, P, prect, shtmp);
+						mean_timing += glfwGetTime() - t1;
 
 						// normalize, accumulate and compare with GT
 						f64 error = 0.f, error2 = 0.f;
 						for (u32 i = 0; i < nCoeff; ++i) {
-							shvals[i] = shtmp[i] * subWt;
-							//shcmp[i] = shvals[i] / (f32) pass;
+							shvals[i] = shtmp[i] * wt;
 
 							// L2 norm
 							f64 nrm = GT[i] - shvals[i];
-							//error += nrm;
+							error += nrm;
 							error2 += nrm * nrm;
 						}
-						//error = std::fabs(error);
-						error2 = std::sqrtf(error2);
+						//error = std::abs(error);
+						error2 = std::sqrt(error2);
 
 						mean_err += error2;
 						mean_err2 += error2 * error2;
 
-						error = GT[0] - shvals[0];
-						error = std::sqrtf(error * error); // L2 norm of DC
-						dc_mean_err += error;
-						dc_mean_err2 += error * error;
-
-						//totalSamples += 10;
-						//timeElapsed = glfwGetTime() - startTime;
-
-					//} while (m < (u32) ArvoMoments && numSamples < maxSamples && timeElapsed < maxTime);
-
-
+						error2 = GT[0] - shvals[0];
+						error2 = std::sqrt(error2 * error2); // L2 norm of DC
+						dc_mean_err += error2;
+						dc_mean_err2 += error2 * error2;
 					}
+
+					mean_timing /= numPasses;
 
 					mean_err /= numPasses;
 					mean_err2 /= numPasses;
@@ -326,10 +350,11 @@ void SHInt::TestConvergence(const std::string & outputFileName, u32 numPasses, u
 					var_err = mean_err2 - mean_err * mean_err;
 					dc_var_err = dc_mean_err2 - dc_mean_err * dc_mean_err;
 
-					l1[m][i] = mean_err;
-					l2[m][i] = var_err;
-					l3[m][i] = dc_mean_err;
-					l4[m][i] = dc_var_err;
+					l1[m][i] = (f32) mean_err;
+					l2[m][i] = (f32) var_err;
+					l3[m][i] = (f32) dc_mean_err;
+					l4[m][i] = (f32) dc_var_err;
+					t1[m][i] = (f32) mean_timing;
 				}
 			}
 		};
@@ -510,7 +535,7 @@ f32 SHInt::IntegrateTrisSampling(const AreaLight::UniformBufferData &al, std::ve
 			triangle.InitUnit(points[triIdx[tri][0]], points[triIdx[tri][1]], points[triIdx[tri][2]], integrationPos);
 
 			// Subdivide projected triangle if too large for robust integration
-			if (triangle.distToOrigin() > g_SubdivThreshold) {
+			if (triangle.distToOrigin() > g_SubdivThreshold || sampleCount < 4) {
 				subdivided[0] = triangle;
 				numSubdiv = 1;
 			}
@@ -527,10 +552,12 @@ f32 SHInt::IntegrateTrisSampling(const AreaLight::UniformBufferData &al, std::ve
 
 			// Sample triangle
 			for (u32 i = 0; i < sc; ++i) {
-				vec2f randVec = Random::Vec2f();
+				//vec2f randVec = Random::Vec2f();
+				vec2f bary = triPool.Next();
 
+				const vec3f &pt = sub.SamplePointBary(bary.x, bary.y);
 				vec3f rayDir;
-				f32 invPdf = sub.SampleDir(rayDir, randVec.x, randVec.y) * sub.area / sc;
+				f32 invPdf = sub.SampleDir(rayDir, pt) * sub.area / sc;
 				//f32 NdotL = rayDir.Dot(integrationNrm);
 
 				// Fill SH with impulse from that direction
@@ -569,24 +596,19 @@ f32 SHInt::IntegrateArvoMoments(const Polygon &P, std::vector<f32> &shvals) {
 	const u32 order = nBand;// (dirCount - 1) / 2 + 1;
 	const u32 mrows = order*order;
 	const u32 mcols = order*dirCount;
-
-	//const auto ZW = ZonalWeightsEigen(sampleDirs);
-	//const auto Y = ZonalExpansionEigen(sampleDirs);
-	//const auto A = computeInverseEigen(Y);
-	//const auto AP = A*ZW;
-
-
+	
 	const auto moments = AxialMomentsEigen(P, sampleDirs);
-	auto APMap = Eigen::Map<Eigen::MatrixXf>(APMatrix, mrows, mcols);
-	Eigen::Matrix<typename float, Eigen::Dynamic, Eigen::Dynamic> analytical = (APMap * moments);
-	f32 *rawdata = analytical.data();
+	//std::vector<f32> moments = P.AxialMoments(sampleDirs);
 
-	std::memcpy(&shvals[0], rawdata, sizeof(f32) * order * order);
+	auto SHMap = Eigen::Map<Eigen::MatrixXf>(&shvals[0], mrows, 1);
+	SHMap = APMap * moments;
+
+	//MatrixProduct(APMatrix, &moments[0], &shvals[0], mrows, mcols, 1);
 
 	return 1.f;
 }
 
-f32 SHInt::IntegrateLightSmart(const AreaLight::UniformBufferData &al, const Rectangle &rect, const SphericalRectangle &sphrect, const Polygon &P, std::vector<f32> &shvals) {
+f32 SHInt::IntegrateLightSmart(const AreaLight::UniformBufferData &al, const Rectangle &rect, const SphericalRectangle &sphrect, const Polygon &P, const PlanarRectangle &prect, std::vector<f32> &shvals) {
 	f32 ret;
 	
 	switch (integrationMethod) {
@@ -604,6 +626,9 @@ f32 SHInt::IntegrateLightSmart(const AreaLight::UniformBufferData &al, const Rec
 		break;
 	case TriSamplingWS:
 		ret = IntegrateTrisSampling(al, shvals, true);
+		break;
+	case TangentPlane:
+		ret = prect.IntegrateRandom(numSamples, shvals, nBand);
 		break;
 	case ArvoMoments:
 		ret = IntegrateArvoMoments(P, shvals);
@@ -644,6 +669,12 @@ f32 SHInt::IntegrateLight(const AreaLight::UniformBufferData &al, std::vector<f3
 		break;
 	case TriSamplingWS:
 		ret = IntegrateTrisSampling(al, shvals, true);
+		break;
+	case TangentPlane:
+	{
+		PlanarRectangle prect(arect, integrationPos);
+		ret = prect.IntegrateRandom(numSamples, shvals, nBand);
+	}
 		break;
 	case ArvoMoments: 
 	{

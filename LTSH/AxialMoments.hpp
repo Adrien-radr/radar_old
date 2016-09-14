@@ -265,7 +265,7 @@ inline Eigen::VectorXf AxialMomentEigen(const Polygon& P, const Vector& w, int n
    b += Eigen::VectorXf::Constant(n2,P.SolidAngle());
 
    // 'c' is the vector of linear elements, storing 'i+1' for index 'i'
-   auto c = Eigen::VectorXf::LinSpaced(n+2, 1, n+2);
+   auto c = Eigen::VectorXf::LinSpaced(n+2, 1.f, f32(n+2));
 
    return a.cwiseQuotient(c);
 }
@@ -280,7 +280,7 @@ template<class Polygon, class Vector>
 inline Eigen::VectorXf AxialMomentsEigen(const Polygon& P,
                                     const std::vector<Vector>& directions) {
 
-   const int dsize = directions.size();
+   const int dsize = (int) directions.size();
    const int order = (dsize-1) / 2 + 1;
 
    Eigen::VectorXf result(dsize*order);

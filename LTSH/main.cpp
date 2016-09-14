@@ -4,7 +4,7 @@
 #include "src/render_internal/geometry.h"
 #include "src/common/sampling.h"
 
-#pragma optimize("", off)
+//#pragma optimize("", off)
 
 AreaLight::Handle alh = -1;
 AreaLight::Handle alh2;
@@ -26,9 +26,8 @@ static bool doTests = false;
 
 SHInt sh1;
 
-#include "Tests.h"
 #include "AxialMoments.hpp"
-#include "eigen\Eigen\Core"
+#include "Tests.h"
 
 
 std::vector<f32> MonteCarloMoments(const Triangle& triangle, const vec3f& w, int n) {
@@ -122,14 +121,14 @@ int TestMoments(const vec3f &dir, const std::vector<vec3f> &v, int nMin, int nMa
 	LogInfo("Comparing axial moments on several directions.");
 	// Doing Moments on several directions
 	std::vector<vec3f> directions;
-	u32 dirCount = 2.f * nMax + 1;
+	u32 dirCount = 2 * nMax + 1;
 	Sampling::SampleSphereBluenoise(directions, dirCount);
 
 	std::vector<f32> momentsDirs = P.AxialMoments(directions);
 	auto momentsDirsEigen = AxialMomentsEigen(P, directions);
 
 	// Test difference for each order
-	for (int i = nMin; i < dirCount; ++i) {
+	for (int i = nMin; i < (int) dirCount; ++i) {
 		for (int j = 0; j < nMax + 1; ++j) {
 			f32 analyticalMoment = momentsDirs[i*(nMax+1)+j];
 			//f32 mcMoment = shvals[i * (i + 1)] * weight;
@@ -192,7 +191,7 @@ int TestZHIntegral(const std::vector<vec3f> &v, int n) {
 	f32 weight = rect.IntegrateAngularStratification(vec3f(0.f), vec3f(0, 1, 0), 10000, shvalsGT, order);
 
 	// Test difference for each coeff
-	for (int i = 0; i < mrows; ++i) {
+	for (int i = 0; i < (int) mrows; ++i) {
 		f32 analyticalMoments = -shvals(i);
 		f32 sh = shvalsGT[i] * weight;
 
@@ -325,12 +324,6 @@ bool MakeLights(Scene *scene) {
 #endif
 
 	return true;
-	err:
-	{
-		LogErr("Couldn't add light to scene.");
-		return false;
-	}
-
 	area_err: {
 		LogErr("Couldn't add area light to scene.");
 		return false;
@@ -504,8 +497,9 @@ void UpdateUI(float dt) {
 	ImGui::RadioButton("Spherical Rectangles", &method, 2);
 	ImGui::RadioButton("Tri Sampling Unit", &method, 3);
 	ImGui::RadioButton("Tri Sampling WS", &method, 4);
-	ImGui::RadioButton("Arvo Moments", &method, 5);
-	ImGui::RadioButton("LTC Analytic", &method, 6);
+	ImGui::RadioButton("Tangent Plane", &method, 5);
+	ImGui::RadioButton("Arvo Moments", &method, 6);
+	ImGui::RadioButton("LTC Analytic", &method, 7);
 
 	ImGui::Text("BRDF :");
 	ImGui::RadioButton("Diffuse", &brdfMethod, (int)BRDF_Diffuse);

@@ -96,10 +96,7 @@ namespace Object {
 		friend Scene;
 
 		Desc(Shader::Handle shader_h)//, Mesh::Handle mesh_h, Material::Handle mat_h = Material::DEFAULT_MATERIAL)
-		: shader(shader_h), numSubmeshes(0) {
-			position = vec3f();
-			rotation = vec3f();
-			scale = vec3f(1.f);
+		: shader(shader_h), numSubmeshes(0), position(0), rotation(0), scale(1) {
 			model_matrix.Identity();
 		}
 
@@ -203,7 +200,7 @@ namespace PointLight {
 
 	/// Point Light Descriptor
 	struct Desc {
-		Desc() : active(false) {}
+		Desc() : position(0), Ld(1), active(false) {}
 
 		vec3f   position;   //!< 3D position in world-coordinates
 		vec3f   Ld; 		//!< Light Diffuse Color. w-coord unused
@@ -237,7 +234,7 @@ namespace AreaLight {
 
 	/// Area Light Descriptor
 	struct Desc {
-		Desc() : active(false), fixture(-1) {}
+		Desc() : position(0), Ld(1), rotation(0), width(1), active(false), fixture(-1) {}
 
 		vec3f position;
 		vec3f Ld;

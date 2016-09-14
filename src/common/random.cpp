@@ -7,6 +7,10 @@ namespace Random {
 	std::mt19937 twister;
 	std::uniform_real_distribution<float> rd(0, 1);
 
+
+	Random::Pool<f32> GlobalPool;
+
+
 	// Feed the twister with enough entropy (state size of 19968 bits == 624 ints)
 	void InitRandom() {
 		std::random_device r;
@@ -15,6 +19,9 @@ namespace Random {
 
 		std::seed_seq seed(std::begin(seed_data), std::end(seed_data));
 		twister = std::mt19937(seed);
+
+		// Initialize the Global Random pool
+		GlobalPool.Init(16384);
 	}
 
 	float Float() {

@@ -6374,7 +6374,7 @@ float ZHProductNormCos11(const float fZ, float *ZHa)
 }
 
 #include "common/common.h"
-#pragma optimize("", off)
+//#pragma optimize("", off)
 void ZonalWeights(int order, float *pZHW) {
 	pZHW[0] = 1.f;
 	pZHW[1 * order + 1] = 1.f;

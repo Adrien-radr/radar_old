@@ -3,7 +3,7 @@
 
 #include <algorithm>
 #include <complex>
-#pragma optimize("", off)
+//#pragma optimize("", off)
 
 static bool even(int n) {
 	return !(n & 1);
@@ -348,8 +348,23 @@ vec3f Triangle::SamplePoint(f32 u1, f32 u2) const {
 	return q0 * bary.x + q1 * bary.y + q2 * (1.f - bary.x - bary.y);
 }
 
+vec3f Triangle::SamplePointBary(f32 baryX, f32 baryY) const {
+	return q0 * baryX + q1 * baryY + q2 * (1.f - baryX - baryY);
+}
+
 f32 Triangle::SampleDir(vec3f &rayDir, const f32 s, const f32 t) const {
-	rayDir = SamplePoint(s, t);
+	return SampleDir(rayDir, SamplePoint(s, t));
+	/*const f32 rayLenSqr = rayDir.Dot(rayDir);
+	const f32 rayLen = std::sqrtf(rayLenSqr);
+	rayDir /= rayLen;
+
+	const f32 costheta = -unitNormal.Dot(rayDir);
+
+	return costheta / rayLenSqr; */
+}
+
+f32 Triangle::SampleDir(vec3f &rayDir, const vec3f &pt) const {
+	rayDir = pt;
 	const f32 rayLenSqr = rayDir.Dot(rayDir);
 	const f32 rayLen = std::sqrtf(rayLenSqr);
 	rayDir /= rayLen;
@@ -555,8 +570,8 @@ f32 Rectangle::IntegrateAngularStratification(const vec3f & integrationPos, cons
 			const f32 y2 = lh1 * tany2 / (siny + tany2 * cosy);
 			const f32 ly = y2 - y1;
 
-			const f32 u1 = (x1 + Random::Float() * lx) / rwidth;
-			const f32 u2 = (y1 + Random::Float() * ly) / rheight;
+			const f32 u1 = (x1 + Random::GlobalPool.Next() * lx) / rwidth;
+			const f32 u2 = (y1 + Random::GlobalPool.Next() * ly) / rheight;
 
 			vec3f rayDir;
 			const f32 invPdf = SampleDir(rayDir, integrationPos, u1, u2) * lx * ly * sampleCount;
@@ -590,7 +605,7 @@ f32 Rectangle::IntegrateRandom(const vec3f & integrationPos, const vec3f & integ
 
 	// costheta * A / r^3
 	for (u32 i = 0; i < sampleCount; ++i) {
-		const vec2f randV = Random::Vec2f();
+		const vec2f randV(Random::GlobalPool.Next(), Random::GlobalPool.Next());
 
 		vec3f rayDir;
 		const f32 invPdf = SampleDir(rayDir, integrationPos, randV.x, randV.y);
@@ -701,7 +716,7 @@ f32 SphericalRectangle::Integrate(const vec3f & integrationNrm, u32 sampleCount,
 
 	// Sample the spherical rectangle
 	for (u32 i = 0; i < sampleCount; ++i) {
-		const vec2f randV = Random::Vec2f();
+		const vec2f randV(Random::GlobalPool.Next(), Random::GlobalPool.Next());
 
 		vec3f rayDir = Sample(randV.x, randV.y) - o;
 		const f32 rayLenSq = rayDir.Dot(rayDir);
@@ -711,6 +726,78 @@ f32 SphericalRectangle::Integrate(const vec3f & integrationNrm, u32 sampleCount,
 
 		for (int j = 0; j < nCoeff; ++j) {
 			shvals[j] += shtmp[j];
+		}
+	}
+
+	return area / (f32) sampleCount;
+}
+
+PlanarRectangle::PlanarRectangle(const Rectangle & rect, const vec3f & integrationPoint) {
+	// copy src points here
+	std::memcpy(&p0, &rect.p0, 4 * sizeof(vec3f));
+
+	const vec3f bary = (p0 + p1 + p2 + p3) * 0.25f;
+
+	const vec3f org = bary - integrationPoint;
+	const f32 rayLenSqr = org.Dot(org);
+	const f32 rayLen = std::sqrtf(rayLenSqr);
+	const vec3f nrm = org / rayLen;
+	
+	// project each point on the plane with origin bary and normal nrm
+	vec3f *verts = &p0;
+	for (int i = 0; i < 4; ++i) {
+		verts[i] -= integrationPoint; // put in intPos frame
+		const vec3f dTh = org - verts[i];
+		const f32 pDist = dTh.Dot(nrm);
+		verts[i] = verts[i] - nrm * pDist;
+	}
+
+	const vec3f d0 = p1 - p0;
+	const vec3f d1 = p3 - p0;
+
+	w = d0.Len();
+	h = d1.Len();
+
+	ex = d0 / w;
+	ey = d1 / h;
+	ez = nrm; // normal pointing away from origin
+	area = w*h;
+}
+
+vec3f PlanarRectangle::SamplePoint(f32 u1, f32 u2) const {
+	return p0 + ex * w * u1 + ey * h * u2;
+}
+
+f32 PlanarRectangle::SampleDir(vec3f & rayDir, const f32 u1, const f32 u2) const {
+	const vec3f pk = SamplePoint(u1, u2);
+	rayDir = pk;
+	const f32 rayLenSq = rayDir.Dot(rayDir);
+	const f32 rayLen = std::sqrtf(rayLenSq);
+	rayDir /= rayLen;
+
+	const f32 costheta = ez.Dot(rayDir);
+
+	return costheta / rayLenSq;
+}
+
+f32 PlanarRectangle::IntegrateRandom(u32 sampleCount, std::vector<f32> &shvals, int nBand) const {
+	const int nCoeff = nBand * nBand;
+
+	std::vector<f32> shtmp(nCoeff, 0.f);
+
+	// costheta * A / r^3
+	for (u32 i = 0; i < sampleCount; ++i) {
+		const vec2f randV(Random::GlobalPool.Next(), Random::GlobalPool.Next());
+
+		vec3f rayDir;
+		const f32 invPdf = SampleDir(rayDir, randV.x, randV.y);
+
+		if (invPdf > 0.f) {
+			SHEval(nBand, rayDir.x, rayDir.z, rayDir.y, &shtmp[0]);
+
+			for (int j = 0; j < nCoeff; ++j) {
+				shvals[j] += shtmp[j] * invPdf; // constant luminance of 1 for now
+			}
 		}
 	}
 
