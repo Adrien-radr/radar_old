@@ -20,3 +20,7 @@ LTSH/bin/imgui.ini
 ipch/
 data/sponza/
 LTSH/eigen/
+*.db
+*.opendb
+*.csv
+*.xlsx
