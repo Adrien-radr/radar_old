@@ -25,10 +25,10 @@ Eigen::VectorXf SHEvalFast(const Vector& w, int order, Eigen::VectorXf& pOut) {
 
 	float fC0, fS0, fC1, fS1, fPa, fPb, fPc;
 	if (order == 1) {
-		pOut[0] = 0.282094791774;
+		pOut[0] = (f32)0.282094791774;
 
 	} else if (order == 2) {
-		pOut[0] = 0.282094791774;
+		pOut[0] = (f32)0.282094791774;
 		pOut[2] = 0.488602511903f*fZ;
 		fC0 = fX;
 		fS0 = fY;
@@ -38,7 +38,7 @@ Eigen::VectorXf SHEvalFast(const Vector& w, int order, Eigen::VectorXf& pOut) {
 
 	} else if (order == 3) {
 		float fZ2 = fZ*fZ;
-		pOut[0] = 0.282094791774;
+		pOut[0] = (f32)0.282094791774;
 		pOut[2] = 0.488602511903f*fZ;
 		pOut[6] = (0.946174695758f*fZ2) + -0.315391565253f;
 		fC0 = fX;
@@ -57,7 +57,7 @@ Eigen::VectorXf SHEvalFast(const Vector& w, int order, Eigen::VectorXf& pOut) {
 
 	} else if (order == 4) {
 		float fZ2 = fZ*fZ;
-		pOut[0] = 0.282094791774;
+		pOut[0] = (f32)0.282094791774;
 		pOut[2] = 0.488602511903f*fZ;
 		pOut[6] = (0.946174695758f*fZ2) + -0.315391565253f;
 		pOut[12] = fZ*((fZ2* 1.86588166295f) + -1.11952899777f);
@@ -88,7 +88,7 @@ Eigen::VectorXf SHEvalFast(const Vector& w, int order, Eigen::VectorXf& pOut) {
 
 	} else if (order == 5) {
 		float fZ2 = fZ*fZ;
-		pOut[0] = 0.282094791774;
+		pOut[0] = (f32)0.282094791774;
 		pOut[2] = 0.488602511903f*fZ;
 		pOut[6] = (0.946174695758f*fZ2) + -0.315391565253f;
 		pOut[12] = fZ*((fZ2* 1.86588166295f) + -1.11952899777f);
@@ -134,7 +134,7 @@ Eigen::VectorXf SHEvalFast(const Vector& w, int order, Eigen::VectorXf& pOut) {
 
 	} else if (order == 6) {
 		float fZ2 = fZ*fZ;
-		pOut[0] = 0.282094791774;
+		pOut[0] = (f32)0.282094791774;
 		pOut[2] = 0.488602511903f*fZ;
 		pOut[6] = (0.946174695758f*fZ2) + -0.315391565253f;
 		pOut[12] = fZ*((fZ2* 1.86588166295f) + -1.11952899777f);
@@ -198,7 +198,7 @@ Eigen::VectorXf SHEvalFast(const Vector& w, int order, Eigen::VectorXf& pOut) {
 
 	} else if (order == 7) {
 		float fZ2 = fZ*fZ;
-		pOut[0] = 0.282094791774;
+		pOut[0] = (f32)0.282094791774;
 		pOut[2] = 0.488602511903f*fZ;
 		pOut[6] = (0.946174695758f*fZ2) + -0.315391565253f;
 		pOut[12] = fZ*((fZ2* 1.86588166295f) + -1.11952899777f);
@@ -283,7 +283,7 @@ Eigen::VectorXf SHEvalFast(const Vector& w, int order, Eigen::VectorXf& pOut) {
 
 	} else if (order == 8) {
 		float fZ2 = fZ*fZ;
-		pOut[0] = 0.282094791774;
+		pOut[0] = (f32)0.282094791774;
 		pOut[2] = 0.488602511903f*fZ;
 		pOut[6] = (0.946174695758f*fZ2) + -0.315391565253f;
 		pOut[12] = fZ*((fZ2* 1.86588166295f) + -1.11952899777f);
@@ -392,7 +392,7 @@ Eigen::VectorXf SHEvalFast(const Vector& w, int order, Eigen::VectorXf& pOut) {
 
 	} else if (order == 9) {
 		float fZ2 = fZ*fZ;
-		pOut[0] = 0.282094791774;
+		pOut[0] = (f32)0.282094791774;
 		pOut[2] = 0.488602511903f*fZ;
 		pOut[6] = (0.946174695758f*fZ2) + -0.315391565253f;
 		pOut[12] = fZ*((fZ2* 1.86588166295f) + -1.11952899777f);
@@ -528,7 +528,7 @@ Eigen::VectorXf SHEvalFast(const Vector& w, int order, Eigen::VectorXf& pOut) {
 
 	} else if (order == 10) {
 		float fZ2 = fZ*fZ;
-		pOut[0] = 0.282094791774;
+		pOut[0] = (f32)0.282094791774;
 		pOut[2] = 0.488602511903f*fZ;
 		pOut[6] = (0.946174695758f*fZ2) + -0.315391565253f;
 		pOut[12] = fZ*((fZ2* 1.86588166295f) + -1.11952899777f);
@@ -694,7 +694,7 @@ Eigen::VectorXf SHEvalFast(const Vector& w, int order, Eigen::VectorXf& pOut) {
 
 	} else if (order == 11) {
 		float fZ2 = fZ*fZ;
-		pOut[0] = 0.282094791774;
+		pOut[0] = (f32)0.282094791774;
 		pOut[2] = 0.488602511903f*fZ;
 		pOut[6] = (0.946174695758f*fZ2) + -0.315391565253f;
 		pOut[12] = fZ*((fZ2* 1.86588166295f) + -1.11952899777f);
@@ -893,7 +893,7 @@ Eigen::VectorXf SHEvalFast(const Vector& w, int order, Eigen::VectorXf& pOut) {
 
 	} else if (order == 12) {
 		float fZ2 = fZ*fZ;
-		pOut[0] = 0.282094791774;
+		pOut[0] = (f32)0.282094791774;
 		pOut[2] = 0.488602511903f*fZ;
 		pOut[6] = (0.946174695758f*fZ2) + -0.315391565253f;
 		pOut[12] = fZ*((fZ2* 1.86588166295f) + -1.11952899777f);
@@ -1128,7 +1128,7 @@ Eigen::VectorXf SHEvalFast(const Vector& w, int order, Eigen::VectorXf& pOut) {
 
 	} else if (order == 13) {
 		float fZ2 = fZ*fZ;
-		pOut[0] = 0.282094791774;
+		pOut[0] = (f32)0.282094791774;
 		pOut[2] = 0.488602511903f*fZ;
 		pOut[6] = (0.946174695758f*fZ2) + -0.315391565253f;
 		pOut[12] = fZ*((fZ2* 1.86588166295f) + -1.11952899777f);
@@ -1402,7 +1402,7 @@ Eigen::VectorXf SHEvalFast(const Vector& w, int order, Eigen::VectorXf& pOut) {
 
 	} else if (order == 14) {
 		float fZ2 = fZ*fZ;
-		pOut[0] = 0.282094791774;
+		pOut[0] = (f32)0.282094791774;
 		pOut[2] = 0.488602511903f*fZ;
 		pOut[6] = (0.946174695758f*fZ2) + -0.315391565253f;
 		pOut[12] = fZ*((fZ2* 1.86588166295f) + -1.11952899777f);
@@ -1718,7 +1718,7 @@ Eigen::VectorXf SHEvalFast(const Vector& w, int order, Eigen::VectorXf& pOut) {
 
 	} else if (order == 15) {
 		float fZ2 = fZ*fZ;
-		pOut[0] = 0.282094791774;
+		pOut[0] = (f32)0.282094791774;
 		pOut[2] = 0.488602511903f*fZ;
 		pOut[6] = (0.946174695758f*fZ2) + -0.315391565253f;
 		pOut[12] = fZ*((fZ2* 1.86588166295f) + -1.11952899777f);
@@ -2079,7 +2079,7 @@ Eigen::VectorXf SHEvalFast(const Vector& w, int order, Eigen::VectorXf& pOut) {
 
 	} else if (order == 16) {
 		float fZ2 = fZ*fZ;
-		pOut[0] = 0.282094791774;
+		pOut[0] = (f32)0.282094791774;
 		pOut[2] = 0.488602511903f*fZ;
 		pOut[6] = (0.946174695758f*fZ2) + -0.315391565253f;
 		pOut[12] = fZ*((fZ2* 1.86588166295f) + -1.11952899777f);
@@ -2488,7 +2488,7 @@ Eigen::VectorXf SHEvalFast(const Vector& w, int order, Eigen::VectorXf& pOut) {
 
 	} else if (order == 17) {
 		float fZ2 = fZ*fZ;
-		pOut[0] = 0.282094791774;
+		pOut[0] = (f32)0.282094791774;
 		pOut[2] = 0.488602511903f*fZ;
 		pOut[6] = (0.946174695758f*fZ2) + -0.315391565253f;
 		pOut[12] = fZ*((fZ2* 1.86588166295f) + -1.11952899777f);
@@ -2948,7 +2948,7 @@ Eigen::VectorXf SHEvalFast(const Vector& w, int order, Eigen::VectorXf& pOut) {
 
 	} else if (order == 18) {
 		float fZ2 = fZ*fZ;
-		pOut[0] = 0.282094791774;
+		pOut[0] = (f32)0.282094791774;
 		pOut[2] = 0.488602511903f*fZ;
 		pOut[6] = (0.946174695758f*fZ2) + -0.315391565253f;
 		pOut[12] = fZ*((fZ2* 1.86588166295f) + -1.11952899777f);
@@ -3462,7 +3462,7 @@ Eigen::VectorXf SHEvalFast(const Vector& w, int order, Eigen::VectorXf& pOut) {
 
 	} else if (order == 19) {
 		float fZ2 = fZ*fZ;
-		pOut[0] = 0.282094791774;
+		pOut[0] = (f32)0.282094791774;
 		pOut[2] = 0.488602511903f*fZ;
 		pOut[6] = (0.946174695758f*fZ2) + -0.315391565253f;
 		pOut[12] = fZ*((fZ2* 1.86588166295f) + -1.11952899777f);
@@ -4150,8 +4150,8 @@ inline Eigen::MatrixXf ZonalExpansionEigen(const std::vector<Vector>& directions
 	return Y;
 }
 inline Eigen::MatrixXf computeInverseEigen(const Eigen::MatrixXf& Y) {
-	const int nrows = Y.rows();
-	const int order = sqrt(nrows);
+	const int nrows = int(Y.rows());
+	const int order = int(sqrt(nrows));
 
 #ifdef USE_SPARSE_EIGEN
 	MatrixType A(mrows, nrows);

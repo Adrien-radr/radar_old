@@ -498,8 +498,9 @@ void UpdateUI(float dt) {
 	ImGui::RadioButton("Tri Sampling Unit", &method, 3);
 	ImGui::RadioButton("Tri Sampling WS", &method, 4);
 	ImGui::RadioButton("Tangent Plane", &method, 5);
-	ImGui::RadioButton("Arvo Moments", &method, 6);
-	ImGui::RadioButton("LTC Analytic", &method, 7);
+	ImGui::RadioButton("Tangent Plane Unit", &method, 6);
+	ImGui::RadioButton("Arvo Moments", &method, 7);
+	ImGui::RadioButton("LTC Analytic", &method, 8);
 
 	ImGui::Text("BRDF :");
 	ImGui::RadioButton("Diffuse", &brdfMethod, (int)BRDF_Diffuse);

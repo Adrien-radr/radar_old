@@ -132,7 +132,11 @@ struct PlanarRectangle {
 	f32 w, h;
 	f32 area;
 
-	PlanarRectangle(const Rectangle &rect, const vec3f &integrationPoint);
+	/// Initialize on the plane at the barycentric point of the 4 vertices
+	void InitBary(const Rectangle &rect, const vec3f &integrationPoint);
+
+	/// Initialize on the inscribed rectangle's average vertex plane
+	void InitUnit(const Rectangle &rect, const vec3f &integrationPoint);
 
 	vec3f SamplePoint(f32 u1, f32 u2) const;
 	f32 SampleDir(vec3f & rayDir, const f32 u1, const f32 u2) const;
@@ -164,10 +168,10 @@ struct Plane {
 	vec3f N;
 
 	/// Returns the intersection point of the given ray on the plane
-	vec3f RayIntersection(const vec3f &rayOrg, const vec3f &rayDir);
+	vec3f RayIntersection(const vec3f &rayOrg, const vec3f &rayDir) const;
 
 	/// Returns the closest point inside the given rectangle for the given point.
 	/// If the input point is outside of of the 2D frame of the plan, it is projected on it
-	vec3f ClampPointInRect(const Rectangle &rect, const vec3f &point);
+	vec3f ClampPointInRect(const Rectangle &rect, const vec3f &point) const ;
 };
 

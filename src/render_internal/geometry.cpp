@@ -16,12 +16,12 @@ static int sign(f32 b) {
 //////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////
 
-vec3f Plane::RayIntersection(const vec3f &rayOrg, const vec3f &rayDir) {
+vec3f Plane::RayIntersection(const vec3f &rayOrg, const vec3f &rayDir) const {
 	const f32 distance = N.Dot(P - rayOrg) / N.Dot(rayDir);
 	return rayOrg + rayDir * distance;
 }
 
-vec3f Plane::ClampPointInRect(const Rectangle &rect, const vec3f &point) {
+vec3f Plane::ClampPointInRect(const Rectangle &rect, const vec3f &point) const {
 	const vec3f dir = P - point;
 
 	vec2f dist2D(dir.Dot(rect.ex), dir.Dot(rect.ey));
@@ -572,6 +572,8 @@ f32 Rectangle::IntegrateAngularStratification(const vec3f & integrationPos, cons
 
 			const f32 u1 = (x1 + Random::GlobalPool.Next() * lx) / rwidth;
 			const f32 u2 = (y1 + Random::GlobalPool.Next() * ly) / rheight;
+			//const f32 u1 = (x1 + Random::Float() * lx) / rwidth;
+			//const f32 u2 = (y1 + Random::Float() * ly) / rheight;
 
 			vec3f rayDir;
 			const f32 invPdf = SampleDir(rayDir, integrationPos, u1, u2) * lx * ly * sampleCount;
@@ -606,6 +608,7 @@ f32 Rectangle::IntegrateRandom(const vec3f & integrationPos, const vec3f & integ
 	// costheta * A / r^3
 	for (u32 i = 0; i < sampleCount; ++i) {
 		const vec2f randV(Random::GlobalPool.Next(), Random::GlobalPool.Next());
+		//const vec2f randV = Random::Vec2f();
 
 		vec3f rayDir;
 		const f32 invPdf = SampleDir(rayDir, integrationPos, randV.x, randV.y);
@@ -717,6 +720,7 @@ f32 SphericalRectangle::Integrate(const vec3f & integrationNrm, u32 sampleCount,
 	// Sample the spherical rectangle
 	for (u32 i = 0; i < sampleCount; ++i) {
 		const vec2f randV(Random::GlobalPool.Next(), Random::GlobalPool.Next());
+		//const vec2f randV = Random::Vec2f();
 
 		vec3f rayDir = Sample(randV.x, randV.y) - o;
 		const f32 rayLenSq = rayDir.Dot(rayDir);
@@ -732,28 +736,35 @@ f32 SphericalRectangle::Integrate(const vec3f & integrationNrm, u32 sampleCount,
 	return area / (f32) sampleCount;
 }
 
-PlanarRectangle::PlanarRectangle(const Rectangle & rect, const vec3f & integrationPoint) {
+void PlanarRectangle::InitBary(const Rectangle & rect, const vec3f & integrationPoint) {
 	// copy src points here
 	std::memcpy(&p0, &rect.p0, 4 * sizeof(vec3f));
 
 	const vec3f bary = (p0 + p1 + p2 + p3) * 0.25f;
 
-	const vec3f org = bary - integrationPoint;
+	vec3f org = bary - integrationPoint;
 	const f32 rayLenSqr = org.Dot(org);
 	const f32 rayLen = std::sqrtf(rayLenSqr);
 	const vec3f nrm = org / rayLen;
-	
-	// project each point on the plane with origin bary and normal nrm
+
+	// org is bary in relative coordinates
+	const Plane P{ org, nrm };
+		
+	// project each point on the plane P
 	vec3f *verts = &p0;
 	for (int i = 0; i < 4; ++i) {
-		verts[i] -= integrationPoint; // put in intPos frame
-		const vec3f dTh = org - verts[i];
-		const f32 pDist = dTh.Dot(nrm);
-		verts[i] = verts[i] - nrm * pDist;
+		vec3f rayDir = verts[i] - integrationPoint;
+		rayDir.Normalize();
+
+		// with 0 as origin since the vertices are in relative coordinates already
+		verts[i] = P.RayIntersection(vec3f(0), rayDir);
 	}
 
 	const vec3f d0 = p1 - p0;
 	const vec3f d1 = p3 - p0;
+
+	const vec3f d2 = p2 - p3;
+	const vec3f d3 = p2 - p1;
 
 	w = d0.Len();
 	h = d1.Len();
@@ -761,11 +772,58 @@ PlanarRectangle::PlanarRectangle(const Rectangle & rect, const vec3f & integrati
 	ex = d0 / w;
 	ey = d1 / h;
 	ez = nrm; // normal pointing away from origin
-	area = w*h;
+
+	area = 0.5f * (w * h + d2.Len() * d3.Len());
+}
+
+void PlanarRectangle::InitUnit(const Rectangle & rect, const vec3f & integrationPoint) {
+	// copy src points here
+	std::memcpy(&p0, &rect.p0, 4 * sizeof(vec3f));
+
+	// Normalize each vertex to get the inscribed triangle,
+	// and find the average vertex plane
+	vec3f bary(0);
+	vec3f *verts = &p0;
+	for (int i = 0; i < 4; ++i) {
+		verts[i] -= integrationPoint; // put in intPos frame
+		verts[i].Normalize();
+		bary += verts[i];
+	}
+
+	bary *= 0.25f;
+
+	// project each point on the tangent plane at the barycenter
+	f32 rayLenSq = bary.Dot(bary);
+	f32 rayLen = std::sqrtf(rayLenSq);
+	ez = bary / rayLen; // plane normal
+
+	// bary is in relative coordinates to the integration pt already
+	const Plane P{ bary, ez };
+
+	for (int i = 0; i < 4; ++i) {
+		// with 0 as origin since the vertices are in relative coordinates already
+		verts[i] = P.RayIntersection(vec3f(0), verts[i]);
+	}
+
+	const vec3f d0 = p1 - p0;
+	const vec3f d1 = p3 - p0;
+
+	const vec3f d2 = p2 - p3;
+	const vec3f d3 = p2 - p1;
+
+	w = d0.Len();
+	h = d1.Len();
+
+	ex = d0 / w;
+	ey = d1 / h;
+
+	area = 0.5f * (w * h + d2.Len() * d3.Len());
 }
 
 vec3f PlanarRectangle::SamplePoint(f32 u1, f32 u2) const {
-	return p0 + ex * w * u1 + ey * h * u2;
+	const f32 mu1 = 1.f - u1;
+	const f32 mu2 = 1.f - u2;
+	return p0 * mu1 * mu2 + p1 * u1 * mu2 + p2 * u1 * u2 + p3 * mu1 * u2;
 }
 
 f32 PlanarRectangle::SampleDir(vec3f & rayDir, const f32 u1, const f32 u2) const {
@@ -785,9 +843,10 @@ f32 PlanarRectangle::IntegrateRandom(u32 sampleCount, std::vector<f32> &shvals, 
 
 	std::vector<f32> shtmp(nCoeff, 0.f);
 
-	// costheta * A / r^3
+	// costheta * A / r^2
 	for (u32 i = 0; i < sampleCount; ++i) {
 		const vec2f randV(Random::GlobalPool.Next(), Random::GlobalPool.Next());
+		//const vec2f randV = Random::Vec2f();
 
 		vec3f rayDir;
 		const f32 invPdf = SampleDir(rayDir, randV.x, randV.y);

@@ -21,7 +21,7 @@ namespace Random {
 		twister = std::mt19937(seed);
 
 		// Initialize the Global Random pool
-		GlobalPool.Init(16384);
+		GlobalPool.Init(65536);
 	}
 
 	float Float() {

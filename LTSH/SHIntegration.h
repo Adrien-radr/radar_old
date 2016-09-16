@@ -11,6 +11,7 @@ enum AreaLightIntegrationMethod {
 	TriSamplingUnit,
 	TriSamplingWS,
 	TangentPlane,
+	TangentPlaneUnit,
 	ArvoMoments,
 	LTCAnalytic
 };
@@ -45,7 +46,7 @@ public:
 private:
 	f32 IntegrateLight(const AreaLight::UniformBufferData &al, std::vector<f32> &shvals);
 	f32 IntegrateLightSmart(const AreaLight::UniformBufferData &al, const Rectangle &rect, const SphericalRectangle &sphrect, 
-		const Polygon &P, const PlanarRectangle &prect, std::vector<f32> &shvals);
+		const Polygon &P, const PlanarRectangle &prect, const PlanarRectangle &uprect, std::vector<f32> &shvals);
 	f32 IntegrateTrisSampling(const AreaLight::UniformBufferData &al, std::vector<f32> &shvals, bool wsSampling);
 	f32 IntegrateTrisLTC(const AreaLight::UniformBufferData &al, std::vector<f32> &shvals);
 	f32 IntegrateArvoMoments(const Polygon &P, std::vector<f32> &shvals);
@@ -76,7 +77,7 @@ private:
 	f32 *ltcMat;
 	f32 *ltcAmp;
 
-	Eigen::Matrix<typename float, Eigen::Dynamic, Eigen::Dynamic> APMap;
+	Eigen::Matrix<typename f32, Eigen::Dynamic, Eigen::Dynamic> APMap;
 	std::vector<vec3f> sampleDirs;
 
 	Random::Pool<vec2f> triPool; // (1 - sqrt(s), sqrt(s) * t) for triangle sampling

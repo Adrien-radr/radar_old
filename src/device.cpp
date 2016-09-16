@@ -539,6 +539,7 @@ void Device::UpdateProjection() {
 	glViewport(0, 0, windowSize.x, windowSize.y);
     projection_matrix_3d = mat4f::Perspective(fov, windowSize[0]/(f32)windowSize[1],
                                               .1f, 1000.f);
+
 	projection_matrix_2d = mat4f::Ortho(0, 	(f32)windowSize.x,
 								        	(f32)windowSize.y, 0,
 								        	0.f, 100.f);
