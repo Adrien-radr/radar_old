@@ -24,7 +24,7 @@ enum AreaLightBRDF {
 
 class SHInt {
 public:
-	SHInt() : integrationPos(0), integrationNrm(0, 1, 0), integrationView(0, -1, 0),
+	SHInt() : initialized(false), integrationPos(0), integrationNrm(0, 1, 0), integrationView(0, -1, 0),
 		ltcMat(nullptr), ltcAmp(nullptr) {}
 	~SHInt();
 	bool Init(Scene *scene, u32 band);
@@ -56,12 +56,17 @@ private:
 	void UpdateData(const std::vector<float> &coeffs);
 
 private:
+	bool initialized;
+
 	u32 nBand;
 	u32 nCoeff;
 	std::vector<float> shCoeffs;
+	std::vector<vec3f> integrationSurface;
 
 	Object::Handle shObj;
 	Material::Handle material;
+	Object::Handle integrationObj;
+	Material::Handle integrationMaterial;
 
 	vec3f integrationPos;
 	vec3f integrationNrm;

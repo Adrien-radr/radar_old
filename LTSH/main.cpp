@@ -581,16 +581,17 @@ int main() {
 	Device &device = GetDevice();
 	if (!device.Init(Init)) {
 		printf("Error initializing Device. Aborting.\n");
-		device.Destroy();
+		DestroyDevice();
+		Log::Close();
 		system("PAUSE");
 		return 1;
 	}
 
 	if (!DoTests()) {
-		device.Destroy();
+		DestroyDevice();
 		Log::Close();
 		system("PAUSE");
-		return 0;
+		return 1;
 	}
 
 	device.SetUpdateFunc(Update);
@@ -598,7 +599,8 @@ int main() {
 
 	device.Run();
 
-	device.Destroy();
+	DestroyDevice();
 	Log::Close();
+
     return 0;
 }

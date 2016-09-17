@@ -7,6 +7,7 @@
 #define RADAR_MINOR "2"
 #define RADAR_PATCH "7"
 
+
 // Platform
 #if defined(_WIN32) || defined(_WIN64)
 #   define RADAR_WIN32

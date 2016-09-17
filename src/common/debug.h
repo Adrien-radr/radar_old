@@ -1,5 +1,11 @@
 #pragma once
 
+// memory Leaks debugging
+#ifdef _DEBUG
+#include <vld.h>
+#endif
+
+
 #include <iostream>
 #include <sstream>
 #include <fstream>

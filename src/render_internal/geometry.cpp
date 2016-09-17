@@ -742,7 +742,8 @@ void PlanarRectangle::InitBary(const Rectangle & rect, const vec3f & integration
 
 	const vec3f bary = (p0 + p1 + p2 + p3) * 0.25f;
 
-	vec3f org = bary - integrationPoint;
+	vec3f org = bary - integrationPoint; 
+	org.Normalize();
 	const f32 rayLenSqr = org.Dot(org);
 	const f32 rayLen = std::sqrtf(rayLenSqr);
 	const vec3f nrm = org / rayLen;

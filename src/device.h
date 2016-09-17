@@ -103,8 +103,9 @@ private:
 	Scene		scene;			//!< Game scene
 };
 
-// Only instance of the device
+// Only instance of the device, creation, access, and destruction
 Device &GetDevice();
+void DestroyDevice();
 
 // Defined in device_imgui.cpp
 void ImGui_MouseListener(const Event &evt, void *data);

@@ -18,6 +18,7 @@ bool SHInt::Init(Scene *scene, u32 band) {
 	integrationNrm = vec3f(0, 1, 0);
 
 	shCoeffs.resize(nCoeff);
+	integrationSurface.resize(12);
 
 	Material::Desc mat_desc(col3f(0.6f, 0.25f, 0), col3f(1, 0.8f, 0), col3f(1, 0, 0), 0.4f);
 	mat_desc.ltcMatrixPath = "../../data/ltc_mat.dds";
@@ -31,10 +32,26 @@ bool SHInt::Init(Scene *scene, u32 band) {
 		return false;
 	}
 
+	mat_desc.uniform.Ka = col3f(0.25f, 0.f, 0.6f);
+	mat_desc.uniform.Kd = col3f(0.8f, 0.f, 1.f);
+	mat_desc.uniform.Ks = col3f(0, 0, 1);
+
+	integrationMaterial = scene->Add(mat_desc);
+	if (integrationMaterial < 0) {
+		LogErr("Error adding SH Integration material.");
+		return false;
+	}
+
 	Object::Desc od(Render::Shader::SHADER_3D_MESH);
 	shObj = scene->Add(od);
 	if (shObj < 0) {
 		LogErr("Error adding SH Vis object");
+		return false;
+	}
+
+	integrationObj = scene->Add(od);
+	if (integrationObj < 0) {
+		LogErr("Error adding SH Integration object");
 		return false;
 	}
 
@@ -90,6 +107,8 @@ void SHInt::Recompute() {
 }
 
 void SHInt::UpdateCoords(const vec3f &position, const vec3f &normal) {
+	initialized = true; // only start simulation if the user clicked somewhere at lease once
+
 	// place at position, shifted in the normal's direction a bit
 	vec3f pos = position + normal * 0.1f;
 
@@ -412,6 +431,7 @@ void SHInt::UpdateData(const std::vector<float> &coeffs) {
 	std::fill_n(shCoeffs.begin(), nCoeff, 0.f);
 	std::copy_n(coeffs.begin(), nCoeff, shCoeffs.begin());
 
+	// Generate SH Visu
 	Object::Desc *od = gameScene->GetObject(shObj);
 
 	od->DestroyData();
@@ -424,6 +444,33 @@ void SHInt::UpdateData(const std::vector<float> &coeffs) {
 	}
 
 	od->AddSubmesh(shVis, material);
+
+	// Generate integration object
+	od = gameScene->GetObject(integrationObj);
+
+	od->DestroyData();
+	od->ClearSubmeshes();
+
+	static u32 indices[] = { 0, 1, 2, 3, 4, 5, 6, 8, 7, 9, 11, 10 };
+	static vec3f normals[12];
+	for (u32 i = 0; i < 6; ++i) {
+		normals[i] = integrationSurface[i] - integrationPos;
+		normals[i].Normalize();
+	}
+	for (u32 i = 6; i < 12; ++i) {
+		normals[i] = integrationPos - integrationSurface[i];
+		normals[i].Normalize();
+	}
+
+	Render::Mesh::Desc d("IntegrationPoly", false, 12, indices, 12, (f32*) &integrationSurface[0], (f32*)normals);
+
+	Render::Mesh::Handle intMesh = Render::Mesh::Build(d);
+	if (intMesh < 0) {
+		LogErr("Error creating integration polygon visualisation.");
+		return;
+	}
+
+	od->AddSubmesh(intMesh, integrationMaterial);
 }
 
 f32 SHInt::IntegrateTrisLTC(const AreaLight::UniformBufferData &al, std::vector<f32> &shvals) {
@@ -497,11 +544,23 @@ f32 SHInt::IntegrateTrisSampling(const AreaLight::UniformBufferData &al, std::ve
 		if (wsSampling) {
 			subdivided[0].InitWS(pN, points[triIdx[tri][0]], points[triIdx[tri][1]], points[triIdx[tri][2]], integrationPos);
 
+			for (u32 i = 0; i < 2; ++i) {
+				integrationSurface[i * 6 + tri * 3 + 0] = subdivided[0].q0 + integrationPos;
+				integrationSurface[i * 6 + tri * 3 + 1] = subdivided[0].q1 + integrationPos;
+				integrationSurface[i * 6 + tri * 3 + 2] = subdivided[0].q2 + integrationPos;
+			}
+
 			numSubdiv = 1;
 		} 
 		else {
 			Triangle triangle;
 			triangle.InitUnit(points[triIdx[tri][0]], points[triIdx[tri][1]], points[triIdx[tri][2]], integrationPos);
+
+			for (u32 i = 0; i < 2; ++i) {
+				integrationSurface[i * 6 + tri * 3 + 0] = triangle.q0 + integrationPos;
+				integrationSurface[i * 6 + tri * 3 + 1] = triangle.q1 + integrationPos;
+				integrationSurface[i * 6 + tri * 3 + 2] = triangle.q2 + integrationPos;
+			}
 
 			// Subdivide projected triangle if too large for robust integration
 			if (triangle.distToOrigin() > g_SubdivThreshold || sampleCount < 4) {
@@ -626,6 +685,16 @@ f32 SHInt::IntegrateLight(const AreaLight::UniformBufferData &al, std::vector<f3
 
 	Rectangle arect = AreaLight::GetRectangle(al);
 
+	// Set the visualisation vertices
+	for (u32 i = 0; i < 2; ++i) {
+		integrationSurface[i*6+0] = arect.p0;
+		integrationSurface[i*6+1] = arect.p1;
+		integrationSurface[i*6+2] = arect.p2;
+		integrationSurface[i*6+3] = arect.p0;
+		integrationSurface[i*6+4] = arect.p2;
+		integrationSurface[i*6+5] = arect.p3;
+	}
+
 	switch (integrationMethod) {
 	case UniformRandom:
 		ret = arect.IntegrateRandom(integrationPos, integrationNrm, numSamples, shvals, nBand);
@@ -650,6 +719,16 @@ f32 SHInt::IntegrateLight(const AreaLight::UniformBufferData &al, std::vector<f3
 	{
 		PlanarRectangle prect;
 		prect.InitBary(arect, integrationPos);
+
+		for (u32 i = 0; i < 2; ++i) {
+			integrationSurface[i * 6 + 0] = prect.p0 + integrationPos;
+			integrationSurface[i * 6 + 1] = prect.p1 + integrationPos;
+			integrationSurface[i * 6 + 2] = prect.p2 + integrationPos;
+			integrationSurface[i * 6 + 3] = prect.p0 + integrationPos;
+			integrationSurface[i * 6 + 4] = prect.p2 + integrationPos;
+			integrationSurface[i * 6 + 5] = prect.p3 + integrationPos;
+		}
+
 		ret = prect.IntegrateRandom(numSamples, shvals, nBand);
 	}
 	break;
@@ -657,6 +736,14 @@ f32 SHInt::IntegrateLight(const AreaLight::UniformBufferData &al, std::vector<f3
 	{
 		PlanarRectangle prect;
 		prect.InitUnit(arect, integrationPos);
+		for (u32 i = 0; i < 2; ++i) {
+			integrationSurface[i * 6 + 0] = prect.p0 + integrationPos;
+			integrationSurface[i * 6 + 1] = prect.p1 + integrationPos;
+			integrationSurface[i * 6 + 2] = prect.p2 + integrationPos;
+			integrationSurface[i * 6 + 3] = prect.p0 + integrationPos;
+			integrationSurface[i * 6 + 4] = prect.p2 + integrationPos;
+			integrationSurface[i * 6 + 5] = prect.p3 + integrationPos;
+		}
 		ret = prect.IntegrateRandom(numSamples, shvals, nBand);
 	}
 	break;
@@ -685,6 +772,8 @@ f32 SHInt::IntegrateLight(const AreaLight::UniformBufferData &al, std::vector<f3
 }
 
 void SHInt::IntegrateAreaLights() {
+	if (!initialized) return;
+
 	std::vector<float> shvals(nCoeff);
 	std::vector<float> shtmp(nCoeff);
 	std::fill_n(shvals.begin(), nCoeff, 0.f);
@@ -753,6 +842,8 @@ void SHInt::IntegrateAreaLights() {
 
 #elif
 #endif
+	} else {
+		std::memset(&integrationSurface[0], 0, 12 * sizeof(vec3f)); // remove the integration surface visu if the light isnt visible
 	}
 	// Update SH Coeffs
 	UpdateData(shvals);

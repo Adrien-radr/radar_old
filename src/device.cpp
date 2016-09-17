@@ -330,6 +330,14 @@ Device &GetDevice() {
 	return *gDevice;
 }
 
+void DestroyDevice() {
+	if (gDevice) {
+		gDevice->Destroy();
+		delete gDevice;
+		gDevice = nullptr;
+	}
+}
+
 bool Device::Init(SceneInitFunc initFunc) {
     int v;
 
