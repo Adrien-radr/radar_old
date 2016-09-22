@@ -329,16 +329,22 @@ void Device::ImGui_Destroy()
     if (g_ElementsHandle) glDeleteBuffers(1, &g_ElementsHandle);
     g_VaoHandle = g_VboHandle = g_ElementsHandle = 0;
 
-    glDetachShader(g_ShaderHandle, g_VertHandle);
-    glDeleteShader(g_VertHandle);
-    g_VertHandle = 0;
+	if (g_VertHandle) {
+		glDetachShader(g_ShaderHandle, g_VertHandle);
+		glDeleteShader(g_VertHandle);
+		g_VertHandle = 0;
+	}
 
-    glDetachShader(g_ShaderHandle, g_FragHandle);
-    glDeleteShader(g_FragHandle);
-    g_FragHandle = 0;
+	if (g_FragHandle) {
+		glDetachShader(g_ShaderHandle, g_FragHandle);
+		glDeleteShader(g_FragHandle);
+		g_FragHandle = 0;
+	}
 
-    glDeleteProgram(g_ShaderHandle);
-    g_ShaderHandle = 0;
+	if (g_ShaderHandle) {
+		glDeleteProgram(g_ShaderHandle);
+		g_ShaderHandle = 0;
+	}
 
     if (g_FontTexture)
     {

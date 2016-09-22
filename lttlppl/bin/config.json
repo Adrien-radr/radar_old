@@ -1,0 +1,15 @@
+{
+    "iWindowWidth" : 1280,
+    "iWindowHeight" : 720,
+    "iMSAA" : 0,
+    "bFullScreen" : 0,
+    "bVSync" : 1,
+    "fFOV" : 75.0,
+    "iAnisotropicFiltering" : 16,
+
+    "fCameraSpeedBase" : 20.0,
+    "fCameraSpeedMult" : 2.0,
+	"fCameraRotationSpeed" : 30.0,
+    "vCameraPosition" : [30.18, 4.30, -10.17],
+    "vCameraTarget" : [30.92, 3.94, -10.73]
+}
