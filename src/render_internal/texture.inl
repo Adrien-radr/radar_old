@@ -1,285 +1,677 @@
+#include <png.h>
 
-namespace Texture {
-    Handle Build(const Desc &desc) {
-        Texture::Data texture;
+namespace Render {
+	namespace Texture {
+		// loaded in Render::Init
+		Handle DEFAULT_DIFFUSE = -1;
+		Handle DEFAULT_NORMAL = -1;
 
-        int tex_i = (int)renderer->textures.size();
+		namespace _internal {
+			static void get_PNG_info(int color_type, _tex *ti) {
+				switch (color_type) {
+				case PNG_COLOR_TYPE_GRAY:
+					ti->format = R8U;
+					break;
+				case PNG_COLOR_TYPE_GRAY_ALPHA:
+					ti->format = RG8U;
+					break;
+				case PNG_COLOR_TYPE_RGB:
+					ti->format = RGB8U;
+					break;
+				case PNG_COLOR_TYPE_RGB_ALPHA:
+					ti->format = RGBA8U;
+					break;
+				default:
+					LogErr("Invalid color type!");
+					break;
+				}
 
-        switch(desc.type) {
-        case FromFile: {
-            // Check if this font resource already exist
-            int free_index;
-
-            if(FindResource(renderer->texture_resources, desc.name[0], free_index)) {
-                return free_index;
-            }
-
-            // If not loaded yet, do it
-            if (!Load(texture, desc.name[0])) {
-                LogErr("Error while loading '", desc.name[0], "' image.");
-                return -1;
-            }
-
-            // .. and add it as a loaded resources
-            AddResource(renderer->texture_resources, free_index, desc.name[0], tex_i);
-        } break;
-
-        case Empty: {
-            glGenTextures(1, &texture.id);
-            glBindTexture(GL_TEXTURE_2D, texture.id);
-            texture.size = desc.size;
-        } break;
-
-        case Cubemap: {
-            // Create cubemap 
-            glGenTextures(1, &texture.id);
-            glBindTexture(GL_TEXTURE_CUBE_MAP, texture.id);
-
-            // Create face textures
-            for(u32 i = 0; i < 6; ++i) {
-                if(!LoadCubemapFace(desc.name[i], i)) {
-                    LogErr("Error while loading face ", i," (", desc.name[i], ") of cubemap.");
-                    return -1;
-                }
-            }
-
-            glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-            glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-            glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-            glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-            glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-            glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
-        } break;
-        }
-
-        // Store the texture
-        renderer->textures.push_back(texture);
-
-        return tex_i;
-    }
-
-    void Destroy(Handle h) {
-        if (h >= 0 && h < (int)renderer->textures.size()) {
-            Texture::Data &tex = renderer->textures[h];
-            glDeleteTextures(1, &tex.id);
-            tex.id = 0;
-        }
-    }
-
-    void Bind(Handle h, Target target) {
-        GLint tex = Exists(h) ? h : -1;
-
-        // Switch Texture Target if needed
-        if (target != renderer->curr_GL_texture_target) {
-            renderer->curr_GL_texture_target = target;
-            glActiveTexture(GL_TEXTURE0 + target);
-        }
-
-        // Switch active Texture if needed
-        if (renderer->curr_GL_texture[target] != tex) {
-            renderer->curr_GL_texture[target] = tex;
-            glBindTexture(GL_TEXTURE_2D, tex >= 0 ? (int)renderer->textures[tex].id : 0);
-        }
-    }
-
-    void BindCubemap(Handle h, Target target) {
-        GLint tex = Exists(h) ? h : -1;
-
-        // Switch Texture Target if needed
-        if (target != renderer->curr_GL_texture_target) {
-            renderer->curr_GL_texture_target = target;
-            glActiveTexture(GL_TEXTURE0 + target);
-        }
-
-        glBindTexture(GL_TEXTURE_CUBE_MAP, tex >= 0 ? (int)renderer->textures[tex].id : 0);
-    }
-
-    bool Exists(Handle h) {
-        return h >= 0 && h < (int)renderer->textures.size() && renderer->textures[h].id > 0;
-    }
-
-    u32 GetGLID(Handle h) {
-        if(Exists(h)) {
-            return renderer->textures[h].id;
-        }
-        return 0;
-    }
-
-	bool GetData(Handle h, TextureFormat fmt, f32 *dst) {
-		if (Exists(h)) {
-			Render::Texture::Bind(h, Render::Texture::TARGET0);
-
-			GLenum glFormat;
-			GLenum glType;
-
-			switch (fmt) {
-			case RGBA32F:
-				glFormat = GL_RGBA;
-				glType = GL_FLOAT;
-				break;
-			case RG32F:
-				glFormat = GL_RG;
-				glType = GL_FLOAT;
-				break;
-			default:
-				LogErr("TextureFormat not supported for GetData. Implement it.");
-				return false;
+				ti->desc = GetTextureFormat(ti->format);
 			}
 
-			glGetTexImage(GL_TEXTURE_2D, 0, glFormat, glType, dst);
+			_tex *LoadPNG(const std::string &filename) {
+				_tex *t = NULL;
+				FILE *f = NULL;
 
-			Render::Texture::Bind(-1, Render::Texture::TARGET0);
+				png_byte    sig[8];
+				png_structp img = NULL;
+				png_infop   img_info = NULL;
 
-			return true;
+				int bpp, color_type;
+				png_bytep *row_pointers = NULL;
+				png_uint_32 w, h;
+
+
+				f = fopen(filename.c_str(), "rb");
+				if (!f) {
+					LogErr("Could not open '", filename, "'.");
+					return NULL;
+				}
+
+				// get png file signature
+				fread(sig, 1, 8, f);
+				if (!png_sig_cmp(sig, 0, 8) == 0) {
+					LogErr("'", filename, "' is not a valid PNG image.");
+					fclose(f);
+					return NULL;
+				}
+
+
+
+				img = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
+				if (!img) {
+					LogErr("Error while creating PNG read struct.");
+					fclose(f);
+					return NULL;
+				}
+
+				img_info = png_create_info_struct(img);
+				if (!img_info) {
+					LogErr("Error while creating PNG info struct.");
+					if (img) png_destroy_read_struct(&img, &img_info, NULL);
+					fclose(f);
+					return NULL;
+				}
+
+				// our texture handle
+				t = new _tex();//
+				t->texels = nullptr;
+
+				size_t rowbytes;
+				// setjmp for any png loading error
+				if (setjmp(png_jmpbuf(img)))
+					goto error;
+
+				// Load png image
+				png_init_io(img, f);
+				png_set_sig_bytes(img, 8);
+				png_read_info(img, img_info);
+
+				//get info
+				bpp = png_get_bit_depth(img, img_info);
+				color_type = png_get_color_type(img, img_info);
+
+				// if indexed, make it RGB
+				if (PNG_COLOR_TYPE_PALETTE == color_type)
+					png_set_palette_to_rgb(img);
+
+				// if 1/2/4 bits gray, make it 8-bits gray
+				if (PNG_COLOR_TYPE_GRAY && 8 > bpp)
+					png_set_expand_gray_1_2_4_to_8(img);
+
+				if (png_get_valid(img, img_info, PNG_INFO_tRNS))
+					png_set_tRNS_to_alpha(img);
+
+				if (16 == bpp)
+					png_set_strip_16(img);
+				else if (8 > bpp)
+					png_set_packing(img);
+
+				// get img info
+				png_read_update_info(img, img_info);
+				png_get_IHDR(img, img_info, &w, &h, &bpp, &color_type, NULL, NULL, NULL);
+				t->width = w;
+				t->height = h;
+
+
+				get_PNG_info(color_type, t);
+
+
+				// create actual texel array
+				rowbytes = png_get_rowbytes(img, img_info);
+				t->texels = (GLubyte*) calloc(1, rowbytes * h);
+				row_pointers = (png_bytep*) calloc(1, sizeof(png_bytep) * h);
+
+				// Set pointers to rows in flipped-y order (GL need (0,0) at bottomleft)
+				for (u32 i = 0; i < t->height; ++i)
+					row_pointers[i] = t->texels + (h - 1 - i) * rowbytes;
+
+				png_read_image(img, row_pointers);
+				//png_read_end( img, NULL );
+				png_destroy_read_struct(&img, &img_info, NULL);
+				free(row_pointers);
+				fclose(f);
+
+				return t;
+
+			error:
+				if (f) fclose(f);
+				if (img_info) png_destroy_read_struct(&img, &img_info, NULL);
+				if (t) delete t;
+				free(row_pointers);
+				return NULL;
+			}
+
+			/// DDS CONSTANTS
+
+#define FOURCC_DXT1 0x31545844 // Equivalent to "DXT1" in ASCII
+#define FOURCC_DXT2 0x32545844 // Equivalent to "DXT2" in ASCII
+#define FOURCC_DXT3 0x33545844 // Equivalent to "DXT3" in ASCII
+#define FOURCC_DXT4 0x34545844 // Equivalent to "DXT4" in ASCII
+#define FOURCC_DXT5 0x35545844 // Equivalent to "DXT5" in ASCII
+#define DDS_DX10    0x30315844 // "DX10" in ASCII, for non-special types.
+
+	// pixel formats
+#define DDPF_ALHAPIXELS 0x00000001l
+#define DDPF_FOURCC 	0x00000004l
+#define DDPF_RGB    	0x00000040l
+			enum DXGI_FORMAT {
+				DXGI_FORMAT_UNKNOWN = 0,
+				DXGI_FORMAT_R32G32B32A32_TYPELESS = 1,
+				DXGI_FORMAT_R32G32B32A32_FLOAT = 2,
+				DXGI_FORMAT_R32G32B32A32_UINT = 3,
+				DXGI_FORMAT_R32G32B32A32_SINT = 4,
+				DXGI_FORMAT_R32G32B32_TYPELESS = 5,
+				DXGI_FORMAT_R32G32B32_FLOAT = 6,
+				DXGI_FORMAT_R32G32B32_UINT = 7,
+				DXGI_FORMAT_R32G32B32_SINT = 8,
+				DXGI_FORMAT_R16G16B16A16_TYPELESS = 9,
+				DXGI_FORMAT_R16G16B16A16_FLOAT = 10,
+				DXGI_FORMAT_R16G16B16A16_UNORM = 11,
+				DXGI_FORMAT_R16G16B16A16_UINT = 12,
+				DXGI_FORMAT_R16G16B16A16_SNORM = 13,
+				DXGI_FORMAT_R16G16B16A16_SINT = 14,
+				DXGI_FORMAT_R32G32_TYPELESS = 15,
+				DXGI_FORMAT_R32G32_FLOAT = 16,
+				DXGI_FORMAT_R32G32_UINT = 17,
+				DXGI_FORMAT_R32G32_SINT = 18,
+				DXGI_FORMAT_R32G8X24_TYPELESS = 19,
+				DXGI_FORMAT_D32_FLOAT_S8X24_UINT = 20,
+				DXGI_FORMAT_R32_FLOAT_X8X24_TYPELESS = 21,
+				DXGI_FORMAT_X32_TYPELESS_G8X24_UINT = 22,
+				DXGI_FORMAT_R10G10B10A2_TYPELESS = 23,
+				DXGI_FORMAT_R10G10B10A2_UNORM = 24,
+				DXGI_FORMAT_R10G10B10A2_UINT = 25,
+				DXGI_FORMAT_R11G11B10_FLOAT = 26,
+				DXGI_FORMAT_R8G8B8A8_TYPELESS = 27,
+				DXGI_FORMAT_R8G8B8A8_UNORM = 28,
+				DXGI_FORMAT_R8G8B8A8_UNORM_SRGB = 29,
+				DXGI_FORMAT_R8G8B8A8_UINT = 30,
+				DXGI_FORMAT_R8G8B8A8_SNORM = 31,
+				DXGI_FORMAT_R8G8B8A8_SINT = 32,
+				DXGI_FORMAT_R16G16_TYPELESS = 33,
+				DXGI_FORMAT_R16G16_FLOAT = 34,
+				DXGI_FORMAT_R16G16_UNORM = 35,
+				DXGI_FORMAT_R16G16_UINT = 36,
+				DXGI_FORMAT_R16G16_SNORM = 37,
+				DXGI_FORMAT_R16G16_SINT = 38,
+				DXGI_FORMAT_R32_TYPELESS = 39,
+				DXGI_FORMAT_D32_FLOAT = 40,
+				DXGI_FORMAT_R32_FLOAT = 41,
+				DXGI_FORMAT_R32_UINT = 42,
+				DXGI_FORMAT_R32_SINT = 43,
+				DXGI_FORMAT_R24G8_TYPELESS = 44,
+				DXGI_FORMAT_D24_UNORM_S8_UINT = 45,
+				DXGI_FORMAT_R24_UNORM_X8_TYPELESS = 46,
+				DXGI_FORMAT_X24_TYPELESS_G8_UINT = 47,
+				DXGI_FORMAT_R8G8_TYPELESS = 48,
+				DXGI_FORMAT_R8G8_UNORM = 49,
+				DXGI_FORMAT_R8G8_UINT = 50,
+				DXGI_FORMAT_R8G8_SNORM = 51,
+				DXGI_FORMAT_R8G8_SINT = 52,
+				DXGI_FORMAT_R16_TYPELESS = 53,
+				DXGI_FORMAT_R16_FLOAT = 54,
+				DXGI_FORMAT_D16_UNORM = 55,
+				DXGI_FORMAT_R16_UNORM = 56,
+				DXGI_FORMAT_R16_UINT = 57,
+				DXGI_FORMAT_R16_SNORM = 58,
+				DXGI_FORMAT_R16_SINT = 59,
+				DXGI_FORMAT_R8_TYPELESS = 60,
+				DXGI_FORMAT_R8_UNORM = 61,
+				DXGI_FORMAT_R8_UINT = 62,
+				DXGI_FORMAT_R8_SNORM = 63,
+				DXGI_FORMAT_R8_SINT = 64,
+				DXGI_FORMAT_A8_UNORM = 65,
+				DXGI_FORMAT_R1_UNORM = 66,
+				DXGI_FORMAT_R9G9B9E5_SHAREDEXP = 67,
+				DXGI_FORMAT_R8G8_B8G8_UNORM = 68,
+				DXGI_FORMAT_G8R8_G8B8_UNORM = 69,
+				DXGI_FORMAT_BC1_TYPELESS = 70,
+				DXGI_FORMAT_BC1_UNORM = 71,
+				DXGI_FORMAT_BC1_UNORM_SRGB = 72,
+				DXGI_FORMAT_BC2_TYPELESS = 73,
+				DXGI_FORMAT_BC2_UNORM = 74,
+				DXGI_FORMAT_BC2_UNORM_SRGB = 75,
+				DXGI_FORMAT_BC3_TYPELESS = 76,
+				DXGI_FORMAT_BC3_UNORM = 77,
+				DXGI_FORMAT_BC3_UNORM_SRGB = 78,
+				DXGI_FORMAT_BC4_TYPELESS = 79,
+				DXGI_FORMAT_BC4_UNORM = 80,
+				DXGI_FORMAT_BC4_SNORM = 81,
+				DXGI_FORMAT_BC5_TYPELESS = 82,
+				DXGI_FORMAT_BC5_UNORM = 83,
+				DXGI_FORMAT_BC5_SNORM = 84,
+				DXGI_FORMAT_B5G6R5_UNORM = 85,
+				DXGI_FORMAT_B5G5R5A1_UNORM = 86,
+				DXGI_FORMAT_B8G8R8A8_UNORM = 87,
+				DXGI_FORMAT_B8G8R8X8_UNORM = 88,
+				DXGI_FORMAT_R10G10B10_XR_BIAS_A2_UNORM = 89,
+				DXGI_FORMAT_B8G8R8A8_TYPELESS = 90,
+				DXGI_FORMAT_B8G8R8A8_UNORM_SRGB = 91,
+				DXGI_FORMAT_B8G8R8X8_TYPELESS = 92,
+				DXGI_FORMAT_B8G8R8X8_UNORM_SRGB = 93,
+				DXGI_FORMAT_BC6H_TYPELESS = 94,
+				DXGI_FORMAT_BC6H_UF16 = 95,
+				DXGI_FORMAT_BC6H_SF16 = 96,
+				DXGI_FORMAT_BC7_TYPELESS = 97,
+				DXGI_FORMAT_BC7_UNORM = 98,
+				DXGI_FORMAT_BC7_UNORM_SRGB = 99,
+				DXGI_FORMAT_FORCE_UINT = 0xffffffffUL
+			};
+
+
+			_tex *LoadDDS(const std::string &filename) {
+				_tex *t = NULL;
+				u32 bufSize;
+
+				// f = fopen(filename.c_str(), "rb");
+				std::ifstream f(filename, std::ifstream::in | std::ifstream::binary);
+				if (f.fail()) {
+					LogErr("Could not open '", filename, "'.");
+					return NULL;
+				}
+
+				// validate filecode
+				char filecode[4];
+				f.read((char*) filecode, sizeof(filecode));
+				if (strncmp(filecode, "DDS ", 4) != 0) {
+					f.close();
+					return NULL;
+				}
+
+				t = new _tex();//
+				t->texels = nullptr;
+
+				// get DX9 header	
+				u8 header[124];
+				f.read((char*) header, sizeof(header));
+
+				t->height = *(u32*)&(header[8]);
+				t->width = *(u32*)&(header[12]);
+				u32 linearSize = *(u32*)&(header[16]);
+				t->mipmapCount = *(u32*)&(header[24]);
+				u32 pixelFlags = *(u32*)&(header[76]);
+				u32 fourCC = *(u32*)&(header[80]);
+				u32 bitCount = *(u32*)&(header[84]);
+				u32 *bitMask = (u32*)&(header[88]); // 4 uints
+
+				u32 dxgiFormat = 0;
+
+				// Check pixel format
+				if (pixelFlags & DDPF_RGB) {
+					switch (bitCount) {
+					case 8:
+						t->format = R8U;
+						break;
+					case 16:
+						t->format = RG8U;
+						break;
+					case 24:
+						t->format = RGB8U;
+						break;
+					case 32:
+						t->format = RGBA8U;
+						break;
+					}
+				} else if (pixelFlags & DDPF_FOURCC) {
+					u32 comp = (fourCC == FOURCC_DXT1) ? 3 : 4;
+					switch (fourCC) {
+					case DDS_DX10:
+					{
+						// read DX10 header info
+						u8 dxgi[20];
+						f.read((char*) dxgi, sizeof(dxgi));
+						dxgiFormat = *(u32*)&(dxgi[0]);
+						// u32 dims 	   = *(u32*)&(dxgi[4]);
+						// u32 miscFlags  = *(u32*)&(dxgi[8]);
+						// u32 arraySize  = *(u32*)&(dxgi[12]);
+						// u32 miscFlags2 = *(u32*)&(dxgi[16]);
+
+						switch (dxgiFormat) {
+						case DXGI_FORMAT_R32_FLOAT:
+							t->format = R32F;
+							break;
+						case DXGI_FORMAT_R32G32_FLOAT:
+							t->format = RG32F;
+							break;
+						case DXGI_FORMAT_R32G32B32_FLOAT:
+							t->format = RGB32F;
+							break;
+						case DXGI_FORMAT_R32G32B32A32_FLOAT:
+							t->format = RGBA32F;
+							break;
+						default:
+							LogErr("Cannot load this DXGI format (", dxgiFormat, "). Add it.");
+							goto err;
+						}
+						break;
+					}
+					case FOURCC_DXT1:
+						t->format = DXT1;
+						break;
+					case FOURCC_DXT2:
+					case FOURCC_DXT3:
+						t->format = DXT3;
+						break;
+					case FOURCC_DXT4:
+					case FOURCC_DXT5:
+						t->format = DXT5;
+						break;
+					default:
+						LogErr("Cannot load this DDS FOURCC format (", fourCC, "). Add it.");
+						goto err;
+					}
+				} else {
+					LogErr("Cannot load this DDS pixelFormat (", pixelFlags, "). Add it.");
+					goto err;
+				}
+
+				// retrieve format info
+				t->desc = GetTextureFormat(t->format);
+
+				{
+					std::streamoff cur = f.tellg();
+					f.seekg(0, std::ios_base::end);
+					std::streamoff end = f.tellg();
+					f.seekg(cur, std::ios_base::beg);
+					bufSize = (u32) (end - cur);
+				}
+
+				// bufSize = t->mipmapCount > 1 ? linearSize * 2 : linearSize;
+				t->texels = (GLubyte*) malloc(bufSize * sizeof(GLubyte));
+				f.read((char*) t->texels, bufSize * sizeof(GLubyte));
+				f.close();
+
+				return t;
+
+			err:
+				delete t;
+				f.close();
+				return NULL;
+			}
+
+			bool LoadCubemapFace(const std::string &filename, u32 face) {
+				_tex *t = NULL;
+
+				if (Resource::CheckExtension(filename, "png"))
+					t = LoadPNG(filename);
+				else if (Resource::CheckExtension(filename, "dds"))
+					t = LoadDDS(filename);
+				else {
+					LogErr("Format of '", filename, "' can't be loaded.");
+					return false;
+				}
+
+				if (!t || !t->texels)
+					return false;
+
+				glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, 0,
+					t->desc.formatInternalGL, t->width, t->height, 0,
+					t->desc.formatGL, t->desc.type, t->texels);
+
+				free(t->texels);
+				delete t;
+
+				return true;
+			}
+
+			bool Load(Data &texture, const std::string &filename) {
+				const Config &deviceConfig = GetDevice().GetConfig();
+				_tex *t = NULL;
+
+				if (Resource::CheckExtension(filename, "png"))
+					t = LoadPNG(filename);
+				else if (Resource::CheckExtension(filename, "dds"))
+					t = LoadDDS(filename);
+				else {
+					LogErr("Format of '", filename, "' can't be loaded.");
+					return false;
+				}
+
+				if (!t || !t->texels)
+					return false;
+
+				glGenTextures(1, &t->id);
+				glBindTexture(GL_TEXTURE_2D, t->id);
+
+				GLint curr_alignment;
+				glGetIntegerv(GL_UNPACK_ALIGNMENT, &curr_alignment);
+				glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+
+
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+				glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, (GLfloat) deviceConfig.anisotropicFiltering);
+
+				switch (t->format) {
+				case DXT1:
+				case DXT3:
+				case DXT5:
+				{
+					// load mipmaps from file
+					u32 offset = 0;
+					u32 w = t->width, h = t->height;
+					for (u32 l = 0; l < t->mipmapCount && (w || h); ++l) {
+						u32 size = ((w + 3) / 4)*((h + 3) / 4)*t->desc.blockSize;
+						glCompressedTexImage2D(GL_TEXTURE_2D, l, t->desc.formatInternalGL, w, h, 0, size, t->texels + offset);
+
+						offset += size;
+						w /= 2;
+						h /= 2;
+						if (w < 1) w = 1;	// for N-Pow2 sized textures
+						if (h < 1) h = 1;
+					}
+					break;
+				}
+				case R8U:
+				case RG8U:
+				case RGB8U:
+				case RGBA8U:
+					glTexImage2D(GL_TEXTURE_2D, 0, t->desc.formatInternalGL, t->width, t->height, 0,
+						t->desc.formatGL, t->desc.type, t->texels);
+
+					glGenerateMipmap(GL_TEXTURE_2D);
+					break;
+				case R32F:
+				case RG32F:
+				case RGB32F:
+				case RGBA32F:
+					glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+					glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+					glTexImage2D(GL_TEXTURE_2D, 0, t->desc.formatInternalGL, t->width, t->height, 0,
+						t->desc.formatGL, t->desc.type, t->texels);
+					break;
+				default:
+					LogErr("Invalid texture format (", t->format, ") at GL Texure creation.");
+					glPixelStorei(GL_UNPACK_ALIGNMENT, curr_alignment);
+					free(t->texels);
+					delete t;
+					return false;
+				}
+
+				glPixelStorei(GL_UNPACK_ALIGNMENT, curr_alignment);
+
+				texture.id = t->id;
+				texture.size = vec2i(t->width, t->height);
+
+				free(t->texels);
+				delete t;
+
+				return true;
+
+			}
 		}
-		return false;
-	}
-}
 
+		FormatDesc GetTextureFormat(TextureFormat fmt) {
+			static FormatDesc fmts[_FORMAT_N] = {
+				{ 0, 0, 0, GL_NONE, GL_NONE, GL_NONE },
 
-namespace FBO {
-    GLuint fbo_attachments[5] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, 
-                                  GL_COLOR_ATTACHMENT3, GL_COLOR_ATTACHMENT4 };
+				// unsigned
+				{ 1,  8, 1, GL_RED, GL_RED, GL_UNSIGNED_BYTE }, // R8U
+				{ 2, 16, 2, GL_RG, GL_RG, GL_UNSIGNED_BYTE }, // RG8U
+				{ 3, 24, 3, GL_RGB, GL_RGB, GL_UNSIGNED_BYTE }, // RGB8U
+				{ 4, 32, 4, GL_RGBA, GL_RGBA, GL_UNSIGNED_BYTE }, // RGBA8U
 
-    Handle Build(Desc d) {
-        Data fbo;
-        glGenFramebuffers(1, &fbo.framebuffer); 
-        glBindFramebuffer(GL_FRAMEBUFFER, fbo.framebuffer);
+																  // float
+				{ 2,  16, 1, GL_R16F, GL_RED, GL_HALF_FLOAT }, // R16F
+				{ 4,  32, 2, GL_RG16F, GL_RG, GL_HALF_FLOAT }, // RG16F
+				{ 6,  48, 3, GL_RGB16F, GL_RGB, GL_HALF_FLOAT }, // RGB16F
+				{ 8,  64, 4, GL_RGBA16F, GL_RGBA, GL_HALF_FLOAT }, // RGBA16F
 
-        // Create all attachments
-        size_t numAttachments = d.textures.size();
-        for(size_t i = 0; i < numAttachments; ++i) {
-            Texture::Desc td;
-            td.size = d.size;
-            td.type = Texture::Empty;
-            Texture::Handle th = Texture::Build(td);
-            if(th < 0) {
-                LogErr("Error creating FBO's associated texture.");
-                return -1;
-            }
-            GLuint tex_id = renderer->textures[th].id;
+				{ 4,  32, 1, GL_R32F, GL_RED, GL_FLOAT }, // R32F
+				{ 8,  64, 2, GL_RG32F, GL_RG, GL_FLOAT }, // RG32F
+				{ 12,  96, 3, GL_RGB32F, GL_RGB, GL_FLOAT }, // RGB32F
+				{ 16, 128, 4, GL_RGBA32F, GL_RGBA, GL_FLOAT }, // RGBA32F
 
-            Texture::FormatDesc fdesc = Texture::GetTextureFormat(d.textures[i]);
-            Texture::Bind(th, Texture::TARGET0);
-            glTexImage2D(GL_TEXTURE_2D, 0, fdesc.formatInternalGL, d.size.x, d.size.y, 0, fdesc.formatGL, fdesc.type, NULL);
+				{ 2, 16, 1, GL_DEPTH_COMPONENT, GL_DEPTH_COMPONENT, GL_FLOAT }, // DEPTH16F
+				{ 4, 32, 1, GL_DEPTH_COMPONENT, GL_DEPTH_COMPONENT, GL_FLOAT }, // DEPTH32F
 
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-            glFramebufferTexture2D(GL_FRAMEBUFFER, (GLenum) (GL_COLOR_ATTACHMENT0 + i), GL_TEXTURE_2D, tex_id, 0);
-            fbo.attachments.push_back(th);
-        }     
+				{ 8, 4, 4, GL_COMPRESSED_RGBA_S3TC_DXT1_EXT, GL_NONE, GL_NONE },	// DXT1
+				{ 16, 8, 4, GL_COMPRESSED_RGBA_S3TC_DXT3_EXT, GL_NONE, GL_NONE },	// DXT3
+				{ 16, 8, 4, GL_COMPRESSED_RGBA_S3TC_DXT5_EXT, GL_NONE, GL_NONE },	// DXT5
+			};
 
-        glDrawBuffers((GLsizei) numAttachments, fbo_attachments);
-
-        // Attach Depth Buffer
-        glGenRenderbuffers(1, &fbo.depthbuffer);
-        glBindRenderbuffer(GL_RENDERBUFFER, fbo.depthbuffer);
-        glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, d.size.x, d.size.y);
-        glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, fbo.depthbuffer);
-
-        // Check if everything is good
-        if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
-            LogErr("Framebuffer not complete!");
-            glBindFramebuffer(GL_FRAMEBUFFER, 0);
-            return -1;
-        }
-
-        glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-        int fbo_i = (int)renderer->fbos.size();
-        renderer->fbos.push_back(fbo);
-
-        return fbo_i;
-    }
-
-    void Destroy(Handle h) {
-        if(Exists(h)) {
-            FBO::Data &f = renderer->fbos[h];
-            for(Texture::Handle &h : f.attachments)
-                Texture::Destroy(h);
-            if(f.framebuffer > 0) {
-                glDeleteFramebuffers(1, &f.framebuffer);
-                f.framebuffer = 0;
-            }
-            if(f.depthbuffer > 0) {
-                glDeleteRenderbuffers(1, &f.depthbuffer);
-                f.depthbuffer = 0;
-            }
-        }
-    }
-
-    bool Exists(Handle h) {
-        return h >= 0 && h < (int)renderer->fbos.size();
-    }
-
-    void Bind(Handle h) {
-        if(Exists(h)) {
-            glBindFramebuffer(GL_FRAMEBUFFER, renderer->fbos[h].framebuffer);
-        }    
-    }
-
-	u32 GetGBufferAttachment(GBufferAttachment idx) {
-        if(idx < _ATTACHMENT_N) {
-            // GBuffer is FBO 0
-            Data &fbo = renderer->fbos[0];
-
-            if((int)idx <= fbo.attachments.size()) {
-                return Texture::GetGLID(fbo.attachments[idx]);
-            }
-        }
-        return 0;
-    }
-
-    const char *GBufferAttachmentNames[_ATTACHMENT_N+1] = {
-        "Object ID",
-        "Depth",
-        "Normal",
-        "World Position"
-    };
-
-    const char *GetGBufferAttachmentName(GBufferAttachment idx) {
-        if(idx < _ATTACHMENT_N) {
-            return GBufferAttachmentNames[idx];
-        }
-
-        return nullptr; // should never happen if you're not idiot
-    }
-
-	vec2i ReadVertexID(int x, int y) {
-		vec2i ret(-1, -1);
-
-		vec4f fbpx = ReadGBuffer(GBufferAttachment::OBJECTID, x, y);
-
-		// data : 
-		// x - ObjectID
-		// y - PrimitiveID
-		// z - Depth
-		if (fbpx.z > 0) {
-			ret.x = (int) fbpx.x;
-			ret.y = (int) fbpx.y;
+			return fmts[fmt];
 		}
 
-		return ret;
-	}
+		Handle Build(const Desc &desc) {
+			Texture::_internal::Data texture;
 
-	vec4f ReadGBuffer(GBufferAttachment idx, int x, int y) {
-		Device &d = GetDevice();
-		const vec2i &ws = d.windowSize;
-		if (x >= ws.x || y >= ws.y)
-			return vec4f(-1.f);
+			int tex_i = (int) renderer->textures.size();
 
-		Data &fbo = renderer->fbos[0]; // GBuffer is always fbo 0
-		glBindFramebuffer(GL_READ_FRAMEBUFFER, fbo.framebuffer);
-		glReadBuffer((GLenum)GL_COLOR_ATTACHMENT0 + idx);
+			switch (desc.type) {
+			case FromFile:
+			{
+				// Check if this font resource already exist
+				int free_index;
 
-		vec4f data;
-		glReadPixels(x, ws.y - y, 1, 1, GL_RGBA, GL_FLOAT, (void*)&data);
-		
-		glReadBuffer(GL_NONE);
-		glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
+				if (FindResource(renderer->texture_resources, desc.name[0], free_index)) {
+					return free_index;
+				}
 
-		return data;
+				// If not loaded yet, do it
+				if (!Load(texture, desc.name[0])) {
+					LogErr("Error while loading '", desc.name[0], "' image.");
+					return -1;
+				}
+
+				// .. and add it as a loaded resources
+				AddResource(renderer->texture_resources, free_index, desc.name[0], tex_i);
+			} break;
+
+			case Empty:
+			{
+				glGenTextures(1, &texture.id);
+				glBindTexture(GL_TEXTURE_2D, texture.id);
+				texture.size = desc.size;
+			} break;
+
+			case Cubemap:
+			{
+				// Create cubemap 
+				glGenTextures(1, &texture.id);
+				glBindTexture(GL_TEXTURE_CUBE_MAP, texture.id);
+
+				// Create face textures
+				for (u32 i = 0; i < 6; ++i) {
+					if (!_internal::LoadCubemapFace(desc.name[i], i)) {
+						LogErr("Error while loading face ", i, " (", desc.name[i], ") of cubemap.");
+						return -1;
+					}
+				}
+
+				glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+				glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+				glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+				glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+				glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+				glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
+			} break;
+			}
+
+			// Store the texture
+			renderer->textures.push_back(texture);
+
+			return tex_i;
+		}
+
+		void Destroy(Handle h) {
+			if (h >= 0 && h < (int) renderer->textures.size()) {
+				Texture::_internal::Data &tex = renderer->textures[h];
+				glDeleteTextures(1, &tex.id);
+				tex.id = 0;
+			}
+		}
+
+		void Bind(Handle h, Target target) {
+			GLint tex = Exists(h) ? h : -1;
+
+			// Switch Texture Target if needed
+			if (target != renderer->curr_GL_texture_target) {
+				renderer->curr_GL_texture_target = target;
+				glActiveTexture(GL_TEXTURE0 + target);
+			}
+
+			// Switch active Texture if needed
+			if (renderer->curr_GL_texture[target] != tex) {
+				renderer->curr_GL_texture[target] = tex;
+				glBindTexture(GL_TEXTURE_2D, tex >= 0 ? (int) renderer->textures[tex].id : 0);
+			}
+		}
+
+		void BindCubemap(Handle h, Target target) {
+			GLint tex = Exists(h) ? h : -1;
+
+			// Switch Texture Target if needed
+			if (target != renderer->curr_GL_texture_target) {
+				renderer->curr_GL_texture_target = target;
+				glActiveTexture(GL_TEXTURE0 + target);
+			}
+
+			glBindTexture(GL_TEXTURE_CUBE_MAP, tex >= 0 ? (int) renderer->textures[tex].id : 0);
+		}
+
+		bool Exists(Handle h) {
+			return h >= 0 && h < (int) renderer->textures.size() && renderer->textures[h].id > 0;
+		}
+
+		u32 GetGLID(Handle h) {
+			if (Exists(h)) {
+				return renderer->textures[h].id;
+			}
+			return 0;
+		}
+
+		bool GetData(Handle h, TextureFormat fmt, f32 *dst) {
+			if (Exists(h)) {
+				Bind(h, TARGET0);
+
+				GLenum glFormat;
+				GLenum glType;
+
+				switch (fmt) {
+				case RGBA32F:
+					glFormat = GL_RGBA;
+					glType = GL_FLOAT;
+					break;
+				case RG32F:
+					glFormat = GL_RG;
+					glType = GL_FLOAT;
+					break;
+				default:
+					LogErr("TextureFormat not supported for GetData. Implement it.");
+					return false;
+				}
+
+				glGetTexImage(GL_TEXTURE_2D, 0, glFormat, glType, dst);
+
+				Bind(-1, TARGET0);
+
+				return true;
+			}
+			return false;
+		}
 	}
 }

@@ -153,6 +153,8 @@
     <ClCompile Include="ext\imgui\imgui_demo.cpp" />
     <ClCompile Include="ext\imgui\imgui_draw.cpp" />
     <ClCompile Include="ext\json\cJSON.c" />
+    <ClCompile Include="src\brdf.cpp" />
+    <ClCompile Include="src\camera.cpp" />
     <ClCompile Include="src\common\debug.cpp" />
     <ClCompile Include="src\common\random.cpp" />
     <ClCompile Include="src\common\resource.cpp" />
@@ -160,13 +162,9 @@
     <ClCompile Include="src\common\SHEval.cpp" />
     <ClCompile Include="src\device.cpp" />
     <ClCompile Include="src\device_imgui.cpp" />
+    <ClCompile Include="src\geometry.cpp" />
     <ClCompile Include="src\model.cpp" />
     <ClCompile Include="src\render.cpp" />
-    <ClCompile Include="src\render_internal\BRDF.cpp" />
-    <ClCompile Include="src\render_internal\font.cpp" />
-    <ClCompile Include="src\render_internal\geometry.cpp" />
-    <ClCompile Include="src\render_internal\mesh.cpp" />
-    <ClCompile Include="src\render_internal\texture.cpp" />
     <ClCompile Include="src\scene.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -180,6 +178,8 @@
     <ClInclude Include="ext\imgui\stb_textedit.h" />
     <ClInclude Include="ext\imgui\stb_truetype.h" />
     <ClInclude Include="ext\json\cJSON.h" />
+    <ClInclude Include="src\brdf.h" />
+    <ClInclude Include="src\camera.h" />
     <ClInclude Include="src\common\common.h" />
     <ClInclude Include="src\common\debug.h" />
     <ClInclude Include="src\common\event.h" />
@@ -189,11 +189,12 @@
     <ClInclude Include="src\common\sampling.h" />
     <ClInclude Include="src\common\SHEval.h" />
     <ClInclude Include="src\device.h" />
+    <ClInclude Include="src\geometry.h" />
     <ClInclude Include="src\render.h" />
-    <ClInclude Include="src\render_internal\BRDF.h" />
     <ClInclude Include="src\render_internal\font.h" />
-    <ClInclude Include="src\render_internal\geometry.h" />
+    <ClInclude Include="src\render_internal\framebuffer.h" />
     <ClInclude Include="src\render_internal\mesh.h" />
+    <ClInclude Include="src\render_internal\shader.h" />
     <ClInclude Include="src\render_internal\texture.h" />
     <ClInclude Include="src\scene.h" />
   </ItemGroup>
@@ -208,6 +209,7 @@
     <None Include="data\shaders\ui.fs" />
     <None Include="data\shaders\ui.vs" />
     <None Include="src\render_internal\font.inl" />
+    <None Include="src\render_internal\framebuffer.inl" />
     <None Include="src\render_internal\mesh.inl" />
     <None Include="src\render_internal\shader.inl" />
     <None Include="src\render_internal\texture.inl" />

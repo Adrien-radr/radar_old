@@ -1,26 +1,14 @@
 #include "render.h"
 #include "device.h"
 #include "common/resource.h"
+#include "common/SHEval.h"
 #include "GL/glew.h"
 #include "json/cJSON.h"
 
-// Internal files for structs & functions
-#include "render_internal/mesh.h"
-#include "render_internal/font.h"
-#include "render_internal/texture.h"
+#include <algorithm>
+#include <ft2build.h>
+#include FT_FREETYPE_H
 
-
-
-//////////////////////////////////////////////////////////////////////////////
-///     Render Data Definitions
-//////////////////////////////////////////////////////////////////////////////
-
-
-
-
-// Definition of _Font in render_internal/font.h
-// Definition of _Mesh and _TextMesh in render_internal/mesh.h
-// Definition of _Texture in render_internal/texture.h
 
 namespace Render {
 	struct RenderResource {
@@ -28,32 +16,7 @@ namespace Render {
 		std::string		name;
 		int				handle;
 	};
-
-	namespace UBO {
-		struct Data {
-			Data() : id(0) {}
-			u32 id;
-		};
-	}
-
-	namespace Texture {
-		// loaded in Render::Init
-		Handle DEFAULT_DIFFUSE = -1;
-		Handle DEFAULT_NORMAL = -1;
-	}
-
-	namespace Shader {
-		struct Data {
-			Data() : id(0) {}
-			u32 id;                             //!< GL Shader Program ID
-			// bool proj_matrix_type;              //!< Type of projection matrix used in shader
-
-			// Arrays of uniforms{blocks}, ordered as the Shader::Uniform{Block} enum
-			GLint  uniform_locations[Shader::_UNIFORM_N];   //!< Locations for the possible uniforms
-			GLuint uniformblock_locations[Shader::_UNIFORMBLOCK_N];
-		};
-	}
-
+	
 	struct Renderer {
 		// Those index the shaders & meshes arrays. They are not equal to the real
 		// GL id.
@@ -75,14 +38,14 @@ namespace Render {
 
 		// Those arrays contain the GL-loaded resources and contains no explicit
 		// duplicates.
-		std::vector<Shader::Data> shaders;
-		std::vector<FBO::Data> fbos;
-		std::vector<UBO::Data> ubos;
-		std::vector<Mesh::Data> meshes;
-		std::vector<TextMesh::Data> textmeshes;
-		std::vector<Texture::Data> textures;
-		std::vector<Font::Data> fonts;
-		std::vector<SpriteSheet::Data> spritesheets;
+		std::vector<FBO::_internal::Data> fbos;
+		std::vector<Shader::_internal::Data> shaders;
+		std::vector<UBO::_internal::Data> ubos;
+		std::vector<Mesh::_internal::Data> meshes;
+		std::vector<TextMesh::_internal::Data> textmeshes;
+		std::vector<Texture::_internal::Data> textures;
+		std::vector<Font::_internal::Data> fonts;
+		std::vector<SpriteSheet::_internal::Data> spritesheets;
 
 
 		// Loaded Resources. Indexes the above arrays with string identifiers
@@ -184,7 +147,7 @@ namespace Render {
 		}
 
 		// Initialize Freetype
-		if (FT_Init_FreeType(&Font::Library)) {
+		if (!Font::InitFontLibrary()) {
 			LogErr("Error initializeing Freetype library.");
 			return false;
 		}
@@ -223,7 +186,7 @@ namespace Render {
 			Clean();
 
 			// Destroy Freetype
-			FT_Done_FreeType(Font::Library);
+			Font::DestroyFontLibrary();
 
 			delete renderer;
 
@@ -527,9 +490,11 @@ namespace Render {
 	}
 
 
-	// Function definitions for all render types
-	#include "render_internal/shader.inl"
-	#include "render_internal/texture.inl"
-	#include "render_internal/font.inl"
-	#include "render_internal/mesh.inl"
 }
+
+// Function definitions for all render types
+#include "render_internal/framebuffer.inl"
+#include "render_internal/font.inl"
+#include "render_internal/texture.inl"
+#include "render_internal/mesh.inl"
+#include "render_internal/shader.inl"

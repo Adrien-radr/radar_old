@@ -1,7 +1,7 @@
 ﻿#include "SHIntegration.h"
 #include "imgui/imgui.h"
 
-#include "src/render_internal/geometry.h"
+#include "src/geometry.h"
 #include "src/common/sampling.h"
 
 //#pragma optimize("", off)

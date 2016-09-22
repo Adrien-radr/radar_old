@@ -1,11 +1,9 @@
 #pragma once
 
-#include "debug.h"
-
 // Code version
 #define RADAR_MAJOR "0"
 #define RADAR_MINOR "2"
-#define RADAR_PATCH "7"
+#define RADAR_PATCH "8"
 
 
 // Platform
@@ -16,6 +14,7 @@
 #else
 #   error "Unknown OS. Only Windows & Linux supported for now."
 #endif
+
 
 // Types
 #include <string>
@@ -38,7 +37,7 @@ struct Rect {
 };
 
 
-// Include Linear Math Function Library
+#include "debug.h"
 #include "linmath.h"
 #include "random.h"
 

@@ -2,35 +2,12 @@
 
 #include "render.h"
 #include "common/event.h"
-
-#include "render_internal/geometry.h"
+#include "camera.h"
+#include "geometry.h"
 
 #define SCENE_MAX_ACTIVE_LIGHTS 8
 
 class Scene;
-
-/// Camera
-struct Camera {
-	void Update(float dt);
-    vec3f	position,
-            target,
-            up,
-            forward,
-            right;
-
-    f32  translationSpeed,
-         rotationSpeed;
-	f32  speedMult;
-	
-    f32  dist;
-    f32  theta,
-         phi;
-
-	bool hasMoved;
-	int speedMode;	// -1 : slower, 0 : normal, 1 : faster
-	bool freeflyMode;
-	vec2i lastMousePos; // mouse position before activating freeflyMode
-};
 
 namespace Material {
 	using namespace Render;
