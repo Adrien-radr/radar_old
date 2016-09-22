@@ -21,7 +21,7 @@ vec4 depthBuffer() {
     return vec4(vec3(z), 1.0);
 }
 
-float rand(vec2 co){
+float rand(in vec2 co){
     return 0.3 + 0.7 * fract(sin(dot(co.xy ,vec2(12.9898,78.233))) * 43758.5453);
 }
 

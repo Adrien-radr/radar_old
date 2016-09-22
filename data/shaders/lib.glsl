@@ -22,12 +22,12 @@ struct Rect {
 };
 
 
-bool RayPlaneIntersect(Ray ray, vec4 plane, out float t) {
+bool RayPlaneIntersect(in Ray ray, in vec4 plane, out float t) {
     t = -dot(plane, vec4(ray.origin, 1.0))/dot(plane.xyz, ray.dir);
     return t > 0.0;
 }
 
-bool RayRectIntersect(Ray ray, Rect rect, out float t) {
+bool RayRectIntersect(in Ray ray, in Rect rect, out float t) {
     bool intersect = RayPlaneIntersect(ray, rect.plane, t);
     if (intersect)
     {
@@ -46,7 +46,7 @@ bool RayRectIntersect(Ray ray, Rect rect, out float t) {
 
 // With added fix from sect. 3.7 of
 // "Linear Efficient Antialiased Displacement and Reflectance Mapping: Supplemental Material"
-vec3 FetchCorrectedNormal(sampler2D nrmTex, vec2 texcoord, mat3 TBN, vec3 V) {
+vec3 FetchCorrectedNormal(in sampler2D nrmTex, in vec2 texcoord, in mat3 TBN, in vec3 V) {
     vec3 n = normalize(texture2D(nrmTex, texcoord).xyz * 2.0 - 1.0);
     n = normalize(TBN * n);
 
@@ -56,11 +56,11 @@ vec3 FetchCorrectedNormal(sampler2D nrmTex, vec2 texcoord, mat3 TBN, vec3 V) {
 }
 
 
-float rand(vec2 co){
+float rand(in vec2 co){
     return fract(sin(dot(co.xy ,vec2(12.9898,78.233))) * 43758.5453);
 }
 
-vec3 rand3(vec3 seed) {
+vec3 rand3(in vec3 seed) {
 	vec2 randSeed = vec2(24.5232, 13.53242);    // fixed seed for the 'random' generator
 	return vec3(rand(randSeed * seed.x), rand(randSeed * seed.y), rand(randSeed * seed.z));
 }
@@ -77,20 +77,20 @@ vec3 rand3(vec3 seed) {
 #define SCOLOR_ALUMINIUM vec3(0.913183, 0.921494, 0.924524)
 #define SCOLOR_COPPER    vec3(0.955008, 0.637427, 0.538163)
 
-float fresnelF0(float n1, float n2) {
+float fresnelF0(in float n1, in float n2) {
     float f0 = (n1 - n2)/(n1 + n2);
     return f0 * f0;
 }
 
-vec3 fresnelSchlick(vec3 f0, float f90, float u) {
+vec3 fresnelSchlick(in vec3 f0, in float f90, in float u) {
     return f0 + (f90 - f0) * pow(1.0 - u, 5.0);
 }
 
-float G_schlick_GGX(float k, float dotVal) {
+float G_schlick_GGX(in float k, in float dotVal) {
     return dotVal / (dotVal * (1 - k) + k);
 }
 
-vec3 GGX(float NdotL, float NdotV, float NdotH, float LdotH, float roughness, vec3 F0) {
+vec3 GGX(in float NdotL, in float NdotV, in float NdotH, in float LdotH, in float roughness, in vec3 F0) {
     float alpha2 = roughness * roughness;
 
     // F 
@@ -113,7 +113,7 @@ vec3 GGX(float NdotL, float NdotV, float NdotH, float LdotH, float roughness, ve
 }
 
 // Renormalized version of Burley's Disney Diffuse factor, used by Frostbite
-float diffuseBurley(float NdotL, float NdotV, float LdotH, float roughness) {
+float diffuseBurley(in float NdotL, in float NdotV, in float LdotH, in float roughness) {
     float energyBias = mix(0.0, 0.5, roughness);
     float energyFactor = mix(1.0, 1.0 / 1.51, roughness);
     float fd90 = energyBias + 2.0 * LdotH * LdotH * roughness;
@@ -124,17 +124,17 @@ float diffuseBurley(float NdotL, float NdotV, float LdotH, float roughness) {
     return lightScatter * viewScatter * energyFactor * M_INV_PI;
 }
 
-float diffuseLambert(float NdotL) {
+float diffuseLambert(in float NdotL) {
     return M_INV_PI;
 }
 
-float smoothDistanceAttenuation(float sqrDist, float invSqrAttRadius) {
+float smoothDistanceAttenuation(in float sqrDist, in float invSqrAttRadius) {
     float factor = sqrDist * invSqrAttRadius;
     float smoothFactor = clamp(1.0 - factor * factor, 0.0, 1.0);
     return smoothFactor * smoothFactor;
 }
 
-float getDistanceAttenuation(vec3 light_vec, float invSqrAttRadius) {
+float getDistanceAttenuation(in vec3 light_vec, in float invSqrAttRadius) {
     float sqrDist = dot(light_vec, light_vec);
     float attenuation = 1.0 / (max(sqrDist, 0.0001));
     //attenuation *= smoothDistanceAttenuation(sqrDist, invSqrAttRadius);
@@ -255,7 +255,7 @@ void ClipQuadToHorizon(inout vec3 L[5], out int n)
         L[4] = L[0];
 }
 
-float IntegrateEdge(vec3 P1, vec3 P2) {
+float IntegrateEdge(in vec3 P1, in vec3 P2) {
     float cosTheta = dot(P1, P2);
     cosTheta = clamp(cosTheta, -0.9999, 0.9999);
 
@@ -265,7 +265,7 @@ float IntegrateEdge(vec3 P1, vec3 P2) {
 }
 
 // Returns a vec2 to index the BRDF matrix depending on the view angle and surface roughness
-vec2 LTCCoords(float NdotV, float roughness) {
+vec2 LTCCoords(in float NdotV, in float roughness) {
     float theta = acos(NdotV);
     vec2 coords = vec2(roughness, theta/(0.5*M_PI));
 
@@ -276,7 +276,7 @@ vec2 LTCCoords(float NdotV, float roughness) {
     return coords;
 }
 
-mat3 LTCMatrix(sampler2D ltcMatrix, vec2 coord) {
+mat3 LTCMatrix(in sampler2D ltcMatrix, in vec2 coord) {
     vec4 v = texture2D(ltcMatrix, coord);
     v = v.rgba;
     // bgra
@@ -294,7 +294,7 @@ mat3 LTCMatrix(sampler2D ltcMatrix, vec2 coord) {
     return Minv;
 }
 
-vec3 LTCEvaluate(vec3 N, vec3 V, vec3 P, mat3 Minv, vec3 points[4], bool twoSided) {
+vec3 LTCEvaluate(in vec3 N, in vec3 V, in vec3 P, in mat3 Minv, in vec3 points[4], in bool twoSided) {
     // N orthonormal frame
     vec3 T, B;
     T = normalize(V - N * dot(V, N));

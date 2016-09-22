@@ -41,15 +41,15 @@ bool CullAreaLight(in AreaLight l, in vec3 points[4], in vec3 P, in vec3 N, in f
 }
 
 // FWD Decl of functions in lib.glsl
-vec3 GGX(float NdotL, float NdotV, float NdotH, float LdotH, float roughness, vec3 F0);
-float diffuseBurley(float NdotL, float NdotV, float LdotH, float roughness);
-float getDistanceAttenuation(vec3 light_vec, float invSqrAttRadius);
-vec3 LTCEvaluate(vec3 N, vec3 V, vec3 P, mat3 Minv, vec3 points[4], bool twoSided);
-vec3 FetchCorrectedNormal(sampler2D nrmTex, vec2 texcoord, mat3 TBN, vec3 V);
-vec2 LTCCoords(float NdotV, float roughness);
-mat3 LTCMatrix(sampler2D ltcMatrix, vec2 coord);
-float rand(vec2 seed);
-vec3 rand3(vec3 seed);
+vec3 GGX(in float NdotL, in float NdotV, in float NdotH, in float LdotH, in float roughness, in vec3 F0);
+float diffuseBurley(in float NdotL, in float NdotV, in float LdotH, in float roughness);
+float getDistanceAttenuation(in vec3 light_vec, in float invSqrAttRadius);
+vec3 LTCEvaluate(in vec3 N, in vec3 V, in vec3 P, in mat3 Minv, in vec3 points[4], in bool twoSided);
+vec3 FetchCorrectedNormal(in sampler2D nrmTex, in vec2 texcoord, in mat3 TBN, in vec3 V);
+vec2 LTCCoords(in float NdotV, in float roughness);
+mat3 LTCMatrix(in sampler2D ltcMatrix, in vec2 coord);
+float rand(in vec2 seed);
+vec3 rand3(in vec3 seed);
 
 // INPUTS
 in vec4 v_color;
@@ -108,7 +108,7 @@ struct SphericalQuad
     float S;
 };
 
-SphericalQuad SphericalQuadInit(vec3 s, vec3 ex, vec3 ey, vec3 o)
+SphericalQuad SphericalQuadInit(in vec3 s, in vec3 ex, in vec3 ey, in vec3 o)
 {
     SphericalQuad squad;
 
@@ -170,7 +170,7 @@ SphericalQuad SphericalQuadInit(vec3 s, vec3 ex, vec3 ey, vec3 o)
     return squad;
 }
 
-vec3 SphericalQuadSample(SphericalQuad squad, float u, float v) {
+vec3 SphericalQuadSample(in SphericalQuad squad, in float u, in float v) {
     // 1. compute 'cu'
     float au = u * squad.S + squad.k;
     float fu = (cos(au) * squad.b0 - squad.b1) / sin(au);
@@ -193,7 +193,7 @@ vec3 SphericalQuadSample(SphericalQuad squad, float u, float v) {
 
 }
 
-mat3 BasisFrisvad(vec3 v)
+mat3 BasisFrisvad(in vec3 v)
 {
     vec3 x, y;
 
@@ -213,7 +213,7 @@ mat3 BasisFrisvad(vec3 v)
     return mat3(x, y, v);
 }
 
-vec3 pointLightContribution(vec3 N, vec3 V, float NdotV, vec3 Kd, vec3 Ks, float roughness) {
+vec3 pointLightContribution(in vec3 N, in vec3 V, in float NdotV, in vec3 Kd, in vec3 Ks, in float roughness) {
     vec3 contrib = vec3(0);
 
     float light_power = 200;
@@ -248,7 +248,7 @@ vec3 pointLightContribution(vec3 N, vec3 V, float NdotV, vec3 Kd, vec3 Ks, float
     return contrib;
 }
 
-vec3 areaLightContribution(vec3 N, vec3 V, float NdotV, vec3 diff_color, vec3 spec_color, float roughness) {
+vec3 areaLightContribution(in vec3 N, in vec3 V, in float NdotV, in vec3 diff_color, in vec3 spec_color, in float roughness) {
     vec3 contrib = vec3(0);
     vec3 points[4];
 
@@ -284,7 +284,7 @@ vec3 areaLightContribution(vec3 N, vec3 V, float NdotV, vec3 diff_color, vec3 sp
     return contrib;
 }
 
-vec3 areaLightGT(vec3 N, vec3 V, float NdotV, vec3 diff_color, vec3 spec_color, float roughness) {
+vec3 areaLightGT(in vec3 N, in vec3 V, in float NdotV, in vec3 diff_color, in vec3 spec_color, in float roughness) {
     vec3 contrib = vec3(0);
     vec3 points[4];
     const int nSamples = 30;

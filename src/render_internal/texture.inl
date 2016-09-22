@@ -482,6 +482,7 @@ namespace Render {
 					glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 					glTexImage2D(GL_TEXTURE_2D, 0, t->desc.formatInternalGL, t->width, t->height, 0,
 						t->desc.formatGL, t->desc.type, t->texels);
+					glGenerateMipmap(GL_TEXTURE_2D);
 					break;
 				default:
 					LogErr("Invalid texture format (", t->format, ") at GL Texure creation.");
