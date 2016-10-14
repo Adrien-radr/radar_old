@@ -1,22 +1,23 @@
 #pragma once
 #include "common/common.h"
 
-struct Camera {
-	void Update(float dt);
+struct Camera
+{
+	void Update( float dt );
 
 	vec3f	position,
-			target,
-			up,
-			forward,
-			right;
+		target,
+		up,
+		forward,
+		right;
 
 	f32		translationSpeed,
-			rotationSpeed;
+		rotationSpeed;
 	f32		speedMult;
 
 	f32		dist;
 	f32		theta,
-			phi;
+		phi;
 
 	bool	hasMoved;
 	int		speedMode;	// -1 : slower, 0 : normal, 1 : faster

@@ -32,8 +32,9 @@ typedef uint64_t    u64;
 typedef float       f32;
 typedef double      f64;
 
-struct Rect {
-    int x, y, w, h;
+struct Rect
+{
+	int x, y, w, h;
 };
 
 
@@ -48,4 +49,4 @@ struct cJSON;
 /// Time stuff
 #define DEFAULT_DATE_FMT "%a %d %b %Y"
 #define DEFAULT_TIME_FMT "%H:%M:%S"
-void get_date_time(char *buffer, u32 bsize, const char *fmt);
+void get_date_time( char *buffer, u32 bsize, const char *fmt );

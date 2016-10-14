@@ -13,7 +13,7 @@ x GT area light lighting
 o Fix GT area light
 o Have a way to update buffers (specially vbos), instead of recreating them. Buffers should be allocated at 
 	program start and destroyed at the end.
-o 2D stuff. Test having way to make a fractal or something and show it with cool effects
+o 2D stuff. Test having way to make a fractal (burning boat)
 
 Normal :
 x GGX -- fixed (smith DFG + burley's disney diffuse)

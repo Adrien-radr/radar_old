@@ -5,10 +5,13 @@
 #define SHADER_MAX_UNIFORMS 64
 #define SHADER_MAX_ATTRIBUTES 6
 
-namespace Render {
-	namespace Shader {
+namespace Render
+{
+	namespace Shader
+	{
 		/// Available shaders for drawing, sorted by their projection matrix type
-		enum Type {
+		enum Type
+		{
 			// Use 2D Ortographic Projection
 			SHADER_2D_UI = 0,
 
@@ -33,7 +36,8 @@ namespace Render {
 		/// corresponding to a in-shader uniform name.
 		/// When sending a uniform value to a shader from C code, use these
 		/// uniform descriptor to specify which uniform the value is intended for.
-		enum Uniform {
+		enum Uniform
+		{
 			UNIFORM_PROJMATRIX,         // for "ProjMatrix", mat4
 			UNIFORM_VIEWMATRIX,         // for "ViewMatrix", mat4
 			UNIFORM_MODELMATRIX,        // for "ModelMatrix", mat4
@@ -59,7 +63,8 @@ namespace Render {
 		};
 
 		// Uniform Block Locations Descriptors
-		enum UniformBlock {
+		enum UniformBlock
+		{
 			UNIFORMBLOCK_MATERIAL,
 			UNIFORMBLOCK_POINTLIGHTS,
 			UNIFORMBLOCK_AREALIGHTS,
@@ -68,8 +73,9 @@ namespace Render {
 		};
 
 		/// Shader Descriptor for shader building.
-		struct Desc {
-			Desc() : vertex_file(""), fragment_file(""), vertex_src(""), fragment_src(""), shaderSlot(-1) {}
+		struct Desc
+		{
+			Desc() : vertex_file( "" ), fragment_file( "" ), vertex_src( "" ), fragment_src( "" ), shaderSlot( -1 ) {}
 
 			/// Shaders are loaded either from file or from text source directly
 			/// If loading from file, vertex_file & fragment_file must be set
@@ -83,11 +89,12 @@ namespace Render {
 			/// @param used must be set to true to activate one attribute
 			/// @param name must be set to the in-shader name of the attribute
 			/// @param location must be set to the desired location for this attrib
-			struct Attrib {
-				Attrib() : used(false), name("") {}
-				Attrib(const std::string &n, u32 l)
-					: used(true), name(n), location(l) {
-				}
+			struct Attrib
+			{
+				Attrib() : used( false ), name( "" ) {}
+				Attrib( const std::string &n, u32 l )
+					: used( true ), name( n ), location( l )
+				{}
 
 				bool		used;
 				std::string name;
@@ -101,20 +108,22 @@ namespace Render {
 			/// @param name must be given (name of the uniform in shader)
 			/// @param desc is the wanted uniform descriptor
 			///     ex: name = "ProjMatrix", and desc = UNIFORM_PROJMATRIX
-			struct Uniform {
-				Uniform() : name("") {}
-				Uniform(const std::string &n, Shader::Uniform d)
-					: name(n), desc(d) {
-				}
+			struct Uniform
+			{
+				Uniform() : name( "" ) {}
+				Uniform( const std::string &n, Shader::Uniform d )
+					: name( n ), desc( d )
+				{}
 
 				std::string		name;
 				Shader::Uniform	desc;
 			};
 
-			struct UniformBlock {
-				UniformBlock(const std::string &n, Shader::UniformBlock d)
-					: name(n), desc(d) {
-				}
+			struct UniformBlock
+			{
+				UniformBlock( const std::string &n, Shader::UniformBlock d )
+					: name( n ), desc( d )
+				{}
 				std::string 			name;
 				Shader::UniformBlock 	desc;
 			};
@@ -138,42 +147,44 @@ namespace Render {
 		/// Build a GL Shader Program from a Shader Description.
 		/// Read the ShaderDesc comments above to understand what to give to this function
 		/// Returns the handle of the created shader. Or -1 if an error occured.
-		Handle Build(const Desc &desc);
+		Handle Build( const Desc &desc );
 
 		/// Build a vertex or fragment shader from source depending on type
-		u32 /*GLuint*/ BuildShader(const char *src, int /*GLenum*/ type);
+		u32 /*GLuint*/ BuildShader( const char *src, int /*GLenum*/ type );
 
 		/// Deallocate GL data
-		void Destroy(Handle h);
+		void Destroy( Handle h );
 
 		/// Bind the given Shader Program as Current GL Program
 		/// if @param shader is -1, all GL shader programs will be unbound
-		void Bind(Handle h);
+		void Bind( Handle h );
 
 		/// Returns true if the given shader exists in renderer
-		bool Exists(Handle h);
+		bool Exists( Handle h );
 
 		// Function Collection to send uniform variables to currently bound GL shader
-		void SendVec2(Uniform target, vec2f value);
-		void SendVec3(Uniform target, vec3f value);
-		void SendVec4(Uniform target, vec4f value);
+		void SendVec2( Uniform target, vec2f value );
+		void SendVec3( Uniform target, vec3f value );
+		void SendVec4( Uniform target, vec4f value );
 		//void SendMat3(Uniform target, mat3 value);
-		void SendMat4(Uniform target, mat4f value);
-		void SendInt(Uniform target, int value);
-		void SendFloat(Uniform target, f32 value);
+		void SendMat4( Uniform target, mat4f value );
+		void SendInt( Uniform target, int value );
+		void SendFloat( Uniform target, f32 value );
 
 		// Same but by designating them as strings (less performant)
-		void SendVec2(const std::string &target, vec2f value);
-		void SendVec3(const std::string &target, vec3f value);
-		void SendVec4(const std::string &target, vec4f value);
+		void SendVec2( const std::string &target, vec2f value );
+		void SendVec3( const std::string &target, vec3f value );
+		void SendVec4( const std::string &target, vec4f value );
 		//void SendMat3(const std::string &target, mat3f value);
-		void SendMat4(const std::string &target, mat4f value);
-		void SendInt(const std::string &target, int value);
-		void SendFloat(const std::string &target, f32 value);
+		void SendMat4( const std::string &target, mat4f value );
+		void SendInt( const std::string &target, int value );
+		void SendFloat( const std::string &target, f32 value );
 
-		namespace _internal {
-			struct Data {
-				Data() : id(0) {}
+		namespace _internal
+		{
+			struct Data
+			{
+				Data() : id( 0 ) {}
 				u32 id;                             //!< GL Shader Program ID
 				// bool proj_matrix_type;              //!< Type of projection matrix used in shader
 
@@ -184,14 +195,17 @@ namespace Render {
 		}
 	}
 
-	namespace UBO {
-		enum StorageType {
+	namespace UBO
+	{
+		enum StorageType
+		{
 			ST_STATIC,
 			ST_DYNAMIC
 		};
 
-		struct Desc {
-			Desc(f32 *data, u32 data_size, StorageType t) : sType(t), data(data), size(data_size) {}
+		struct Desc
+		{
+			Desc( f32 *data, u32 data_size, StorageType t ) : sType( t ), data( data ), size( data_size ) {}
 
 			StorageType sType;
 			f32 *data;			//!< pointer on the data to register in the UBO
@@ -200,15 +214,17 @@ namespace Render {
 
 		typedef int Handle;
 
-		Handle Build(const Desc &desc);
-		void Update(Handle h, const Desc &desc);
-		void Destroy(Handle h);
-		void Bind(Shader::UniformBlock loc, Handle h);
-		bool Exists(Handle h);
+		Handle Build( const Desc &desc );
+		void Update( Handle h, const Desc &desc );
+		void Destroy( Handle h );
+		void Bind( Shader::UniformBlock loc, Handle h );
+		bool Exists( Handle h );
 
-		namespace _internal {
-			struct Data {
-				Data() : id(0) {}
+		namespace _internal
+		{
+			struct Data
+			{
+				Data() : id( 0 ) {}
 				u32 id;
 			};
 		}

@@ -1,14 +1,19 @@
 #include <png.h>
 
-namespace Render {
-	namespace Texture {
+namespace Render
+{
+	namespace Texture
+	{
 		// loaded in Render::Init
 		Handle DEFAULT_DIFFUSE = -1;
 		Handle DEFAULT_NORMAL = -1;
 
-		namespace _internal {
-			static void get_PNG_info(int color_type, _tex *ti) {
-				switch (color_type) {
+		namespace _internal
+		{
+			static void get_PNG_info( int color_type, _tex *ti )
+			{
+				switch ( color_type )
+				{
 				case PNG_COLOR_TYPE_GRAY:
 					ti->format = R8U;
 					break;
@@ -22,14 +27,15 @@ namespace Render {
 					ti->format = RGBA8U;
 					break;
 				default:
-					LogErr("Invalid color type!");
+					LogErr( "Invalid color type!" );
 					break;
 				}
 
-				ti->desc = GetTextureFormat(ti->format);
+				ti->desc = GetTextureFormat( ti->format );
 			}
 
-			_tex *LoadPNG(const std::string &filename) {
+			_tex *LoadPNG( const std::string &filename )
+			{
 				_tex *t = NULL;
 				FILE *f = NULL;
 
@@ -42,34 +48,38 @@ namespace Render {
 				png_uint_32 w, h;
 
 
-				f = fopen(filename.c_str(), "rb");
-				if (!f) {
-					LogErr("Could not open '", filename, "'.");
+				f = fopen( filename.c_str(), "rb" );
+				if ( !f )
+				{
+					LogErr( "Could not open '", filename, "'." );
 					return NULL;
 				}
 
 				// get png file signature
-				fread(sig, 1, 8, f);
-				if (!png_sig_cmp(sig, 0, 8) == 0) {
-					LogErr("'", filename, "' is not a valid PNG image.");
-					fclose(f);
+				fread( sig, 1, 8, f );
+				if ( !png_sig_cmp( sig, 0, 8 ) == 0 )
+				{
+					LogErr( "'", filename, "' is not a valid PNG image." );
+					fclose( f );
 					return NULL;
 				}
 
 
 
-				img = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
-				if (!img) {
-					LogErr("Error while creating PNG read struct.");
-					fclose(f);
+				img = png_create_read_struct( PNG_LIBPNG_VER_STRING, NULL, NULL, NULL );
+				if ( !img )
+				{
+					LogErr( "Error while creating PNG read struct." );
+					fclose( f );
 					return NULL;
 				}
 
-				img_info = png_create_info_struct(img);
-				if (!img_info) {
-					LogErr("Error while creating PNG info struct.");
-					if (img) png_destroy_read_struct(&img, &img_info, NULL);
-					fclose(f);
+				img_info = png_create_info_struct( img );
+				if ( !img_info )
+				{
+					LogErr( "Error while creating PNG info struct." );
+					if ( img ) png_destroy_read_struct( &img, &img_info, NULL );
+					fclose( f );
 					return NULL;
 				}
 
@@ -79,66 +89,66 @@ namespace Render {
 
 				size_t rowbytes;
 				// setjmp for any png loading error
-				if (setjmp(png_jmpbuf(img)))
+				if ( setjmp( png_jmpbuf( img ) ) )
 					goto error;
 
 				// Load png image
-				png_init_io(img, f);
-				png_set_sig_bytes(img, 8);
-				png_read_info(img, img_info);
+				png_init_io( img, f );
+				png_set_sig_bytes( img, 8 );
+				png_read_info( img, img_info );
 
 				//get info
-				bpp = png_get_bit_depth(img, img_info);
-				color_type = png_get_color_type(img, img_info);
+				bpp = png_get_bit_depth( img, img_info );
+				color_type = png_get_color_type( img, img_info );
 
 				// if indexed, make it RGB
-				if (PNG_COLOR_TYPE_PALETTE == color_type)
-					png_set_palette_to_rgb(img);
+				if ( PNG_COLOR_TYPE_PALETTE == color_type )
+					png_set_palette_to_rgb( img );
 
 				// if 1/2/4 bits gray, make it 8-bits gray
-				if (PNG_COLOR_TYPE_GRAY && 8 > bpp)
-					png_set_expand_gray_1_2_4_to_8(img);
+				if ( PNG_COLOR_TYPE_GRAY && 8 > bpp )
+					png_set_expand_gray_1_2_4_to_8( img );
 
-				if (png_get_valid(img, img_info, PNG_INFO_tRNS))
-					png_set_tRNS_to_alpha(img);
+				if ( png_get_valid( img, img_info, PNG_INFO_tRNS ) )
+					png_set_tRNS_to_alpha( img );
 
-				if (16 == bpp)
-					png_set_strip_16(img);
-				else if (8 > bpp)
-					png_set_packing(img);
+				if ( 16 == bpp )
+					png_set_strip_16( img );
+				else if ( 8 > bpp )
+					png_set_packing( img );
 
 				// get img info
-				png_read_update_info(img, img_info);
-				png_get_IHDR(img, img_info, &w, &h, &bpp, &color_type, NULL, NULL, NULL);
+				png_read_update_info( img, img_info );
+				png_get_IHDR( img, img_info, &w, &h, &bpp, &color_type, NULL, NULL, NULL );
 				t->width = w;
 				t->height = h;
 
 
-				get_PNG_info(color_type, t);
+				get_PNG_info( color_type, t );
 
 
 				// create actual texel array
-				rowbytes = png_get_rowbytes(img, img_info);
-				t->texels = (GLubyte*) calloc(1, rowbytes * h);
-				row_pointers = (png_bytep*) calloc(1, sizeof(png_bytep) * h);
+				rowbytes = png_get_rowbytes( img, img_info );
+				t->texels = (GLubyte*) calloc( 1, rowbytes * h );
+				row_pointers = (png_bytep*) calloc( 1, sizeof( png_bytep ) * h );
 
 				// Set pointers to rows in flipped-y order (GL need (0,0) at bottomleft)
-				for (u32 i = 0; i < t->height; ++i)
-					row_pointers[i] = t->texels + (h - 1 - i) * rowbytes;
+				for ( u32 i = 0; i < t->height; ++i )
+					row_pointers[i] = t->texels + ( h - 1 - i ) * rowbytes;
 
-				png_read_image(img, row_pointers);
+				png_read_image( img, row_pointers );
 				//png_read_end( img, NULL );
-				png_destroy_read_struct(&img, &img_info, NULL);
-				free(row_pointers);
-				fclose(f);
+				png_destroy_read_struct( &img, &img_info, NULL );
+				free( row_pointers );
+				fclose( f );
 
 				return t;
 
 			error:
-				if (f) fclose(f);
-				if (img_info) png_destroy_read_struct(&img, &img_info, NULL);
-				if (t) delete t;
-				free(row_pointers);
+				if ( f ) fclose( f );
+				if ( img_info ) png_destroy_read_struct( &img, &img_info, NULL );
+				if ( t ) delete t;
+				free( row_pointers );
 				return NULL;
 			}
 
@@ -155,7 +165,8 @@ namespace Render {
 #define DDPF_ALHAPIXELS 0x00000001l
 #define DDPF_FOURCC 	0x00000004l
 #define DDPF_RGB    	0x00000040l
-			enum DXGI_FORMAT {
+			enum DXGI_FORMAT
+			{
 				DXGI_FORMAT_UNKNOWN = 0,
 				DXGI_FORMAT_R32G32B32A32_TYPELESS = 1,
 				DXGI_FORMAT_R32G32B32A32_FLOAT = 2,
@@ -260,21 +271,24 @@ namespace Render {
 			};
 
 
-			_tex *LoadDDS(const std::string &filename) {
+			_tex *LoadDDS( const std::string &filename )
+			{
 				_tex *t = NULL;
 				u32 bufSize;
 
 				// f = fopen(filename.c_str(), "rb");
-				std::ifstream f(filename, std::ifstream::in | std::ifstream::binary);
-				if (f.fail()) {
-					LogErr("Could not open '", filename, "'.");
+				std::ifstream f( filename, std::ifstream::in | std::ifstream::binary );
+				if ( f.fail() )
+				{
+					LogErr( "Could not open '", filename, "'." );
 					return NULL;
 				}
 
 				// validate filecode
 				char filecode[4];
-				f.read((char*) filecode, sizeof(filecode));
-				if (strncmp(filecode, "DDS ", 4) != 0) {
+				f.read( (char*) filecode, sizeof( filecode ) );
+				if ( strncmp( filecode, "DDS ", 4 ) != 0 )
+				{
 					f.close();
 					return NULL;
 				}
@@ -284,22 +298,24 @@ namespace Render {
 
 				// get DX9 header	
 				u8 header[124];
-				f.read((char*) header, sizeof(header));
+				f.read( (char*) header, sizeof( header ) );
 
-				t->height = *(u32*)&(header[8]);
-				t->width = *(u32*)&(header[12]);
-				u32 linearSize = *(u32*)&(header[16]);
-				t->mipmapCount = *(u32*)&(header[24]);
-				u32 pixelFlags = *(u32*)&(header[76]);
-				u32 fourCC = *(u32*)&(header[80]);
-				u32 bitCount = *(u32*)&(header[84]);
-				u32 *bitMask = (u32*)&(header[88]); // 4 uints
+				t->height = *( u32* )&( header[8] );
+				t->width = *( u32* )&( header[12] );
+				u32 linearSize = *( u32* )&( header[16] );
+				t->mipmapCount = *( u32* )&( header[24] );
+				u32 pixelFlags = *( u32* )&( header[76] );
+				u32 fourCC = *( u32* )&( header[80] );
+				u32 bitCount = *( u32* )&( header[84] );
+				u32 *bitMask = ( u32* )&( header[88] ); // 4 uints
 
 				u32 dxgiFormat = 0;
 
 				// Check pixel format
-				if (pixelFlags & DDPF_RGB) {
-					switch (bitCount) {
+				if ( pixelFlags & DDPF_RGB )
+				{
+					switch ( bitCount )
+					{
 					case 8:
 						t->format = R8U;
 						break;
@@ -313,21 +329,25 @@ namespace Render {
 						t->format = RGBA8U;
 						break;
 					}
-				} else if (pixelFlags & DDPF_FOURCC) {
-					u32 comp = (fourCC == FOURCC_DXT1) ? 3 : 4;
-					switch (fourCC) {
+				}
+				else if ( pixelFlags & DDPF_FOURCC )
+				{
+					u32 comp = ( fourCC == FOURCC_DXT1 ) ? 3 : 4;
+					switch ( fourCC )
+					{
 					case DDS_DX10:
 					{
 						// read DX10 header info
 						u8 dxgi[20];
-						f.read((char*) dxgi, sizeof(dxgi));
-						dxgiFormat = *(u32*)&(dxgi[0]);
+						f.read( (char*) dxgi, sizeof( dxgi ) );
+						dxgiFormat = *( u32* )&( dxgi[0] );
 						// u32 dims 	   = *(u32*)&(dxgi[4]);
 						// u32 miscFlags  = *(u32*)&(dxgi[8]);
 						// u32 arraySize  = *(u32*)&(dxgi[12]);
 						// u32 miscFlags2 = *(u32*)&(dxgi[16]);
 
-						switch (dxgiFormat) {
+						switch ( dxgiFormat )
+						{
 						case DXGI_FORMAT_R32_FLOAT:
 							t->format = R32F;
 							break;
@@ -341,7 +361,7 @@ namespace Render {
 							t->format = RGBA32F;
 							break;
 						default:
-							LogErr("Cannot load this DXGI format (", dxgiFormat, "). Add it.");
+							LogErr( "Cannot load this DXGI format (", dxgiFormat, "). Add it." );
 							goto err;
 						}
 						break;
@@ -358,28 +378,30 @@ namespace Render {
 						t->format = DXT5;
 						break;
 					default:
-						LogErr("Cannot load this DDS FOURCC format (", fourCC, "). Add it.");
+						LogErr( "Cannot load this DDS FOURCC format (", fourCC, "). Add it." );
 						goto err;
 					}
-				} else {
-					LogErr("Cannot load this DDS pixelFormat (", pixelFlags, "). Add it.");
+				}
+				else
+				{
+					LogErr( "Cannot load this DDS pixelFormat (", pixelFlags, "). Add it." );
 					goto err;
 				}
 
 				// retrieve format info
-				t->desc = GetTextureFormat(t->format);
+				t->desc = GetTextureFormat( t->format );
 
 				{
 					std::streamoff cur = f.tellg();
-					f.seekg(0, std::ios_base::end);
+					f.seekg( 0, std::ios_base::end );
 					std::streamoff end = f.tellg();
-					f.seekg(cur, std::ios_base::beg);
-					bufSize = (u32) (end - cur);
+					f.seekg( cur, std::ios_base::beg );
+					bufSize = (u32) ( end - cur );
 				}
 
 				// bufSize = t->mipmapCount > 1 ? linearSize * 2 : linearSize;
-				t->texels = (GLubyte*) malloc(bufSize * sizeof(GLubyte));
-				f.read((char*) t->texels, bufSize * sizeof(GLubyte));
+				t->texels = (GLubyte*) malloc( bufSize * sizeof( GLubyte ) );
+				f.read( (char*) t->texels, bufSize * sizeof( GLubyte ) );
 				f.close();
 
 				return t;
@@ -390,62 +412,67 @@ namespace Render {
 				return NULL;
 			}
 
-			bool LoadCubemapFace(const std::string &filename, u32 face) {
+			bool LoadCubemapFace( const std::string &filename, u32 face )
+			{
 				_tex *t = NULL;
 
-				if (Resource::CheckExtension(filename, "png"))
-					t = LoadPNG(filename);
-				else if (Resource::CheckExtension(filename, "dds"))
-					t = LoadDDS(filename);
-				else {
-					LogErr("Format of '", filename, "' can't be loaded.");
+				if ( Resource::CheckExtension( filename, "png" ) )
+					t = LoadPNG( filename );
+				else if ( Resource::CheckExtension( filename, "dds" ) )
+					t = LoadDDS( filename );
+				else
+				{
+					LogErr( "Format of '", filename, "' can't be loaded." );
 					return false;
 				}
 
-				if (!t || !t->texels)
+				if ( !t || !t->texels )
 					return false;
 
-				glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, 0,
+				glTexImage2D( GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, 0,
 					t->desc.formatInternalGL, t->width, t->height, 0,
-					t->desc.formatGL, t->desc.type, t->texels);
+					t->desc.formatGL, t->desc.type, t->texels );
 
-				free(t->texels);
+				free( t->texels );
 				delete t;
 
 				return true;
 			}
 
-			bool Load(Data &texture, const std::string &filename) {
+			bool Load( Data &texture, const std::string &filename )
+			{
 				const Config &deviceConfig = GetDevice().GetConfig();
 				_tex *t = NULL;
 
-				if (Resource::CheckExtension(filename, "png"))
-					t = LoadPNG(filename);
-				else if (Resource::CheckExtension(filename, "dds"))
-					t = LoadDDS(filename);
-				else {
-					LogErr("Format of '", filename, "' can't be loaded.");
+				if ( Resource::CheckExtension( filename, "png" ) )
+					t = LoadPNG( filename );
+				else if ( Resource::CheckExtension( filename, "dds" ) )
+					t = LoadDDS( filename );
+				else
+				{
+					LogErr( "Format of '", filename, "' can't be loaded." );
 					return false;
 				}
 
-				if (!t || !t->texels)
+				if ( !t || !t->texels )
 					return false;
 
-				glGenTextures(1, &t->id);
-				glBindTexture(GL_TEXTURE_2D, t->id);
+				glGenTextures( 1, &t->id );
+				glBindTexture( GL_TEXTURE_2D, t->id );
 
 				GLint curr_alignment;
-				glGetIntegerv(GL_UNPACK_ALIGNMENT, &curr_alignment);
-				glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+				glGetIntegerv( GL_UNPACK_ALIGNMENT, &curr_alignment );
+				glPixelStorei( GL_UNPACK_ALIGNMENT, 1 );
 
 
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-				glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, (GLfloat) deviceConfig.anisotropicFiltering);
+				glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR );
+				glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
+				glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT );
+				glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT );
+				glTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, (GLfloat) deviceConfig.anisotropicFiltering );
 
-				switch (t->format) {
+				switch ( t->format )
+				{
 				case DXT1:
 				case DXT3:
 				case DXT5:
@@ -453,15 +480,16 @@ namespace Render {
 					// load mipmaps from file
 					u32 offset = 0;
 					u32 w = t->width, h = t->height;
-					for (u32 l = 0; l < t->mipmapCount && (w || h); ++l) {
-						u32 size = ((w + 3) / 4)*((h + 3) / 4)*t->desc.blockSize;
-						glCompressedTexImage2D(GL_TEXTURE_2D, l, t->desc.formatInternalGL, w, h, 0, size, t->texels + offset);
+					for ( u32 l = 0; l < t->mipmapCount && ( w || h ); ++l )
+					{
+						u32 size = ( ( w + 3 ) / 4 )*( ( h + 3 ) / 4 )*t->desc.blockSize;
+						glCompressedTexImage2D( GL_TEXTURE_2D, l, t->desc.formatInternalGL, w, h, 0, size, t->texels + offset );
 
 						offset += size;
 						w /= 2;
 						h /= 2;
-						if (w < 1) w = 1;	// for N-Pow2 sized textures
-						if (h < 1) h = 1;
+						if ( w < 1 ) w = 1;	// for N-Pow2 sized textures
+						if ( h < 1 ) h = 1;
 					}
 					break;
 				}
@@ -469,35 +497,35 @@ namespace Render {
 				case RG8U:
 				case RGB8U:
 				case RGBA8U:
-					glTexImage2D(GL_TEXTURE_2D, 0, t->desc.formatInternalGL, t->width, t->height, 0,
-						t->desc.formatGL, t->desc.type, t->texels);
+					glTexImage2D( GL_TEXTURE_2D, 0, t->desc.formatInternalGL, t->width, t->height, 0,
+						t->desc.formatGL, t->desc.type, t->texels );
 
-					glGenerateMipmap(GL_TEXTURE_2D);
+					glGenerateMipmap( GL_TEXTURE_2D );
 					break;
 				case R32F:
 				case RG32F:
 				case RGB32F:
 				case RGBA32F:
-					glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-					glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-					glTexImage2D(GL_TEXTURE_2D, 0, t->desc.formatInternalGL, t->width, t->height, 0,
-						t->desc.formatGL, t->desc.type, t->texels);
-					glGenerateMipmap(GL_TEXTURE_2D);
+					glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
+					glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
+					glTexImage2D( GL_TEXTURE_2D, 0, t->desc.formatInternalGL, t->width, t->height, 0,
+						t->desc.formatGL, t->desc.type, t->texels );
+					glGenerateMipmap( GL_TEXTURE_2D );
 					break;
 				default:
-					LogErr("Invalid texture format (", t->format, ") at GL Texure creation.");
-					glPixelStorei(GL_UNPACK_ALIGNMENT, curr_alignment);
-					free(t->texels);
+					LogErr( "Invalid texture format (", t->format, ") at GL Texure creation." );
+					glPixelStorei( GL_UNPACK_ALIGNMENT, curr_alignment );
+					free( t->texels );
 					delete t;
 					return false;
 				}
 
-				glPixelStorei(GL_UNPACK_ALIGNMENT, curr_alignment);
+				glPixelStorei( GL_UNPACK_ALIGNMENT, curr_alignment );
 
 				texture.id = t->id;
-				texture.size = vec2i(t->width, t->height);
+				texture.size = vec2i( t->width, t->height );
 
-				free(t->texels);
+				free( t->texels );
 				delete t;
 
 				return true;
@@ -505,7 +533,8 @@ namespace Render {
 			}
 		}
 
-		FormatDesc GetTextureFormat(TextureFormat fmt) {
+		FormatDesc GetTextureFormat( TextureFormat fmt )
+		{
 			static FormatDesc fmts[_FORMAT_N] = {
 				{ 0, 0, 0, GL_NONE, GL_NONE, GL_NONE },
 
@@ -537,122 +566,141 @@ namespace Render {
 			return fmts[fmt];
 		}
 
-		Handle Build(const Desc &desc) {
+		Handle Build( const Desc &desc )
+		{
 			Texture::_internal::Data texture;
 
 			int tex_i = (int) renderer->textures.size();
 
-			switch (desc.type) {
+			switch ( desc.type )
+			{
 			case FromFile:
 			{
 				// Check if this font resource already exist
 				int free_index;
 
-				if (FindResource(renderer->texture_resources, desc.name[0], free_index)) {
+				if ( FindResource( renderer->texture_resources, desc.name[0], free_index ) )
+				{
 					return free_index;
 				}
 
 				// If not loaded yet, do it
-				if (!Load(texture, desc.name[0])) {
-					LogErr("Error while loading '", desc.name[0], "' image.");
+				if ( !Load( texture, desc.name[0] ) )
+				{
+					LogErr( "Error while loading '", desc.name[0], "' image." );
 					return -1;
 				}
 
 				// .. and add it as a loaded resources
-				AddResource(renderer->texture_resources, free_index, desc.name[0], tex_i);
+				AddResource( renderer->texture_resources, free_index, desc.name[0], tex_i );
 			} break;
 
 			case Empty:
 			{
-				glGenTextures(1, &texture.id);
-				glBindTexture(GL_TEXTURE_2D, texture.id);
+				glGenTextures( 1, &texture.id );
+				glBindTexture( GL_TEXTURE_2D, texture.id );
 				texture.size = desc.size;
 			} break;
 
 			case Cubemap:
 			{
 				// Create cubemap 
-				glGenTextures(1, &texture.id);
-				glBindTexture(GL_TEXTURE_CUBE_MAP, texture.id);
+				glGenTextures( 1, &texture.id );
+				glBindTexture( GL_TEXTURE_CUBE_MAP, texture.id );
 
 				// Create face textures
-				for (u32 i = 0; i < 6; ++i) {
-					if (!_internal::LoadCubemapFace(desc.name[i], i)) {
-						LogErr("Error while loading face ", i, " (", desc.name[i], ") of cubemap.");
+				for ( u32 i = 0; i < 6; ++i )
+				{
+					if ( !_internal::LoadCubemapFace( desc.name[i], i ) )
+					{
+						LogErr( "Error while loading face ", i, " (", desc.name[i], ") of cubemap." );
 						return -1;
 					}
 				}
 
-				glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-				glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-				glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-				glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-				glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-				glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
+				glTexParameteri( GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
+				glTexParameteri( GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
+				glTexParameteri( GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE );
+				glTexParameteri( GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE );
+				glTexParameteri( GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE );
+				glBindTexture( GL_TEXTURE_CUBE_MAP, 0 );
 			} break;
 			}
 
 			// Store the texture
-			renderer->textures.push_back(texture);
+			renderer->textures.push_back( texture );
 
 			return tex_i;
 		}
 
-		void Destroy(Handle h) {
-			if (h >= 0 && h < (int) renderer->textures.size()) {
+		void Destroy( Handle h )
+		{
+			if ( h >= 0 && h < (int) renderer->textures.size() )
+			{
 				Texture::_internal::Data &tex = renderer->textures[h];
-				glDeleteTextures(1, &tex.id);
+				glDeleteTextures( 1, &tex.id );
 				tex.id = 0;
 			}
 		}
 
-		void Bind(Handle h, Target target) {
-			GLint tex = Exists(h) ? h : -1;
+		void Bind( Handle h, Target target )
+		{
+			GLint tex = Exists( h ) ? h : -1;
 
 			// Switch Texture Target if needed
-			if (target != renderer->curr_GL_texture_target) {
+			if ( target != renderer->curr_GL_texture_target )
+			{
 				renderer->curr_GL_texture_target = target;
-				glActiveTexture(GL_TEXTURE0 + target);
+				glActiveTexture( GL_TEXTURE0 + target );
 			}
 
 			// Switch active Texture if needed
-			if (renderer->curr_GL_texture[target] != tex) {
+			if ( renderer->curr_GL_texture[target] != tex )
+			{
 				renderer->curr_GL_texture[target] = tex;
-				glBindTexture(GL_TEXTURE_2D, tex >= 0 ? (int) renderer->textures[tex].id : 0);
+				glBindTexture( GL_TEXTURE_2D, tex >= 0 ? (int) renderer->textures[tex].id : 0 );
 			}
 		}
 
-		void BindCubemap(Handle h, Target target) {
-			GLint tex = Exists(h) ? h : -1;
+		void BindCubemap( Handle h, Target target )
+		{
+			GLint tex = Exists( h ) ? h : -1;
 
 			// Switch Texture Target if needed
-			if (target != renderer->curr_GL_texture_target) {
+			if ( target != renderer->curr_GL_texture_target )
+			{
 				renderer->curr_GL_texture_target = target;
-				glActiveTexture(GL_TEXTURE0 + target);
+				glActiveTexture( GL_TEXTURE0 + target );
 			}
 
-			glBindTexture(GL_TEXTURE_CUBE_MAP, tex >= 0 ? (int) renderer->textures[tex].id : 0);
+			glBindTexture( GL_TEXTURE_CUBE_MAP, tex >= 0 ? (int) renderer->textures[tex].id : 0 );
 		}
 
-		bool Exists(Handle h) {
+		bool Exists( Handle h )
+		{
 			return h >= 0 && h < (int) renderer->textures.size() && renderer->textures[h].id > 0;
 		}
 
-		u32 GetGLID(Handle h) {
-			if (Exists(h)) {
+		u32 GetGLID( Handle h )
+		{
+			if ( Exists( h ) )
+			{
 				return renderer->textures[h].id;
 			}
 			return 0;
 		}
 
-		bool GetData(Handle h, TextureFormat fmt, f32 *dst) {
-			if (Exists(h)) {
-				Bind(h, TARGET0);
+		bool GetData( Handle h, TextureFormat fmt, f32 *dst )
+		{
+			if ( Exists( h ) )
+			{
+				Bind( h, TARGET0 );
 
 				GLenum glFormat;
 				GLenum glType;
 
-				switch (fmt) {
+				switch ( fmt )
+				{
 				case RGBA32F:
 					glFormat = GL_RGBA;
 					glType = GL_FLOAT;
@@ -662,13 +710,13 @@ namespace Render {
 					glType = GL_FLOAT;
 					break;
 				default:
-					LogErr("TextureFormat not supported for GetData. Implement it.");
+					LogErr( "TextureFormat not supported for GetData. Implement it." );
 					return false;
 				}
 
-				glGetTexImage(GL_TEXTURE_2D, 0, glFormat, glType, dst);
+				glGetTexImage( GL_TEXTURE_2D, 0, glFormat, glType, dst );
 
-				Bind(-1, TARGET0);
+				Bind( -1, TARGET0 );
 
 				return true;
 			}

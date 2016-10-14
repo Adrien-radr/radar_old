@@ -10,57 +10,61 @@
 #include <sstream>
 #include <fstream>
 
-class Log {
+class Log
+{
 public:
 	static void Init();
 	static void Close();
 
 
 	template <typename... M>
-	static void Err(const char *file, int line, const M &...msg_list) {
-		std::string path(file);
+	static void Err( const char *file, int line, const M &...msg_list )
+	{
+		std::string path( file );
 #ifdef _WIN32
-		std::string filename = path.substr(path.find_last_of('\\')+1);
+		std::string filename = path.substr( path.find_last_of( '\\' ) + 1 );
 #else
-		std::string filename = path.substr(path.find_last_of('/')+1);
+		std::string filename = path.substr( path.find_last_of( '/' ) + 1 );
 #endif
-		log_ss.precision(2);
-		LogMsg("<", get_engine_time(), "> EE (", filename, ":", line, ") ");
-		log_ss.precision(4);
-		LogMsg( msg_list..., "\n");
+		log_ss.precision( 2 );
+		LogMsg( "<", get_engine_time(), "> EE (", filename, ":", line, ") " );
+		log_ss.precision( 4 );
+		LogMsg( msg_list..., "\n" );
 	}
 
 	template <typename... M>
-	static void Info(const char *file, int line, const M &...msg_list) {
-		std::string path(file);
+	static void Info( const char *file, int line, const M &...msg_list )
+	{
+		std::string path( file );
 #ifdef _WIN32
-		std::string filename = path.substr(path.find_last_of('\\')+1);
+		std::string filename = path.substr( path.find_last_of( '\\' ) + 1 );
 #else
-		std::string filename = path.substr(path.find_last_of('/')+1);
+		std::string filename = path.substr( path.find_last_of( '/' ) + 1 );
 #endif
-		log_ss.precision(2);
-		LogMsg("<", get_engine_time(), "> II (", filename, ":", line, ") ");
-		log_ss.precision(4);
-		LogMsg(msg_list..., "\n");
+		log_ss.precision( 2 );
+		LogMsg( "<", get_engine_time(), "> II (", filename, ":", line, ") " );
+		log_ss.precision( 4 );
+		LogMsg( msg_list..., "\n" );
 	}
 
 private:
 	template <typename T>
-	static void LogMsg(const T& value) {
+	static void LogMsg( const T& value )
+	{
 		log_ss << value;// << std::endl;
 
 		std::cout << log_ss.str();
 		log_file << log_ss.str();
 
 		log_file.flush();
-		log_ss.str(std::string());
+		log_ss.str( std::string() );
 	}
 
 	template <typename U, typename... T>
-	static void LogMsg(const U& head, const T&... tail)
+	static void LogMsg( const U& head, const T&... tail )
 	{
 		log_ss << head;
-		LogMsg(tail...);
+		LogMsg( tail... );
 	}
 
 	static double get_engine_time();

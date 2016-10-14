@@ -10,12 +10,13 @@
 #include "render_internal/font.h"
 
 
-namespace Render {
+namespace Render
+{
 	bool Init();
 	void Destroy();
 	int GetCurrentShader();
 	int GetCurrentMesh();
-	
+
 	bool ReloadShaders();
 	void StartTextRendering();
 	void StartPolygonRendering();
@@ -26,5 +27,5 @@ namespace Render {
 	void ToggleGTRaytracing();
 	void ResetGTAccumulation();
 	void AccumulateGT();
-	void UpdateView(const mat4f &viewMatrix, const vec3f &eyePos);
+	void UpdateView( const mat4f &viewMatrix, const vec3f &eyePos );
 }

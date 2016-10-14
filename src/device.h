@@ -8,12 +8,13 @@
 #include "GL/glew.h"
 #include "GLFW/glfw3.h"
 
-struct Config {
-    vec2i   windowSize;
-    bool    fullscreen;
-    u32     MSAASamples;
-    f32     fov;
-    bool    vSync;
+struct Config
+{
+	vec2i   windowSize;
+	bool    fullscreen;
+	u32     MSAASamples;
+	f32     fov;
+	bool    vSync;
 	u32		anisotropicFiltering;
 
 	f32		cameraBaseSpeed;
@@ -30,10 +31,11 @@ struct Config {
 ///     - Window Managment
 ///     - Event & Input managment
 /// Only one device is created per game session.
-class Device {
+class Device
+{
 public:
-	Device() : window(nullptr) {}
-	bool Init(SceneInitFunc initFunc);
+	Device() : window( nullptr ) {}
+	bool Init( SceneInitFunc initFunc );
 	void Destroy();
 
 	void Run();
@@ -42,25 +44,25 @@ public:
 	/// @param type : Key or Mouse listener
 	/// @param func : Callback function of the listener (of type ListenerFunc)
 	/// @param data : Void pointer on anything that could be useful in the callback
-	bool AddEventListener(ListenerType type, ListenerFunc func, void *data);
+	bool AddEventListener( ListenerType type, ListenerFunc func, void *data );
 
 	void UpdateProjection();
 
-	void SetMouseX(int x) const;
-	void SetMouseY(int y) const;
-	void ShowCursor(bool flag) const;
+	void SetMouseX( int x ) const;
+	void SetMouseY( int y ) const;
+	void ShowCursor( bool flag ) const;
 
 	// Input querying functions. EventManaget needs to be initialized
 	u32  GetMouseX() const;
 	u32  GetMouseY() const;
 
-	bool IsKeyUp(Key k) const;
-	bool IsKeyHit(Key k) const;
-	bool IsKeyDown(Key k) const;
+	bool IsKeyUp( Key k ) const;
+	bool IsKeyHit( Key k ) const;
+	bool IsKeyDown( Key k ) const;
 
-	bool IsMouseUp(MouseButton m) const;
-	bool IsMouseHit(MouseButton m) const;
-	bool IsMouseDown(MouseButton m) const;
+	bool IsMouseUp( MouseButton m ) const;
+	bool IsMouseHit( MouseButton m ) const;
+	bool IsMouseDown( MouseButton m ) const;
 
 	bool IsWheelUp() const;
 	bool IsWheelDown() const;
@@ -72,9 +74,9 @@ public:
 
 	const Config &GetConfig() const { return config; }
 
-	void SetUpdateFunc(SceneUpdateFunc func) { scene.SetUpdateFunc(func); }
-	void SetFixedUpdateFunc(SceneUpdateFunc func) { scene.SetFixedUpdateFunc(func); }
-	void SetRenderFunc(SceneRenderFunc func) { scene.SetRenderFunc(func); }
+	void SetUpdateFunc( SceneUpdateFunc func ) { scene.SetUpdateFunc( func ); }
+	void SetFixedUpdateFunc( SceneUpdateFunc func ) { scene.SetFixedUpdateFunc( func ); }
+	void SetRenderFunc( SceneRenderFunc func ) { scene.SetRenderFunc( func ); }
 
 private:
 	bool ImGui_Init();
@@ -90,7 +92,7 @@ public:
 	vec2i		mouseLastPosition;
 
 private:
-    GLFWwindow  *window;
+	GLFWwindow  *window;
 	Config		config;
 
 	bool		wireframe;		//!< True for wireframe mode activated
@@ -98,7 +100,7 @@ private:
 	mat4f		projection_matrix_3d;
 	float 		fov;
 
-    f64         engineTime;    //!< Time since the device has started
+	f64         engineTime;    //!< Time since the device has started
 
 	Scene		scene;			//!< Game scene
 };
@@ -108,5 +110,5 @@ Device &GetDevice();
 void DestroyDevice();
 
 // Defined in device_imgui.cpp
-void ImGui_MouseListener(const Event &evt, void *data);
-void ImGui_KeyListener(const Event &evt, void *data);
+void ImGui_MouseListener( const Event &evt, void *data );
+void ImGui_KeyListener( const Event &evt, void *data );

@@ -1,19 +1,24 @@
 #pragma once
 
-namespace Render {
+namespace Render
+{
 	// Forward decl of _Font
-	namespace Font {
+	namespace Font
+	{
 		typedef int Handle;
-		namespace _internal {
+		namespace _internal
+		{
 			struct Data;
 		}
 	}
 
-	namespace TextMesh {
-		struct Desc {
-			Desc(Font::Handle font, const std::string &str, const vec4f &strcolor) :
-				font_handle(font), string(str), color(strcolor) {
-			}
+	namespace TextMesh
+	{
+		struct Desc
+		{
+			Desc( Font::Handle font, const std::string &str, const vec4f &strcolor ) :
+				font_handle( font ), string( str ), color( strcolor )
+			{}
 
 			Font::Handle font_handle;
 			std::string string;
@@ -26,32 +31,34 @@ namespace Render {
 		typedef int Handle;
 
 		// Creates the TextMesh with the given descriptor
-		Handle Build(Desc &desc);
+		Handle Build( Desc &desc );
 
 		/// Deallocate GL data for the given textmesh handle
-		void Destroy(Handle h);
+		void Destroy( Handle h );
 
 		/// Binds the given textmesh's VBO as current
-		void Bind(Handle h);
+		void Bind( Handle h );
 
 		/// Render the given textmesh. Binds it if not currently bound
-		void Render(Handle h);
+		void Render( Handle h );
 
 		/// Returns true if the given mesh exists in renderer
-		bool Exists(Handle h);
+		bool Exists( Handle h );
 
 		/// Change the string displayed by a TextMesh
 		/// @param h : handle of the text mesh to be modified. -1 for a new handle
 		/// @param mesh : Handle of the used font
 		/// @param str : new string to be displayed
 		/// @return : h if it is >= 0, or a new handle if h is -1
-		Handle SetString(Handle h, Font::Handle fh, const std::string &str);
+		Handle SetString( Handle h, Font::Handle fh, const std::string &str );
 
-		namespace _internal {
+		namespace _internal
+		{
 			/// Dynamic mesh used to display text.
 			/// VBOs updated every time its string text is changed.
-			struct Data {
-				Data() : vbo(0), vertices_n(0), curr_letter_n(0), font(NULL) {}
+			struct Data
+			{
+				Data() : vbo( 0 ), vertices_n( 0 ), curr_letter_n( 0 ), font( NULL ) {}
 				u32 vbo;            //!< Contains position data and texcoord data
 				u32 vertices_n;     //!< Number of vertices the mesh has (string_len*6)
 
@@ -67,12 +74,14 @@ namespace Render {
 			};
 
 			/// Modify the given TextMesh data to contains the given string with the given font
-			bool CreateFromString(Data &mesh, const Font::_internal::Data &font, const std::string &str);
+			bool CreateFromString( Data &mesh, const Font::_internal::Data &font, const std::string &str );
 		}
 	}
 
-	namespace Mesh {
-		enum Attribute {
+	namespace Mesh
+	{
+		enum Attribute
+		{
 			MESH_POSITIONS = 1,
 			MESH_NORMALS = 2,
 			MESH_TEXCOORDS = 4,
@@ -82,14 +91,16 @@ namespace Render {
 			MESH_INDICES = 64
 		};
 
-		enum AnimType {
+		enum AnimType
+		{
 			ANIM_NONE,      // static mesh, no bone animation
 			ANIM_IDLE,
 
 			ANIM_N // Do not Use
 		};
 
-		struct AnimState {
+		struct AnimState
+		{
 			int curr_frame;
 			f32 curr_time;
 			f32 duration;
@@ -104,14 +115,15 @@ namespace Render {
 		/// @param normals : array of vertex normals.
 		/// @param texcoords : array of vertex texture UV coords
 		/// @param colors : array of vertex colors.
-		struct Desc {
-			Desc(const std::string &resource_name, bool empty_mesh, u32 icount, u32 *idx_arr,
+		struct Desc
+		{
+			Desc( const std::string &resource_name, bool empty_mesh, u32 icount, u32 *idx_arr,
 				u32 vcount, f32 *pos_arr, f32 *normal_arr = nullptr, f32 *texcoord_arr = nullptr,
-				f32 *tangent_arr = nullptr, f32 *bitangent_arr = nullptr, f32 *col_arr = nullptr) :
-				name(resource_name), empty_mesh(empty_mesh), vertices_n(vcount), indices_n(icount),
-				indices(idx_arr), positions(pos_arr), normals(normal_arr), texcoords(texcoord_arr),
-				tangents(tangent_arr), bitangents(bitangent_arr), colors(col_arr) {
-			}
+				f32 *tangent_arr = nullptr, f32 *bitangent_arr = nullptr, f32 *col_arr = nullptr ) :
+				name( resource_name ), empty_mesh( empty_mesh ), vertices_n( vcount ), indices_n( icount ),
+				indices( idx_arr ), positions( pos_arr ), normals( normal_arr ), texcoords( texcoord_arr ),
+				tangents( tangent_arr ), bitangents( bitangent_arr ), colors( col_arr )
+			{}
 
 
 			std::string name;	//!< name of the mesh for resource managment
@@ -137,7 +149,7 @@ namespace Render {
 
 		/// Build a Mesh from the given Mesh Description. See above to understand what is needed.
 		/// @return : the Mesh Handle if creation successful. -1 if error occured.
-		Handle Build(const Desc &desc);
+		Handle Build( const Desc &desc );
 
 		/// Build a radius 1 sphere
 		Handle BuildSphere();
@@ -147,23 +159,23 @@ namespace Render {
 
 		/// Build a SH visualization mesh
 		/// @param shNormalization : put to true if the sh visualization should be normalized by DC
-		Handle BuildSHVisualization(const float *shCoeffs, const u32 bandN, const std::string &meshName, bool shNormalization, const u32 numPhi = 48, const u32 numTheta = 96);
+		Handle BuildSHVisualization( const float *shCoeffs, const u32 bandN, const std::string &meshName, bool shNormalization, const u32 numPhi = 48, const u32 numTheta = 96 );
 
 		/// Deallocate GL data for the given mesh handle
-		void Destroy(Handle h);
+		void Destroy( Handle h );
 
 		/// Bind given Mesh as current VAO for drawing
 		/// If -1 is given, unbind all VAOs
-		void Bind(Handle h);
+		void Bind( Handle h );
 
 		/// Returns true if the given mesh exists in renderer
-		bool Exists(Handle h);
-		bool Exists(const std::string &resourceName, Handle &h); // returns the resource in h if it exists as a resource
+		bool Exists( Handle h );
+		bool Exists( const std::string &resourceName, Handle &h ); // returns the resource in h if it exists as a resource
 
 		/// Renders the given mesh, binding it if not currently bound as GL Current VAO.
 		/// The given animation state is used to transmit bone-matrix data to the shader
 		/// before drawing the mesh. If NULL, an identity bonematrix is used
-		void Render(Handle h);
+		void Render( Handle h );
 
 		/// Sets the current played animation of state. Reset it at the beginning of 1st frame
 		// void SetAnimation(Handle h, AnimState &state, AnimType type);
@@ -212,7 +224,8 @@ namespace Render {
 		//};
 
 		/// Header information about an armature animation
-		struct _Animation {
+		struct _Animation
+		{
 			std::vector<f32>	frame_duration;    //!< Duration of each frame
 			f32					duration;
 			int					frame_n;
@@ -220,9 +233,12 @@ namespace Render {
 		};
 #endif
 
-		namespace _internal {
-			struct Data {
-				Data() : vao(0), indices_n(0), attrib_flags(MESH_POSITIONS), center(0), radius(0) {
+		namespace _internal
+		{
+			struct Data
+			{
+				Data() : vao( 0 ), indices_n( 0 ), attrib_flags( MESH_POSITIONS ), center( 0 ), radius( 0 )
+				{
 					vbo[0] = vbo[1] = vbo[2] = vbo[3] = vbo[4] = vbo[5] = 0;
 					ibo = 0;
 				}

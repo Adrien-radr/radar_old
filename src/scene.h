@@ -9,19 +9,24 @@
 
 class Scene;
 
-namespace Material {
+namespace Material
+{
 	using namespace Render;
-	struct Desc {
-		Desc(const col3f &ka, const col3f &kd, const col3f &ks, float s, const std::string diffuse = "") :
-			uniform(ka, kd, ks, s), diffuseTexPath(diffuse), specularTexPath(""), normalTexPath(""),
-			occlusionTexPath(""), ltcMatrixPath(""), ltcAmplitudePath(""), dynamic(false), gbufferDraw(true) {}
+	struct Desc
+	{
+		Desc( const col3f &ka, const col3f &kd, const col3f &ks, float s, const std::string diffuse = "" ) :
+			uniform( ka, kd, ks, s ), diffuseTexPath( diffuse ), specularTexPath( "" ), normalTexPath( "" ),
+			occlusionTexPath( "" ), ltcMatrixPath( "" ), ltcAmplitudePath( "" ), dynamic( false ), gbufferDraw( true )
+		{}
 
 		// Default debug material
-		Desc() : Desc(col3f(0.3f, 0.f, 0.3f), col3f(0.51f, 0.4f, 0.51f), col3f(0.7f, 0.04f, 0.7f), 0.95f) {}
+		Desc() : Desc( col3f( 0.3f, 0.f, 0.3f ), col3f( 0.51f, 0.4f, 0.51f ), col3f( 0.7f, 0.04f, 0.7f ), 0.95f ) {}
 
-		struct UniformBufferData {
-			UniformBufferData(const col3f &ka, const col3f &kd, const col3f &ks, float s) : 
-				Ka(ka), Kd(kd), Ks(ks), shininess(s) {}
+		struct UniformBufferData
+		{
+			UniformBufferData( const col3f &ka, const col3f &kd, const col3f &ks, float s ) :
+				Ka( ka ), Kd( kd ), Ks( ks ), shininess( s )
+			{}
 			//----
 			col3f 	Ka;			//!< ambient color
 			f32 	dummy0;
@@ -46,9 +51,11 @@ namespace Material {
 		bool gbufferDraw;
 	};
 
-	struct Data {
-		Data() : ubo(-1), diffuseTex(-1), specularTex(-1), normalTex(-1), occlusionTex(-1), 
-				 ltcMatrix(-1), ltcAmplitude(-1) {}
+	struct Data
+	{
+		Data() : ubo( -1 ), diffuseTex( -1 ), specularTex( -1 ), normalTex( -1 ), occlusionTex( -1 ),
+			ltcMatrix( -1 ), ltcAmplitude( -1 )
+		{}
 		Desc desc;
 		UBO::Handle ubo;
 
@@ -67,46 +74,53 @@ namespace Material {
 	extern Handle DEFAULT_MATERIAL;	//!< Default material (pink diffuse), defined in scene.cpp Init()
 }
 
-namespace Object {
+namespace Object
+{
 	using namespace Render;
-	struct Desc {
+	struct Desc
+	{
 		friend Scene;
 
-		Desc(Shader::Handle shader_h)//, Mesh::Handle mesh_h, Material::Handle mat_h = Material::DEFAULT_MATERIAL)
-		: shader(shader_h), numSubmeshes(0), position(0), rotation(0), scale(1) {
+		Desc( Shader::Handle shader_h )//, Mesh::Handle mesh_h, Material::Handle mat_h = Material::DEFAULT_MATERIAL)
+			: shader( shader_h ), numSubmeshes( 0 ), position( 0 ), rotation( 0 ), scale( 1 )
+		{
 			model_matrix.Identity();
 		}
 
-		void AddSubmesh(Mesh::Handle mesh_h, Material::Handle mat_h) {
-			meshes.push_back(mesh_h);
-			materials.push_back(mat_h);
+		void AddSubmesh( Mesh::Handle mesh_h, Material::Handle mat_h )
+		{
+			meshes.push_back( mesh_h );
+			materials.push_back( mat_h );
 			++numSubmeshes;
 		}
 
-		void ClearSubmeshes() {
+		void ClearSubmeshes()
+		{
 			numSubmeshes = 0;
 			meshes.clear();
 			materials.clear();
 		}
 
-		void DestroyData() {
-			for (u32 i = 0; i < numSubmeshes; ++i) {
-				Render::Mesh::Destroy(meshes[i]);
+		void DestroyData()
+		{
+			for ( u32 i = 0; i < numSubmeshes; ++i )
+			{
+				Render::Mesh::Destroy( meshes[i] );
 			}
 			ClearSubmeshes();
 		}
 
 		void Identity();
-		void Translate(const vec3f &t);
-		void Scale(const vec3f &s);
-		void Rotate(const vec3f &r);
+		void Translate( const vec3f &t );
+		void Scale( const vec3f &s );
+		void Rotate( const vec3f &r );
 
 		Shader::Handle   shader;
 
 		// Mesh::AnimType   animation;
 		// Mesh::AnimState  animation_state;
 
-		Mesh::Handle GetMesh(u32 idx) const { if (idx < meshes.size()) return meshes[idx]; else return -1; }
+		Mesh::Handle GetMesh( u32 idx ) const { if ( idx < meshes.size() ) return meshes[idx]; else return -1; }
 
 	private:
 		std::vector<Mesh::Handle>		meshes;
@@ -124,11 +138,13 @@ namespace Object {
 	typedef int Handle;
 }
 
-namespace ModelResource {
+namespace ModelResource
+{
 	typedef int Handle;
 
-	struct Data {
-		Data() : resourceName("UNNAMED"), pathName(""), numSubMeshes(0) {}
+	struct Data
+	{
+		Data() : resourceName( "UNNAMED" ), pathName( "" ), numSubMeshes( 0 ) {}
 
 		// Loaded resources 
 		// std::vector<Render::Texture::Handle> textures;
@@ -146,12 +162,15 @@ namespace ModelResource {
 	};
 };
 
-namespace Text {
-	struct Desc {
-		Desc(const std::string &string, Render::Font::Handle fh, const vec4f &col)
-		: color(col), str(string), font(fh), mesh(-1) {}
+namespace Text
+{
+	struct Desc
+	{
+		Desc( const std::string &string, Render::Font::Handle fh, const vec4f &col )
+			: color( col ), str( string ), font( fh ), mesh( -1 )
+		{}
 
-		void SetPosition(const vec2f &pos);
+		void SetPosition( const vec2f &pos );
 
 		mat4f						model_matrix;
 		vec4f						color;
@@ -165,9 +184,11 @@ namespace Text {
 	typedef int Handle;
 }
 
-namespace PointLight {
+namespace PointLight
+{
 	/// Point Light GPU signature (sent as UBO)
-	struct UniformBufferData {
+	struct UniformBufferData
+	{
 		vec3f   position;
 		f32		dummy0;
 		//----
@@ -176,8 +197,9 @@ namespace PointLight {
 	};
 
 	/// Point Light Descriptor
-	struct Desc {
-		Desc() : position(0), Ld(1), active(false) {}
+	struct Desc
+	{
+		Desc() : position( 0 ), Ld( 1 ), active( false ) {}
 
 		vec3f   position;   //!< 3D position in world-coordinates
 		vec3f   Ld; 		//!< Light Diffuse Color. w-coord unused
@@ -191,9 +213,11 @@ namespace PointLight {
 	typedef int Handle;
 }
 
-namespace AreaLight {
+namespace AreaLight
+{
 	/// Area Light GPU signature (sent as UBO)
-	struct UniformBufferData {
+	struct UniformBufferData
+	{
 		vec3f position;
 		f32   dummy0;
 		//----
@@ -210,8 +234,9 @@ namespace AreaLight {
 	};
 
 	/// Area Light Descriptor
-	struct Desc {
-		Desc() : position(0), Ld(1), rotation(0), width(1), active(false), fixture(-1) {}
+	struct Desc
+	{
+		Desc() : position( 0 ), Ld( 1 ), rotation( 0 ), width( 1 ), active( false ), fixture( -1 ) {}
 
 		vec3f position;
 		vec3f Ld;
@@ -223,86 +248,90 @@ namespace AreaLight {
 	};
 
 	/// Returns the Area Light as a Rectangle structure
-	Rectangle GetRectangle(const UniformBufferData &al);
+	Rectangle GetRectangle( const UniformBufferData &al );
 
 	/// Returns the 4 vertices composing the AreaLight
-	void GetVertices(const UniformBufferData &al, vec3f points[4]);
+	void GetVertices( const UniformBufferData &al, vec3f points[4] );
 
 	/// Returns true if the point at P of normal N can't see the area light al
-	bool Cull(const UniformBufferData &al, const vec3f &P, const vec3f &N);
+	bool Cull( const UniformBufferData &al, const vec3f &P, const vec3f &N );
 
 	/// Handle representing a area light in the scene.
 	/// This can be used to modify or delete the light after creation.
 	typedef int Handle;
 }
 
-namespace Skybox {
-	struct Desc {
+namespace Skybox
+{
+	struct Desc
+	{
 		std::string filenames[6]; // right, left, up, down, back front
 	};
 
-	struct Data {
-		Render::Texture::Handle cubemap; 
+	struct Data
+	{
+		Render::Texture::Handle cubemap;
 	};
 
 	typedef int Handle;
 }
 
 class Scene;
-typedef bool (*SceneInitFunc)(Scene *scene);
-typedef void (*SceneUpdateFunc)(Scene *scene, float dt);
-typedef void (*SceneRenderFunc)(Scene *scene);
+typedef bool( *SceneInitFunc )( Scene *scene );
+typedef void( *SceneUpdateFunc )( Scene *scene, float dt );
+typedef void( *SceneRenderFunc )( Scene *scene );
 
-class Scene {
+class Scene
+{
 public:
 	Scene();
 
-	bool Init(SceneInitFunc initFunc);
+	bool Init( SceneInitFunc initFunc );
 	void Clean();
 
-	void Update(f32 dt);
+	void Update( f32 dt );
 	void UpdateGUI();
 	void Render();
 
-	void SetUpdateFunc(SceneUpdateFunc func) { customUpdateFunc = func; }
-	void SetFixedUpdateFunc(SceneUpdateFunc func) { customFixedUpdateFunc = func; }
-	void SetRenderFunc(SceneRenderFunc func) { customRenderFunc = func; }
+	void SetUpdateFunc( SceneUpdateFunc func ) { customUpdateFunc = func; }
+	void SetFixedUpdateFunc( SceneUpdateFunc func ) { customFixedUpdateFunc = func; }
+	void SetRenderFunc( SceneRenderFunc func ) { customRenderFunc = func; }
 
 	void UpdateView();
 
 	const mat4f& GetViewMatrix() const { return view_matrix; }
 	Camera &GetCamera() { return camera; }
 
-	bool MaterialExists(Material::Handle h) const;
-	void SetTextString(Text::Handle h, const std::string &str);
+	bool MaterialExists( Material::Handle h ) const;
+	void SetTextString( Text::Handle h, const std::string &str );
 
-	ModelResource::Handle GetModelResource(const std::string &modelName);
+	ModelResource::Handle GetModelResource( const std::string &modelName );
 
-	ModelResource::Handle LoadModelResource(const std::string &fileName);
-	Object::Handle InstanciateModel(const ModelResource::Handle &h);
-	Object::Handle Add(const Object::Desc &d);
-	PointLight::Handle Add(const PointLight::Desc &d);
-	AreaLight::Handle Add(const AreaLight::Desc &d);
-	Text::Handle Add(const Text::Desc &d);
-	Material::Handle Add(const Material::Desc &d);
-	Skybox::Handle Add(const Skybox::Desc &d);
-	void SetSkybox(Skybox::Handle h);
+	ModelResource::Handle LoadModelResource( const std::string &fileName );
+	Object::Handle InstanciateModel( const ModelResource::Handle &h );
+	Object::Handle Add( const Object::Desc &d );
+	PointLight::Handle Add( const PointLight::Desc &d );
+	AreaLight::Handle Add( const AreaLight::Desc &d );
+	Text::Handle Add( const Text::Desc &d );
+	Material::Handle Add( const Material::Desc &d );
+	Skybox::Handle Add( const Skybox::Desc &d );
+	void SetSkybox( Skybox::Handle h );
 
 	// Scene getters
-	Object::Desc *GetObject(Object::Handle h);
-	AreaLight::Desc *GetLight(AreaLight::Handle h);
-	Material::Data *GetMaterial(Material::Handle h);
-	const AreaLight::UniformBufferData *GetAreaLightUBO(AreaLight::Handle h);
+	Object::Desc *GetObject( Object::Handle h );
+	AreaLight::Desc *GetLight( AreaLight::Handle h );
+	Material::Data *GetMaterial( Material::Handle h );
+	const AreaLight::UniformBufferData *GetAreaLightUBO( AreaLight::Handle h );
 
-	bool ObjectExists(Object::Handle h);
-	bool AreaLightExists(AreaLight::Handle h);
+	bool ObjectExists( Object::Handle h );
+	bool AreaLightExists( AreaLight::Handle h );
 
 private:
 	bool InitLightUniforms();
 
 	/// Update the UBO defining the scene lights and upload it to GPU
 	/// returns the number of active lights to be rendered (to send to each shaders) 
-	u32 AggregatePointLightUniforms(); 
+	u32 AggregatePointLightUniforms();
 	u32 AggregateAreaLightUniforms();
 
 	// GUI
@@ -344,4 +373,4 @@ private:
 };
 
 /// Listener callback function for the scene
-void SceneResizeEventListener(const Event &event, void *data);
+void SceneResizeEventListener( const Event &event, void *data );
