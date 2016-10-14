@@ -104,7 +104,7 @@ bool Scene::Init(SceneInitFunc initFunc) {
 		active_areaLights[i] = -1;
 	}
 
-	Render::Font::Desc fdesc("../../data/DejaVuSans.ttf", 12);
+	Render::Font::Desc fdesc("../radar/data/DejaVuSans.ttf", 12);
 	Render::Font::Handle fhandle = Render::Font::Build(fdesc);
 	if (fhandle < 0) {
 		LogErr("Error loading DejaVuSans font.");
@@ -126,12 +126,12 @@ bool Scene::Init(SceneInitFunc initFunc) {
 	}
 
 	Skybox::Desc sd;
-	sd.filenames[0] = "../../data/default_diff.png";
-	sd.filenames[1] = "../../data/default_diff.png";
-	sd.filenames[2] = "../../data/default_diff.png";
-	sd.filenames[3] = "../../data/default_diff.png";
-	sd.filenames[4] = "../../data/default_diff.png";
-	sd.filenames[5] = "../../data/default_diff.png";
+	sd.filenames[0] = "../radar/data/default_diff.png";
+	sd.filenames[1] = "../radar/data/default_diff.png";
+	sd.filenames[2] = "../radar/data/default_diff.png";
+	sd.filenames[3] = "../radar/data/default_diff.png";
+	sd.filenames[4] = "../radar/data/default_diff.png";
+	sd.filenames[5] = "../radar/data/default_diff.png";
 
 	Skybox::Handle sh = Add(sd);
 	if(sh < 0) {
@@ -458,8 +458,8 @@ u32 Scene::AggregateAreaLightUniforms() {
 			// TODO : other shader for light fixtures
 			Object::Desc od(Render::Shader::SHADER_3D_MESH);
 			Material::Desc matd(col3f(src.Ld.x, src.Ld.y, src.Ld.z), col3f(0,0,0), col3f(0,0,0), 1e-3f);
-			matd.ltcMatrixPath = "../../data/ltc_mat.dds";
-			matd.ltcAmplitudePath = "../../data/ltc_amp.dds";
+			matd.ltcMatrixPath = "../radar/data/ltc_mat.dds";
+			matd.ltcAmplitudePath = "../radar/data/ltc_amp.dds";
 			Material::Handle math = Add(matd);
 			if(math < 0) {
 				LogErr("mat err");
