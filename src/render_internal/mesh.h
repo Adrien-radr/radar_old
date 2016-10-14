@@ -128,7 +128,7 @@ namespace Render {
 			f32 *tangents;		//!< format vec3
 			f32 *bitangents;	//!< format vec3
 			f32 *colors;        //!< format vec4
-	};
+		};
 
 		/// Mesh Handle.
 		/// Meshes are stored and worked on internally by the renderer.
@@ -160,9 +160,9 @@ namespace Render {
 		bool Exists(Handle h);
 		bool Exists(const std::string &resourceName, Handle &h); // returns the resource in h if it exists as a resource
 
-																 /// Renders the given mesh, binding it if not currently bound as GL Current VAO.
-																 /// The given animation state is used to transmit bone-matrix data to the shader
-																 /// before drawing the mesh. If NULL, an identity bonematrix is used
+		/// Renders the given mesh, binding it if not currently bound as GL Current VAO.
+		/// The given animation state is used to transmit bone-matrix data to the shader
+		/// before drawing the mesh. If NULL, an identity bonematrix is used
 		void Render(Handle h);
 
 		/// Sets the current played animation of state. Reset it at the beginning of 1st frame
