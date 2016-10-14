@@ -7,7 +7,6 @@ bin/data/old
 *.tlog
 *.pdb
 *.user
-*.filters
 *.suo
 *.sdf
 *.opensdf

@@ -1,0 +1,181 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="src\device.cpp" />
+    <ClCompile Include="src\render.cpp" />
+    <ClCompile Include="src\scene.cpp" />
+    <ClCompile Include="ext\imgui\imgui.cpp">
+      <Filter>imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="ext\imgui\imgui_demo.cpp">
+      <Filter>imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="ext\imgui\imgui_draw.cpp">
+      <Filter>imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="src\device_imgui.cpp" />
+    <ClCompile Include="src\model.cpp" />
+    <ClCompile Include="src\common\debug.cpp">
+      <Filter>common</Filter>
+    </ClCompile>
+    <ClCompile Include="ext\json\cJSON.c">
+      <Filter>ext</Filter>
+    </ClCompile>
+    <ClCompile Include="src\common\resource.cpp">
+      <Filter>common</Filter>
+    </ClCompile>
+    <ClCompile Include="src\common\SHEval.cpp">
+      <Filter>common</Filter>
+    </ClCompile>
+    <ClCompile Include="src\common\random.cpp">
+      <Filter>common</Filter>
+    </ClCompile>
+    <ClCompile Include="src\common\sampling.cpp">
+      <Filter>common</Filter>
+    </ClCompile>
+    <ClCompile Include="src\camera.cpp" />
+    <ClCompile Include="src\geometry.cpp" />
+    <ClCompile Include="src\brdf.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="src\device.h" />
+    <ClInclude Include="src\render.h" />
+    <ClInclude Include="src\scene.h" />
+    <ClInclude Include="ext\imgui\imconfig.h">
+      <Filter>imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="ext\imgui\imgui.h">
+      <Filter>imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="ext\imgui\imgui_internal.h">
+      <Filter>imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="ext\imgui\stb_rect_pack.h">
+      <Filter>imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="ext\imgui\stb_textedit.h">
+      <Filter>imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="ext\imgui\stb_truetype.h">
+      <Filter>imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="src\common\common.h">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="src\common\debug.h">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="src\common\event.h">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="src\common\linmath.h">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="ext\json\cJSON.h">
+      <Filter>ext</Filter>
+    </ClInclude>
+    <ClInclude Include="ext\gl\wglew.h">
+      <Filter>ext</Filter>
+    </ClInclude>
+    <ClInclude Include="ext\gl\glxew.h">
+      <Filter>ext</Filter>
+    </ClInclude>
+    <ClInclude Include="ext\gl\glew.h">
+      <Filter>ext</Filter>
+    </ClInclude>
+    <ClInclude Include="src\render_internal\font.h">
+      <Filter>render_internal</Filter>
+    </ClInclude>
+    <ClInclude Include="src\render_internal\mesh.h">
+      <Filter>render_internal</Filter>
+    </ClInclude>
+    <ClInclude Include="src\render_internal\texture.h">
+      <Filter>render_internal</Filter>
+    </ClInclude>
+    <ClInclude Include="src\common\resource.h">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="src\common\SHEval.h">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="src\common\random.h">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="src\common\sampling.h">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="src\camera.h" />
+    <ClInclude Include="src\geometry.h" />
+    <ClInclude Include="src\brdf.h" />
+    <ClInclude Include="src\render_internal\shader.h">
+      <Filter>render_internal</Filter>
+    </ClInclude>
+    <ClInclude Include="src\render_internal\framebuffer.h">
+      <Filter>render_internal</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="imgui">
+      <UniqueIdentifier>{69c7c6a4-46a8-48dd-bf0a-e2d27bfe2b6d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="common">
+      <UniqueIdentifier>{110f9ffa-3846-4f88-9782-c6b305df7cc8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ext">
+      <UniqueIdentifier>{46893a60-7227-4cdb-8e70-4b48bc35c3ee}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="render_internal">
+      <UniqueIdentifier>{c4f4f056-6ede-4cce-b777-8a90b8997a6f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="shaders">
+      <UniqueIdentifier>{fbb7ea4e-6a2f-44bf-8b66-a94f34401bd9}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="src\render_internal\font.inl">
+      <Filter>render_internal</Filter>
+    </None>
+    <None Include="src\render_internal\mesh.inl">
+      <Filter>render_internal</Filter>
+    </None>
+    <None Include="src\render_internal\shader.inl">
+      <Filter>render_internal</Filter>
+    </None>
+    <None Include="src\render_internal\texture.inl">
+      <Filter>render_internal</Filter>
+    </None>
+    <None Include="data\shaders\gBufferPass_frag.glsl">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="data\shaders\gBufferPass_vert.glsl">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="data\shaders\lib.glsl">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="data\shaders\mesh_frag.glsl">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="data\shaders\mesh_vert.glsl">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="data\shaders\skybox_frag.glsl">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="data\shaders\skybox_vert.glsl">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="data\shaders\ui.fs">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="data\shaders\ui.vs">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="src\render_internal\framebuffer.inl">
+      <Filter>render_internal</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="TODO.txt" />
+  </ItemGroup>
+</Project>
