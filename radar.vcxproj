@@ -27,7 +27,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v140_xp</PlatformToolset>
+    <PlatformToolset>v140</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
@@ -67,7 +67,7 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <OutDir>$(SolutionDir)lib\</OutDir>
+    <OutDir>$(ProjectDir)lib\</OutDir>
     <LibraryPath>$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64);</LibraryPath>
     <TargetExt>.lib</TargetExt>
   </PropertyGroup>
@@ -104,7 +104,7 @@
       <WarningLevel>Level3</WarningLevel>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>src/;ext/;ext/imgui;ext/png;ext/freetype;C:\Program Files (x86)\Visual Leak Detector\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>src/;ext/;ext/imgui;ext/png;ext/freetype</AdditionalIncludeDirectories>
       <CompileAsWinRT>false</CompileAsWinRT>
     </ClCompile>
     <Link>

@@ -457,6 +457,9 @@ namespace Render
 				if ( !t || !t->texels )
 					return false;
 
+				Target last_target = GetCurrentTextureTarget();
+				int last_tex = GetCurrentTexture( last_target );
+
 				glGenTextures( 1, &t->id );
 				glBindTexture( GL_TEXTURE_2D, t->id );
 
@@ -522,6 +525,9 @@ namespace Render
 
 				glPixelStorei( GL_UNPACK_ALIGNMENT, curr_alignment );
 
+				// restore previously bound tex
+				Bind( last_tex, last_target );
+
 				texture.id = t->id;
 				texture.size = vec2i( t->width, t->height );
 
@@ -530,6 +536,35 @@ namespace Render
 
 				return true;
 
+			}
+
+			bool LoadCubemap( Data &texture, const std::string *faces )
+			{
+				int last_tex = GetCurrentCubemapTexture();
+				glGenTextures( 1, &texture.id );
+				glBindTexture( GL_TEXTURE_CUBE_MAP, texture.id );
+
+				// Create face textures
+				for ( u32 i = 0; i < 6; ++i )
+				{
+					if ( !_internal::LoadCubemapFace( faces[i], i ) )
+					{
+						LogErr( "Error while loading face ", i, " (", faces[i], ") of cubemap." );
+						BindCubemap( last_tex, Target::TARGET0 );
+						return false;
+					}
+				}
+
+				glTexParameteri( GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
+				glTexParameteri( GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
+				glTexParameteri( GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE );
+				glTexParameteri( GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE );
+				glTexParameteri( GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE );
+
+				// restore previously bound target
+				BindCubemap( last_tex, Target::TARGET0 );
+
+				return true;
 			}
 		}
 
@@ -598,32 +633,17 @@ namespace Render
 			case Empty:
 			{
 				glGenTextures( 1, &texture.id );
-				glBindTexture( GL_TEXTURE_2D, texture.id );
+				//glBindTexture( GL_TEXTURE_2D, texture.id );
 				texture.size = desc.size;
 			} break;
 
 			case Cubemap:
 			{
-				// Create cubemap 
-				glGenTextures( 1, &texture.id );
-				glBindTexture( GL_TEXTURE_CUBE_MAP, texture.id );
-
-				// Create face textures
-				for ( u32 i = 0; i < 6; ++i )
+				if ( !LoadCubemap( texture, desc.name ) )
 				{
-					if ( !_internal::LoadCubemapFace( desc.name[i], i ) )
-					{
-						LogErr( "Error while loading face ", i, " (", desc.name[i], ") of cubemap." );
-						return -1;
-					}
+					LogErr( "Error loading cubemap." );
+					return -1;
 				}
-
-				glTexParameteri( GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
-				glTexParameteri( GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
-				glTexParameteri( GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE );
-				glTexParameteri( GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE );
-				glTexParameteri( GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE );
-				glBindTexture( GL_TEXTURE_CUBE_MAP, 0 );
 			} break;
 			}
 
@@ -673,7 +693,12 @@ namespace Render
 				glActiveTexture( GL_TEXTURE0 + target );
 			}
 
-			glBindTexture( GL_TEXTURE_CUBE_MAP, tex >= 0 ? (int) renderer->textures[tex].id : 0 );
+			// Switch Texture Target if needed
+			if ( tex != renderer->curr_GL_cubemap_texture )
+			{
+				renderer->curr_GL_cubemap_texture = tex;
+				glBindTexture( GL_TEXTURE_CUBE_MAP, tex >= 0 ? (int) renderer->textures[tex].id : 0 );
+			}
 		}
 
 		bool Exists( Handle h )

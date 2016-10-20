@@ -28,6 +28,7 @@ namespace Render
 		GLint			curr_GL_ubo;
 		GLint           curr_GL_vao;
 		GLint           curr_GL_texture[Texture::_TARGET_N];
+		GLint			curr_GL_cubemap_texture;
 		Texture::Target curr_GL_texture_target;
 
 		GLuint			shaderFunctionLibrary;
@@ -72,6 +73,7 @@ namespace Render
 		renderer->curr_GL_ubo = -1;
 		for ( int i = 0; i < Texture::_TARGET_N; ++i )
 			renderer->curr_GL_texture[i] = -1;
+		renderer->curr_GL_cubemap_texture = -1;
 		renderer->curr_GL_texture_target = Texture::TARGET0;
 		glActiveTexture( GL_TEXTURE0 );   // default to 1st one
 
@@ -393,6 +395,9 @@ namespace Render
 	int GetCurrentShader() { return renderer->curr_GL_program; }
 	int GetCurrentMesh() { return renderer->curr_GL_vao; }
 	int GetCurrentTexture( Texture::Target t ) { return renderer->curr_GL_texture[t]; }
+	Texture::Target GetCurrentTextureTarget() { return renderer->curr_GL_texture_target; }
+	int GetCurrentCubemapTexture() { return renderer->curr_GL_cubemap_texture; }
+
 	void StartTextRendering()
 	{
 		Shader::Bind( Shader::SHADER_2D_UI );
