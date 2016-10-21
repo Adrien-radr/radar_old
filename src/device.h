@@ -25,6 +25,8 @@ struct Config
 	vec3f	cameraTarget;
 };
 
+typedef void ( *LoopFunction )( float dt );
+
 /// The Device encompass :
 ///     - Context Creation
 ///     - Bridge with OpenGL
@@ -35,10 +37,11 @@ class Device
 {
 public:
 	Device() : window( nullptr ) {}
-	bool Init( SceneInitFunc initFunc );
+	bool Init( LoopFunction loopFunction );
 	void Destroy();
 
 	void Run();
+	
 
 	/// Listener registering function
 	/// @param type : Key or Mouse listener
@@ -66,17 +69,11 @@ public:
 
 	bool IsWheelUp() const;
 	bool IsWheelDown() const;
-
-	bool IsWireframe() const { return wireframe; }
-
+	
 	const mat4f &Get3DProjectionMatrix() const { return projection_matrix_3d; }
 	const mat4f &Get2DProjectionMatrix() const { return projection_matrix_2d; }
 
 	const Config &GetConfig() const { return config; }
-
-	void SetUpdateFunc( SceneUpdateFunc func ) { scene.SetUpdateFunc( func ); }
-	void SetFixedUpdateFunc( SceneUpdateFunc func ) { scene.SetFixedUpdateFunc( func ); }
-	void SetRenderFunc( SceneRenderFunc func ) { scene.SetRenderFunc( func ); }
 
 private:
 	bool ImGui_Init();
@@ -95,14 +92,13 @@ private:
 	GLFWwindow  *window;
 	Config		config;
 
-	bool		wireframe;		//!< True for wireframe mode activated
 	mat4f		projection_matrix_2d;
 	mat4f		projection_matrix_3d;
 	float 		fov;
 
 	f64         engineTime;    //!< Time since the device has started
 
-	Scene		scene;			//!< Game scene
+	LoopFunction mainLoop;
 };
 
 // Only instance of the device, creation, access, and destruction

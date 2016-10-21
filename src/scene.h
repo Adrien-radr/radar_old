@@ -79,12 +79,10 @@ namespace Object
 	using namespace Render;
 	struct Desc
 	{
-		friend Scene;
-
 		Desc( Shader::Handle shader_h )//, Mesh::Handle mesh_h, Material::Handle mat_h = Material::DEFAULT_MATERIAL)
 			: shader( shader_h ), numSubmeshes( 0 ), position( 0 ), rotation( 0 ), scale( 1 )
 		{
-			model_matrix.Identity();
+			modelMatrix.Identity();
 		}
 
 		void AddSubmesh( Mesh::Handle mesh_h, Material::Handle mat_h )
@@ -114,23 +112,24 @@ namespace Object
 		void Translate( const vec3f &t );
 		void Scale( const vec3f &s );
 		void Rotate( const vec3f &r );
+		void ApplyTransform();
 
-		Shader::Handle   shader;
 
 		// Mesh::AnimType   animation;
 		// Mesh::AnimState  animation_state;
 
 		Mesh::Handle GetMesh( u32 idx ) const { if ( idx < meshes.size() ) return meshes[idx]; else return -1; }
 
-	private:
 		std::vector<Mesh::Handle>		meshes;
 		std::vector<Material::Handle> 	materials;
-		mat4f					model_matrix;
+
+		mat4f	modelMatrix;
 		vec3f	position;
 		vec3f	rotation;
 		vec3f 	scale;
 
-		u32 numSubmeshes;
+		Shader::Handle  shader;
+		u32				numSubmeshes;
 	};
 
 	/// Handle representing an object in the scene.
@@ -286,81 +285,49 @@ class Scene
 public:
 	Scene();
 
-	bool Init( SceneInitFunc initFunc );
-	void Clean();
+	virtual bool Init();
+	virtual void Clean();
 
-	void Update( f32 dt );
-	void UpdateGUI();
-	void Render();
+	virtual void Update( f32 dt ) {}
+	virtual void UpdateGUI() {}
+	virtual void Render() {}
+	virtual void UpdateView() {}
 
 	void SetUpdateFunc( SceneUpdateFunc func ) { customUpdateFunc = func; }
 	void SetFixedUpdateFunc( SceneUpdateFunc func ) { customFixedUpdateFunc = func; }
 	void SetRenderFunc( SceneRenderFunc func ) { customRenderFunc = func; }
 
-	void UpdateView();
+	
+	Object::Handle Add( const Object::Desc &d );
+	Object::Desc *GetObject( Object::Handle h );
+	bool ObjectExists( Object::Handle h );
 
-	const mat4f& GetViewMatrix() const { return view_matrix; }
-	Camera &GetCamera() { return camera; }
+	PointLight::Handle Add( const PointLight::Desc &d );
 
-	bool MaterialExists( Material::Handle h ) const;
+	Text::Handle Add( const Text::Desc &d );
 	void SetTextString( Text::Handle h, const std::string &str );
 
-	ModelResource::Handle GetModelResource( const std::string &modelName );
+	Material::Handle Add( const Material::Desc &d );
+	Material::Data *GetMaterial( Material::Handle h );
+	bool MaterialExists( Material::Handle h ) const;
 
+	ModelResource::Handle GetModelResource( const std::string &modelName );
 	ModelResource::Handle LoadModelResource( const std::string &fileName );
 	Object::Handle InstanciateModel( const ModelResource::Handle &h );
-	Object::Handle Add( const Object::Desc &d );
-	PointLight::Handle Add( const PointLight::Desc &d );
-	AreaLight::Handle Add( const AreaLight::Desc &d );
-	Text::Handle Add( const Text::Desc &d );
-	Material::Handle Add( const Material::Desc &d );
-	Skybox::Handle Add( const Skybox::Desc &d );
-	void SetSkybox( Skybox::Handle h );
 
-	// Scene getters
-	Object::Desc *GetObject( Object::Handle h );
-	AreaLight::Desc *GetLight( AreaLight::Handle h );
-	Material::Data *GetMaterial( Material::Handle h );
-	const AreaLight::UniformBufferData *GetAreaLightUBO( AreaLight::Handle h );
+	const mat4f& GetViewMatrix() const { return viewMatrix; }
 
-	bool ObjectExists( Object::Handle h );
-	bool AreaLightExists( AreaLight::Handle h );
-
-private:
-	bool InitLightUniforms();
-
-	/// Update the UBO defining the scene lights and upload it to GPU
-	/// returns the number of active lights to be rendered (to send to each shaders) 
-	u32 AggregatePointLightUniforms();
-	u32 AggregateAreaLightUniforms();
-
-	// GUI
-	bool ShowGBufferWindow();
-
-private:
+protected:
 	std::vector<Text::Desc> texts;
+	std::vector<Object::Desc> objects;
+	std::vector<Material::Data> materials;
+	std::vector<ModelResource::Data> models;
 
 	Render::UBO::Handle pointLightsUBO;
 	std::vector<PointLight::Desc> pointLights;
 	int active_pointLights[SCENE_MAX_ACTIVE_LIGHTS];
 
-	Render::UBO::Handle areaLightsUBO;
-	std::vector<AreaLight::Desc> areaLights;
-	int active_areaLights[SCENE_MAX_ACTIVE_LIGHTS];
-	AreaLight::UniformBufferData areaLightUBO[SCENE_MAX_ACTIVE_LIGHTS];
-	bool areaLightUBOInitialized;
-
-	std::vector<Object::Desc> objects;
-	std::vector<Material::Data> materials;
-
-	std::vector<ModelResource::Data> models;
-	std::vector<Skybox::Data> skyboxes;
-
-	mat4f view_matrix;
-	Camera camera;
-
-	Skybox::Handle currSkybox;
-	Render::Mesh::Handle skyboxMesh;
+	mat4f viewMatrix;
 
 	SceneInitFunc 	customInitFunc;
 	SceneUpdateFunc customUpdateFunc;
@@ -374,3 +341,58 @@ private:
 
 /// Listener callback function for the scene
 void SceneResizeEventListener( const Event &event, void *data );
+
+
+
+// ADRIEN TODO - Move this in project dependent part, outside radar
+// this is specifically for a 3D scene
+class Scene3D : public Scene
+{
+public:
+	Scene3D();
+
+	bool Init() override;
+	void Clean() override;
+
+	void Update( f32 dt ) override;
+	void UpdateGUI() override;
+	void Render() override;
+	void UpdateView() override;
+
+	AreaLight::Handle Add( const AreaLight::Desc &d );
+	AreaLight::Desc *GetLight( AreaLight::Handle h );
+	bool AreaLightExists( AreaLight::Handle h );
+	const AreaLight::UniformBufferData *GetAreaLightUBO( AreaLight::Handle h );
+
+	Skybox::Handle Add( const Skybox::Desc &d );
+	void SetSkybox( Skybox::Handle h );
+
+	Camera &GetCamera() { return camera; }
+
+private:
+	bool InitLightUniforms();
+
+	/// Update the UBO defining the scene lights and upload it to GPU
+	/// returns the number of active lights to be rendered (to send to each shaders) 
+	u32 AggregatePointLightUniforms();
+	u32 AggregateAreaLightUniforms();
+
+	// GUI
+	bool ShowGBufferWindow();
+
+private:
+	Render::UBO::Handle areaLightsUBO;
+	std::vector<AreaLight::Desc> areaLights;
+	int active_areaLights[SCENE_MAX_ACTIVE_LIGHTS];
+	AreaLight::UniformBufferData areaLightUBO[SCENE_MAX_ACTIVE_LIGHTS];
+	bool areaLightUBOInitialized;
+
+	std::vector<Skybox::Data> skyboxes;
+	Skybox::Handle currSkybox;
+	Render::Mesh::Handle skyboxMesh;
+
+
+	Camera camera;
+
+	bool wireframe;
+};

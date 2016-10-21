@@ -377,9 +377,10 @@ void DestroyDevice()
 	}
 }
 
-bool Device::Init( SceneInitFunc initFunc )
+bool Device::Init( LoopFunction loopFunction )
 {
 	int v;
+	mainLoop = loopFunction;
 
 	Random::InitRandom();
 
@@ -528,15 +529,7 @@ bool Device::Init( SceneInitFunc initFunc )
 	// Initialize projection matrix
 	UpdateProjection();
 
-	wireframe = 0;
 	engineTime = 0.0;
-
-	// Initialize Game Scene
-	if ( !scene.Init( initFunc ) )
-	{
-		LogErr( "Error initializing Device's Scene." );
-		goto err;
-	}
 
 	// Initialize listeners in order
 	if ( !AddEventListener( LT_ResizeListener, SceneResizeEventListener, this ) )
@@ -623,6 +616,8 @@ void Device::UpdateProjection()
 	Render::Shader::SendMat4( Render::Shader::UNIFORM_PROJMATRIX, projection_matrix_2d );
 }
 
+
+
 void Device::Run()
 {
 	f64 dt, t, last_t = glfwGetTime();
@@ -641,26 +636,14 @@ void Device::Run()
 		// Keyboard inputs for Device
 		if ( IsKeyUp( K_Escape ) )
 			glfwSetWindowShouldClose( window, GL_TRUE );
-		if ( IsKeyUp( K_F1 ) )
-		{
-			wireframe = !wireframe;
-			/*if(wireframe) {
-				glDisable(GL_CULL_FACE);
-				glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-				} else {
-				glEnable(GL_CULL_FACE);
-				glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-				}*/
-		}
 
 		// register mouse position
 		mouseLastPosition = em->prev_state.mouse_pos;
 		mousePosition = em->curr_state.mouse_pos;
-		scene.Update( (f32) dt );
 
-		// Render Scene
-		scene.Render();
-		ImGui::Render();
+		mainLoop( dt );
+
+		ImGui::Render(); // ADRIEN - should that be here or in the custom loop function
 
 		glfwSwapBuffers( window );
 		em->Update();
