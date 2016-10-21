@@ -275,11 +275,6 @@ namespace Skybox
 	typedef int Handle;
 }
 
-class Scene;
-typedef bool( *SceneInitFunc )( Scene *scene );
-typedef void( *SceneUpdateFunc )( Scene *scene, float dt );
-typedef void( *SceneRenderFunc )( Scene *scene );
-
 class Scene
 {
 public:
@@ -292,11 +287,6 @@ public:
 	virtual void UpdateGUI() {}
 	virtual void Render() {}
 	virtual void UpdateView() {}
-
-	void SetUpdateFunc( SceneUpdateFunc func ) { customUpdateFunc = func; }
-	void SetFixedUpdateFunc( SceneUpdateFunc func ) { customFixedUpdateFunc = func; }
-	void SetRenderFunc( SceneRenderFunc func ) { customRenderFunc = func; }
-
 	
 	Object::Handle Add( const Object::Desc &d );
 	Object::Desc *GetObject( Object::Handle h );
@@ -329,11 +319,6 @@ protected:
 
 	mat4f viewMatrix;
 
-	SceneInitFunc 	customInitFunc;
-	SceneUpdateFunc customUpdateFunc;
-	SceneUpdateFunc customFixedUpdateFunc;
-	SceneRenderFunc customRenderFunc;
-
 	// Mouse Picking (-1 for nothing)
 	Object::Handle pickedObject;
 	int			   pickedTriangle;
@@ -341,58 +326,3 @@ protected:
 
 /// Listener callback function for the scene
 void SceneResizeEventListener( const Event &event, void *data );
-
-
-
-// ADRIEN TODO - Move this in project dependent part, outside radar
-// this is specifically for a 3D scene
-class Scene3D : public Scene
-{
-public:
-	Scene3D();
-
-	bool Init() override;
-	void Clean() override;
-
-	void Update( f32 dt ) override;
-	void UpdateGUI() override;
-	void Render() override;
-	void UpdateView() override;
-
-	AreaLight::Handle Add( const AreaLight::Desc &d );
-	AreaLight::Desc *GetLight( AreaLight::Handle h );
-	bool AreaLightExists( AreaLight::Handle h );
-	const AreaLight::UniformBufferData *GetAreaLightUBO( AreaLight::Handle h );
-
-	Skybox::Handle Add( const Skybox::Desc &d );
-	void SetSkybox( Skybox::Handle h );
-
-	Camera &GetCamera() { return camera; }
-
-private:
-	bool InitLightUniforms();
-
-	/// Update the UBO defining the scene lights and upload it to GPU
-	/// returns the number of active lights to be rendered (to send to each shaders) 
-	u32 AggregatePointLightUniforms();
-	u32 AggregateAreaLightUniforms();
-
-	// GUI
-	bool ShowGBufferWindow();
-
-private:
-	Render::UBO::Handle areaLightsUBO;
-	std::vector<AreaLight::Desc> areaLights;
-	int active_areaLights[SCENE_MAX_ACTIVE_LIGHTS];
-	AreaLight::UniformBufferData areaLightUBO[SCENE_MAX_ACTIVE_LIGHTS];
-	bool areaLightUBOInitialized;
-
-	std::vector<Skybox::Data> skyboxes;
-	Skybox::Handle currSkybox;
-	Render::Mesh::Handle skyboxMesh;
-
-
-	Camera camera;
-
-	bool wireframe;
-};
