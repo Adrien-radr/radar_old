@@ -21,8 +21,8 @@ namespace Render
 	void StartTextRendering();
 	void ClearBuffers();
 
-	void StartGBufferPass();
-	void StopGBufferPass();
+	void BindGBuffer();
+	void UnbindGBuffer();
 
 	void UpdateView( const mat4f &viewMatrix );
 	void UpdateProjectionMatrix2D( const mat4f &proj );

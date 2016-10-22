@@ -311,6 +311,9 @@ public:
 	const mat4f& GetViewMatrix() const { return viewMatrix; }
 
 protected:
+	u32 AggregatePointLightUniforms();
+
+protected:
 	std::vector<Text::Desc> texts;
 	std::vector<Object::Desc> objects;
 	std::vector<Material::Data> materials;

@@ -224,176 +224,36 @@ namespace Render
 			// D(LogInfo("Renderer destroyed.");)
 		}
 	}
+#if 0 // UI SHADER
 
-#if 0
-	bool RecompileShaderLibrary( bool inited )
+	if ( inited && shaders[Shader::SHADER_2D_UI].id > 0 )
 	{
-		static std::string shaderLibraryPath = "../radar/data/shaders/lib.glsl";
-
-		if ( inited && renderer->shaderFunctionLibrary > 0 )
-		{
-			glDeleteShader( renderer->shaderFunctionLibrary );
-			renderer->shaderFunctionLibrary = 0;
-		}
-
-		std::string src;
-		if ( !Resource::ReadFile( src, shaderLibraryPath ) )
-		{
-			LogErr( "Failed to read shader library (", shaderLibraryPath, ")" );
-			return false;
-		}
-
-		renderer->shaderFunctionLibrary = Shader::BuildShader( src.c_str(), GL_FRAGMENT_SHADER );
-		if ( !renderer->shaderFunctionLibrary )
-		{
-			LogErr( "Failed to build shader library." );
-			return false;
-		}
-
-		return true;
+		Destroy( Shader::SHADER_2D_UI );
+		shader_slot = Shader::SHADER_2D_UI;
 	}
-	bool ReloadShaders()
+
+	// Load standard shaders in right order
+	Shader::Desc sd_ui_shader;
+	sd_ui_shader.vertex_file = "../radar/data/shaders/ui.vs";
+	sd_ui_shader.fragment_file = "../radar/data/shaders/ui.fs";
+	sd_ui_shader.attribs[0] = Shader::Desc::Attrib( "in_position", 0 );
+	sd_ui_shader.attribs[1] = Shader::Desc::Attrib( "in_texcoord", 2 );
+
+	sd_ui_shader.uniforms.push_back( Shader::Desc::Uniform( "ProjMatrix", Shader::UNIFORM_PROJMATRIX ) );
+	sd_ui_shader.uniforms.push_back( Shader::Desc::Uniform( "ModelMatrix", Shader::UNIFORM_MODELMATRIX ) );
+	sd_ui_shader.uniforms.push_back( Shader::Desc::Uniform( "DiffuseTex", Shader::UNIFORM_TEXTURE0 ) );
+	sd_ui_shader.uniforms.push_back( Shader::Desc::Uniform( "text_color", Shader::UNIFORM_TEXTCOLOR ) );
+	sd_ui_shader.shaderSlot = shader_slot;
+	sd_mesh.projType = Shader::PROJECTION_2D;
+
+	Shader::Handle shader_ui = Shader::Build( sd_ui_shader );
+	if ( shader_ui != Shader::SHADER_2D_UI )
 	{
-		static bool inited = false;
-
-		// Compile shader function libraries
-		if ( !RecompileShaderLibrary( inited ) )
-			return false;
-
-		int shader_slot = -1;
-
-		if ( inited && renderer->shaders[Shader::SHADER_2D_UI].id > 0 )
-		{
-			Destroy( Shader::SHADER_2D_UI );
-			shader_slot = Shader::SHADER_2D_UI;
-		}
-
-		// Load standard shaders in right order
-		Shader::Desc sd_ui_shader;
-		sd_ui_shader.vertex_file = "../radar/data/shaders/ui.vs";
-		sd_ui_shader.fragment_file = "../radar/data/shaders/ui.fs";
-		sd_ui_shader.attribs[0] = Shader::Desc::Attrib( "in_position", 0 );
-		sd_ui_shader.attribs[1] = Shader::Desc::Attrib( "in_texcoord", 2 );
-
-		sd_ui_shader.uniforms.push_back( Shader::Desc::Uniform( "ProjMatrix", Shader::UNIFORM_PROJMATRIX ) );
-		sd_ui_shader.uniforms.push_back( Shader::Desc::Uniform( "ModelMatrix", Shader::UNIFORM_MODELMATRIX ) );
-		sd_ui_shader.uniforms.push_back( Shader::Desc::Uniform( "DiffuseTex", Shader::UNIFORM_TEXTURE0 ) );
-		sd_ui_shader.uniforms.push_back( Shader::Desc::Uniform( "text_color", Shader::UNIFORM_TEXTCOLOR ) );
-		sd_ui_shader.shaderSlot = shader_slot;
-		sd_mesh.projType = Shader::PROJECTION_2D;
-
-		Shader::Handle shader_ui = Shader::Build( sd_ui_shader );
-		if ( shader_ui != Shader::SHADER_2D_UI )
-		{
-			LogErr( "Error loading UI shader." );
-			return false;
-		}
-		Shader::Bind( shader_ui );
-		Shader::SendInt( Shader::UNIFORM_TEXTURE0, Texture::TARGET0 );
-
-		shader_slot = -1;
-
-		if ( inited && renderer->shaders[Shader::SHADER_3D_MESH].id > 0 )
-		{
-			Destroy( Shader::SHADER_3D_MESH );
-			shader_slot = Shader::SHADER_3D_MESH;
-		}
-
-		Shader::Desc sd_mesh;
-		sd_mesh.vertex_file = "../radar/data/shaders/mesh_vert.glsl";
-		sd_mesh.fragment_file = "../radar/data/shaders/mesh_frag.glsl";
-		sd_mesh.attribs[0] = Shader::Desc::Attrib( "in_position", 0 );
-		sd_mesh.attribs[1] = Shader::Desc::Attrib( "in_normal", 1 );
-		sd_mesh.attribs[2] = Shader::Desc::Attrib( "in_texcoord", 2 );
-		sd_mesh.attribs[3] = Shader::Desc::Attrib( "in_tangent", 3 );
-		sd_mesh.attribs[4] = Shader::Desc::Attrib( "in_binormal", 4 );
-		sd_mesh.attribs[5] = Shader::Desc::Attrib( "in_color", 5 );
-
-		sd_mesh.uniforms.push_back( Shader::Desc::Uniform( "ModelMatrix", Shader::UNIFORM_MODELMATRIX ) );
-		sd_mesh.uniforms.push_back( Shader::Desc::Uniform( "ViewMatrix", Shader::UNIFORM_VIEWMATRIX ) );
-		sd_mesh.uniforms.push_back( Shader::Desc::Uniform( "ProjMatrix", Shader::UNIFORM_PROJMATRIX ) );
-		sd_mesh.uniforms.push_back( Shader::Desc::Uniform( "DiffuseTex", Shader::UNIFORM_TEXTURE0 ) );
-		sd_mesh.uniforms.push_back( Shader::Desc::Uniform( "SpecularTex", Shader::UNIFORM_TEXTURE1 ) );
-		sd_mesh.uniforms.push_back( Shader::Desc::Uniform( "NormalTex", Shader::UNIFORM_TEXTURE2 ) );
-		sd_mesh.uniforms.push_back( Shader::Desc::Uniform( "AOTex", Shader::UNIFORM_TEXTURE3 ) );
-		sd_mesh.uniforms.push_back( Shader::Desc::Uniform( "ltc_mat", Shader::UNIFORM_TEXTURE4 ) );
-		sd_mesh.uniforms.push_back( Shader::Desc::Uniform( "ltc_amp", Shader::UNIFORM_TEXTURE5 ) );
-		sd_mesh.uniforms.push_back( Shader::Desc::Uniform( "eyePosition", Shader::UNIFORM_EYEPOS ) );
-		sd_mesh.uniforms.push_back( Shader::Desc::Uniform( "nPointLights", Shader::UNIFORM_NPOINTLIGHTS ) );
-		sd_mesh.uniforms.push_back( Shader::Desc::Uniform( "nAreaLights", Shader::UNIFORM_NAREALIGHTS ) );
-		sd_mesh.uniforms.push_back( Shader::Desc::Uniform( "GTMode", Shader::UNIFORM_GROUNDTRUTH ) );
-		sd_mesh.uniforms.push_back( Shader::Desc::Uniform( "globalTime", Shader::UNIFORM_GLOBALTIME ) );
-		sd_mesh.uniformblocks.push_back( Shader::Desc::UniformBlock( "Material", Shader::UNIFORMBLOCK_MATERIAL ) );
-		sd_mesh.uniformblocks.push_back( Shader::Desc::UniformBlock( "PointLights", Shader::UNIFORMBLOCK_LIGHTTYPE0 ) );
-		sd_mesh.uniformblocks.push_back( Shader::Desc::UniformBlock( "AreaLights", Shader::UNIFORMBLOCK_LIGHTTYPE1 ) );
-		sd_mesh.shaderSlot = shader_slot;
-		sd_mesh.linkedLibraries.push_back( renderer->shaderFunctionLibrary );
-		sd_mesh.projType = Shader::PROJECTION_3D;
-		sd_mesh.useEyePosition = true;
-
-
-		Shader::Handle shader_mesh = Shader::Build( sd_mesh );
-		if ( shader_mesh != Shader::SHADER_3D_MESH )
-		{
-			LogErr( "Error loading Mesh shader." );
-			return false;
-		}
-		Shader::Bind( shader_mesh );
-		Shader::SendInt( Shader::UNIFORM_TEXTURE0, Texture::TARGET0 );
-		Shader::SendInt( Shader::UNIFORM_TEXTURE1, Texture::TARGET1 );
-		Shader::SendInt( Shader::UNIFORM_TEXTURE2, Texture::TARGET2 );
-		Shader::SendInt( Shader::UNIFORM_TEXTURE3, Texture::TARGET3 );
-		Shader::SendInt( Shader::UNIFORM_TEXTURE4, Texture::TARGET4 );
-		Shader::SendInt( Shader::UNIFORM_TEXTURE5, Texture::TARGET5 );
-		Shader::SendInt( Shader::UNIFORM_GROUNDTRUTH, (int) renderer->GTMode );
-		Shader::SendFloat( Shader::UNIFORM_GLOBALTIME, 0.f );	// Default : not using ground truth raytracing
-
-		shader_slot = -1;
-
-		if ( inited && renderer->shaders[Shader::SHADER_GBUFFERPASS].id > 0 )
-		{
-			Destroy( Shader::SHADER_GBUFFERPASS );
-			shader_slot = Shader::SHADER_GBUFFERPASS;
-		}
-
-		Shader::Desc sd_gbuf;
-		sd_gbuf.vertex_file = "../radar/data/shaders/gBufferPass_vert.glsl";
-		sd_gbuf.fragment_file = "../radar/data/shaders/gBufferPass_frag.glsl";
-		sd_gbuf.attribs[0] = Shader::Desc::Attrib( "in_position", 0 );
-		sd_gbuf.attribs[1] = Shader::Desc::Attrib( "in_normal", 1 );
-		sd_gbuf.attribs[2] = Shader::Desc::Attrib( "in_texcoord", 2 );
-		sd_gbuf.attribs[3] = Shader::Desc::Attrib( "in_tangent", 3 );
-		sd_gbuf.attribs[4] = Shader::Desc::Attrib( "in_binormal", 4 );
-		sd_gbuf.attribs[5] = Shader::Desc::Attrib( "in_color", 5 );
-
-		sd_gbuf.uniforms.push_back( Shader::Desc::Uniform( "ModelMatrix", Shader::UNIFORM_MODELMATRIX ) );
-		sd_gbuf.uniforms.push_back( Shader::Desc::Uniform( "ViewMatrix", Shader::UNIFORM_VIEWMATRIX ) );
-		sd_gbuf.uniforms.push_back( Shader::Desc::Uniform( "ProjMatrix", Shader::UNIFORM_PROJMATRIX ) );
-		sd_gbuf.uniforms.push_back( Shader::Desc::Uniform( "ObjectID", Shader::UNIFORM_OBJECTID ) );
-		sd_gbuf.shaderSlot = shader_slot;
-		sd_mesh.projType = Shader::PROJECTION_3D;
-
-
-		Shader::Handle shader_gbuf = Shader::Build( sd_gbuf );
-		if ( shader_gbuf != Shader::SHADER_GBUFFERPASS )
-		{
-			LogErr( "Error loading GBuffer shader." );
-			return false;
-		}
-
-		shader_slot = -1;
-
-		if ( inited && renderer->shaders[Shader::SHADER_SKYBOX].id > 0 )
-		{
-			Destroy( Shader::SHADER_SKYBOX );
-			shader_slot = Shader::SHADER_SKYBOX;
-		}
-
-
-
-		inited = true;
-		return true;
+		LogErr( "Error loading UI shader." );
+		return false;
 	}
+	Shader::Bind( shader_ui );
+	Shader::SendInt( Shader::UNIFORM_TEXTURE0, Texture::TARGET0 );
 #endif
 	int GetCurrentShader() { return renderer->curr_GL_program; }
 	int GetCurrentMesh() { return renderer->curr_GL_vao; }
@@ -407,17 +267,15 @@ namespace Render
 		//Mesh::Bind( renderer->text_vao );	// bind general text vao
 	}
 
-	void StartGBufferPass()
+	void BindGBuffer()
 	{
 		FBO::Bind( 0 );	// gBuffer is always the 1st created fbo
 		glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
-		//Shader::Bind( Render::Shader::SHADER_GBUFFERPASS );
 	}
 
-	void StopGBufferPass()
+	void UnbindGBuffer()
 	{
 		glBindFramebuffer( GL_FRAMEBUFFER, 0 ); // use the default FB again
-		//glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	}
 
 	void ClearBuffers()

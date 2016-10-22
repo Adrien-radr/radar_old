@@ -268,6 +268,32 @@ PointLight::Handle Scene::Add( const PointLight::Desc &d )
 	return ( PointLight::Handle )index;
 }
 
+u32 Scene::AggregatePointLightUniforms()
+{
+	static PointLight::UniformBufferData fullUBO[SCENE_MAX_ACTIVE_LIGHTS];
+
+	u32 numActiveLights = 0;
+	for ( u32 l = 0; l < SCENE_MAX_ACTIVE_LIGHTS; ++l )
+	{
+		if ( active_pointLights[l] < 0 ) break;
+		const PointLight::Desc &src = pointLights[active_pointLights[l]];
+
+		++numActiveLights;
+
+		fullUBO[l].position = src.position;
+		fullUBO[l].Ld = src.Ld;
+		fullUBO[l].radius = src.radius;
+	}
+	// Update UBO
+	Render::UBO::Desc ubo_desc( (f32*) fullUBO, numActiveLights * sizeof( PointLight::UniformBufferData ), Render::UBO::ST_DYNAMIC );
+	Render::UBO::Update( pointLightsUBO, ubo_desc );
+
+	// Bind it
+	Render::UBO::Bind( Render::Shader::UNIFORMBLOCK_LIGHTTYPE0, pointLightsUBO );
+
+	return numActiveLights;
+}
+
 Material::Data *Scene::GetMaterial( Material::Handle h )
 {
 	if ( MaterialExists( h ) )
