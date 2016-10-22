@@ -9,6 +9,7 @@ namespace Render
 {
 	namespace Shader
 	{
+		/*
 		/// Available shaders for drawing, sorted by their projection matrix type
 		enum Type
 		{
@@ -29,6 +30,18 @@ namespace Render
 			_SHADER_2D_PROJECTION_END = SHADER_3D_MESH,     // Do not use
 			_SHADER_3D_PROJECTION_START = SHADER_3D_MESH,   // Do not use
 			_SHADER_3D_PROJECTION_END = _SHADER_END         // Do not use
+		};
+		*/
+		enum StaticShaders
+		{
+			SHADER_SKYBOX = 0,
+		};
+
+		enum ProjectionType
+		{
+			PROJECTION_NONE,
+			PROJECTION_2D,
+			PROJECTION_3D
 		};
 
 		/// Uniform Locations Descriptors
@@ -66,8 +79,9 @@ namespace Render
 		enum UniformBlock
 		{
 			UNIFORMBLOCK_MATERIAL,
-			UNIFORMBLOCK_POINTLIGHTS,
-			UNIFORMBLOCK_AREALIGHTS,
+			UNIFORMBLOCK_LIGHTTYPE0,	// usually Point Light
+			UNIFORMBLOCK_LIGHTTYPE1,
+			UNIFORMBLOCK_LIGHTTYPE2,
 
 			_UNIFORMBLOCK_N				// Do not use 
 		};
@@ -75,7 +89,7 @@ namespace Render
 		/// Shader Descriptor for shader building.
 		struct Desc
 		{
-			Desc() : vertex_file( "" ), fragment_file( "" ), vertex_src( "" ), fragment_src( "" ), shaderSlot( -1 ) {}
+			Desc() : vertex_file( "" ), fragment_file( "" ), vertex_src( "" ), fragment_src( "" ), projType( PROJECTION_NONE ), shaderSlot( -1 ) {}
 
 			/// Shaders are loaded either from file or from text source directly
 			/// If loading from file, vertex_file & fragment_file must be set
@@ -132,6 +146,8 @@ namespace Render
 			std::vector<UniformBlock> uniformblocks;
 
 			std::vector<u32> linkedLibraries;
+
+			ProjectionType projType;
 
 			int shaderSlot;
 		};

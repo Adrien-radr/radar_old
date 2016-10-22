@@ -605,15 +605,8 @@ void Device::UpdateProjection()
 		(f32) windowSize.y, 0,
 		0.f, 100.f );
 
-	for ( int i = Render::Shader::_SHADER_3D_PROJECTION_START; i < Render::Shader::_SHADER_3D_PROJECTION_END; ++i )
-	{
-		Render::Shader::Bind( i );
-		Render::Shader::SendMat4( Render::Shader::UNIFORM_PROJMATRIX, projection_matrix_3d );
-	}
-
-	// Update 2d shaders
-	Render::Shader::Bind( Render::Shader::SHADER_2D_UI );
-	Render::Shader::SendMat4( Render::Shader::UNIFORM_PROJMATRIX, projection_matrix_2d );
+	Render::UpdateProjectionMatrix3D( projection_matrix_3d );
+	Render::UpdateProjectionMatrix2D( projection_matrix_2d );
 }
 
 
@@ -641,7 +634,7 @@ void Device::Run()
 		mouseLastPosition = em->prev_state.mouse_pos;
 		mousePosition = em->curr_state.mouse_pos;
 
-		mainLoop( dt );
+		mainLoop( (f32) dt );
 
 		ImGui::Render(); // ADRIEN - should that be here or in the custom loop function
 

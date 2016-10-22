@@ -303,7 +303,10 @@ public:
 
 	ModelResource::Handle GetModelResource( const std::string &modelName );
 	ModelResource::Handle LoadModelResource( const std::string &fileName );
-	Object::Handle InstanciateModel( const ModelResource::Handle &h );
+	Object::Handle InstanciateModel( const ModelResource::Handle &h, Render::Shader::Handle shader );
+	
+	Skybox::Handle Add( const Skybox::Desc &d );
+	void SetSkybox( Skybox::Handle h );
 
 	const mat4f& GetViewMatrix() const { return viewMatrix; }
 
@@ -316,6 +319,10 @@ protected:
 	Render::UBO::Handle pointLightsUBO;
 	std::vector<PointLight::Desc> pointLights;
 	int active_pointLights[SCENE_MAX_ACTIVE_LIGHTS];
+	
+	std::vector<Skybox::Data> skyboxes;
+	Skybox::Handle currSkybox;
+	Render::Mesh::Handle skyboxMesh;
 
 	mat4f viewMatrix;
 

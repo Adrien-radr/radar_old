@@ -251,6 +251,20 @@ namespace Render
 				renderer->shaders.push_back( shader );
 			}
 
+			// register shader to renderer's projection matrix type
+			if ( desc.projType == PROJECTION_2D )
+			{
+				renderer->shaders_proj2d.push_back( slot );
+			} 
+			else if ( desc.projType == PROJECTION_3D )
+			{
+				renderer->shaders_proj3d.push_back( slot );
+			}
+			else
+			{
+				LogErr( "Shader built without a set Projection Matrix Type. This won't draw anything." );
+			}
+
 			return slot;
 		}
 

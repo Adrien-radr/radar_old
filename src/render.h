@@ -17,15 +17,14 @@ namespace Render
 	int GetCurrentShader();
 	int GetCurrentMesh();
 
-	bool ReloadShaders();
+	//bool ReloadShaders();
 	void StartTextRendering();
-	void StartPolygonRendering();
+	void ClearBuffers();
 
 	void StartGBufferPass();
 	void StopGBufferPass();
 
-	void ToggleGTRaytracing();
-	void ResetGTAccumulation();
-	void AccumulateGT();
-	void UpdateView( const mat4f &viewMatrix, const vec3f &eyePos );
+	void UpdateView( const mat4f &viewMatrix );
+	void UpdateProjectionMatrix2D( const mat4f &proj );
+	void UpdateProjectionMatrix3D( const mat4f &proj );
 }

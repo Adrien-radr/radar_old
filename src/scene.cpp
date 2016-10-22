@@ -127,6 +127,23 @@ bool Scene::Init()
 	texts.reserve( 256 );
 	objects.reserve( 1024 );
 	materials.reserve( 64 );
+	pointLights.reserve( 32 );
+	skyboxes.reserve( 16 );
+
+	for ( u32 i = 0; i < SCENE_MAX_ACTIVE_LIGHTS; ++i )
+	{
+		active_pointLights[i] = -1;
+	}
+
+	// Point Lights
+	Render::UBO::Desc ubo_desc( NULL, SCENE_MAX_ACTIVE_LIGHTS * sizeof( PointLight::UniformBufferData ), Render::UBO::ST_DYNAMIC );
+	pointLightsUBO = Render::UBO::Build( ubo_desc );
+	if ( pointLightsUBO < 0 )
+	{
+		LogErr( "Error creating point light's UBO." );
+		return false;
+	}
+	
 
 	Render::Font::Desc fdesc( "../radar/data/DejaVuSans.ttf", 12 );
 	Render::Font::Handle fhandle = Render::Font::Build( fdesc );
@@ -144,6 +161,31 @@ bool Scene::Init()
 		return false;
 	}
 
+
+	// Default Skybox (white)
+	skyboxMesh = Render::Mesh::BuildBox();
+	if ( skyboxMesh < 0 )
+	{
+		LogErr( "Error creating skybox mesh." );
+		return false;
+	}
+
+	Skybox::Desc sd;
+	sd.filenames[0] = "../radar/data/default_diff.png";
+	sd.filenames[1] = "../radar/data/default_diff.png";
+	sd.filenames[2] = "../radar/data/default_diff.png";
+	sd.filenames[3] = "../radar/data/default_diff.png";
+	sd.filenames[4] = "../radar/data/default_diff.png";
+	sd.filenames[5] = "../radar/data/default_diff.png";
+
+	Skybox::Handle sh = Add( sd );
+	if ( sh < 0 )
+	{
+		LogErr( "Error creating default white skybox." );
+		return false;
+	}
+	SetSkybox( sh );
+
 	return true;
 }
 
@@ -152,6 +194,7 @@ void Scene::Clean()
 	objects.clear();
 	texts.clear();
 	materials.clear();
+	skyboxes.clear();
 }
 
 
@@ -393,14 +436,14 @@ bool Scene::ObjectExists( Object::Handle h )
 	return h >= 0 && h < (int) objects.size();
 }
 
-Object::Handle Scene::InstanciateModel( const ModelResource::Handle &h )
+Object::Handle Scene::InstanciateModel( const ModelResource::Handle &h, Render::Shader::Handle shader )
 {
 	size_t index = objects.size();
 	ModelResource::Data &model = models[h];
 
 	// Material::Desc mat_desc(col3f(0.181,0.1,0.01), col3f(.9,.5,.5), col3f(1,.8,0.2), 0.8);
 
-	Object::Desc odesc( Render::Shader::SHADER_3D_MESH );//, model.subMeshes[i], model.materials[matIdx]);
+	Object::Desc odesc( shader );//, model.subMeshes[i], model.materials[matIdx]);
 	for ( u32 i = 0; i < model.numSubMeshes; ++i )
 	{
 		u32 matIdx = model.materialIdx[i];
@@ -418,4 +461,32 @@ Object::Handle Scene::InstanciateModel( const ModelResource::Handle &h )
 		return -1;
 	}
 	return obj_h;
+}
+
+Skybox::Handle Scene::Add( const Skybox::Desc &d )
+{
+	size_t idx = skyboxes.size();
+
+	Skybox::Data sky;
+	Render::Texture::Desc td;
+	td.type = Render::Texture::Cubemap;
+	for ( u32 i = 0; i < 6; ++i )
+	{
+		td.name[i] = d.filenames[i];
+	}
+	sky.cubemap = Render::Texture::Build( td );
+	if ( sky.cubemap < 0 )
+	{
+		LogErr( "Error creating Skybox." );
+		return -1;
+	}
+
+	skyboxes.push_back( sky );
+	return ( Skybox::Handle ) idx;
+}
+
+void Scene::SetSkybox( Skybox::Handle h )
+{
+	currSkybox = h;
+	Render::Texture::BindCubemap( skyboxes[currSkybox].cubemap, Render::Texture::TARGET0 );
 }

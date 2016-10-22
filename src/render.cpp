@@ -31,14 +31,9 @@ namespace Render
 		GLint			curr_GL_cubemap_texture;
 		Texture::Target curr_GL_texture_target;
 
-		GLuint			shaderFunctionLibrary;
 
 		/// View/Camera Matrix
 		mat4f           view_matrix;
-
-		bool 			GTMode;			// Ground Truth Raytracing mode
-		bool			blendChange;	// To reset the backbuffer accumulation when moving the camera
-		int				accumFrames;	// number of accumulation frames
 
 		// Those arrays contain the GL-loaded resources and contains no explicit
 		// duplicates.
@@ -51,6 +46,9 @@ namespace Render
 		std::vector<Font::_internal::Data> fonts;
 		std::vector<SpriteSheet::_internal::Data> spritesheets;
 
+
+		std::vector<Shader::Handle> shaders_proj3d; //!< list of shaders using 3D projection matrix
+		std::vector<Shader::Handle> shaders_proj2d; //!< list of shaders using 2d projection matrix
 
 		// Loaded Resources. Indexes the above arrays with string identifiers
 		// Those string names are the filenames of the resources
@@ -76,11 +74,6 @@ namespace Render
 		renderer->curr_GL_cubemap_texture = -1;
 		renderer->curr_GL_texture_target = Texture::TARGET0;
 		glActiveTexture( GL_TEXTURE0 );   // default to 1st one
-
-		renderer->shaderFunctionLibrary = 0;
-		renderer->GTMode = false;
-		renderer->blendChange = true;
-		renderer->accumFrames = 1;
 
 		renderer->mesh_resources.clear();
 		renderer->font_resources.clear();
@@ -120,11 +113,12 @@ namespace Render
 			return false;
 		}
 
+#if 0
 		if ( !ReloadShaders() )
 		{
 			return false;
 		}
-
+#endif
 		// Create FBO for gBuffer pass
 		FBO::Desc fdesc;
 		fdesc.size = GetDevice().windowSize;	// TODO : resize gBuffer when window change size
@@ -164,6 +158,28 @@ namespace Render
 			LogErr( "Error initializeing Freetype library." );
 			return false;
 		}
+
+		// Init Skybox Shader
+		Shader::Desc sd_skybox;
+		sd_skybox.vertex_file = "../radar/data/shaders/skybox_vert.glsl";
+		sd_skybox.fragment_file = "../radar/data/shaders/skybox_frag.glsl";
+		sd_skybox.attribs[0] = Shader::Desc::Attrib( "in_position", 0 );
+
+		sd_skybox.uniforms.push_back( Shader::Desc::Uniform( "ViewMatrix", Shader::UNIFORM_VIEWMATRIX ) );
+		sd_skybox.uniforms.push_back( Shader::Desc::Uniform( "ProjMatrix", Shader::UNIFORM_PROJMATRIX ) );
+		sd_skybox.projType = Shader::PROJECTION_3D;
+
+		Shader::Handle shader_skybox = Shader::Build( sd_skybox );
+		if ( shader_skybox != Shader::SHADER_SKYBOX )
+		{
+			LogErr( "Error loading Skybox shader." );
+			return false;
+		}
+		Shader::Bind( shader_skybox );
+		Shader::SendInt( Shader::UNIFORM_TEXTURE0, Texture::TARGET0 );
+
+		// Get those projection matrix in our shaders
+		GetDevice().UpdateProjection();
 
 		LogInfo( "Renderer successfully initialized." );
 
@@ -209,6 +225,7 @@ namespace Render
 		}
 	}
 
+#if 0
 	bool RecompileShaderLibrary( bool inited )
 	{
 		static std::string shaderLibraryPath = "../radar/data/shaders/lib.glsl";
@@ -235,7 +252,6 @@ namespace Render
 
 		return true;
 	}
-
 	bool ReloadShaders()
 	{
 		static bool inited = false;
@@ -264,6 +280,7 @@ namespace Render
 		sd_ui_shader.uniforms.push_back( Shader::Desc::Uniform( "DiffuseTex", Shader::UNIFORM_TEXTURE0 ) );
 		sd_ui_shader.uniforms.push_back( Shader::Desc::Uniform( "text_color", Shader::UNIFORM_TEXTCOLOR ) );
 		sd_ui_shader.shaderSlot = shader_slot;
+		sd_mesh.projType = Shader::PROJECTION_2D;
 
 		Shader::Handle shader_ui = Shader::Build( sd_ui_shader );
 		if ( shader_ui != Shader::SHADER_2D_UI )
@@ -307,10 +324,12 @@ namespace Render
 		sd_mesh.uniforms.push_back( Shader::Desc::Uniform( "GTMode", Shader::UNIFORM_GROUNDTRUTH ) );
 		sd_mesh.uniforms.push_back( Shader::Desc::Uniform( "globalTime", Shader::UNIFORM_GLOBALTIME ) );
 		sd_mesh.uniformblocks.push_back( Shader::Desc::UniformBlock( "Material", Shader::UNIFORMBLOCK_MATERIAL ) );
-		sd_mesh.uniformblocks.push_back( Shader::Desc::UniformBlock( "PointLights", Shader::UNIFORMBLOCK_POINTLIGHTS ) );
-		sd_mesh.uniformblocks.push_back( Shader::Desc::UniformBlock( "AreaLights", Shader::UNIFORMBLOCK_AREALIGHTS ) );
+		sd_mesh.uniformblocks.push_back( Shader::Desc::UniformBlock( "PointLights", Shader::UNIFORMBLOCK_LIGHTTYPE0 ) );
+		sd_mesh.uniformblocks.push_back( Shader::Desc::UniformBlock( "AreaLights", Shader::UNIFORMBLOCK_LIGHTTYPE1 ) );
 		sd_mesh.shaderSlot = shader_slot;
 		sd_mesh.linkedLibraries.push_back( renderer->shaderFunctionLibrary );
+		sd_mesh.projType = Shader::PROJECTION_3D;
+		sd_mesh.useEyePosition = true;
 
 
 		Shader::Handle shader_mesh = Shader::Build( sd_mesh );
@@ -352,6 +371,7 @@ namespace Render
 		sd_gbuf.uniforms.push_back( Shader::Desc::Uniform( "ProjMatrix", Shader::UNIFORM_PROJMATRIX ) );
 		sd_gbuf.uniforms.push_back( Shader::Desc::Uniform( "ObjectID", Shader::UNIFORM_OBJECTID ) );
 		sd_gbuf.shaderSlot = shader_slot;
+		sd_mesh.projType = Shader::PROJECTION_3D;
 
 
 		Shader::Handle shader_gbuf = Shader::Build( sd_gbuf );
@@ -369,29 +389,12 @@ namespace Render
 			shader_slot = Shader::SHADER_SKYBOX;
 		}
 
-		Shader::Desc sd_skybox;
-		sd_skybox.vertex_file = "../radar/data/shaders/skybox_vert.glsl";
-		sd_skybox.fragment_file = "../radar/data/shaders/skybox_frag.glsl";
-		sd_skybox.attribs[0] = Shader::Desc::Attrib( "in_position", 0 );
-
-		sd_skybox.uniforms.push_back( Shader::Desc::Uniform( "ViewMatrix", Shader::UNIFORM_VIEWMATRIX ) );
-		sd_skybox.uniforms.push_back( Shader::Desc::Uniform( "ProjMatrix", Shader::UNIFORM_PROJMATRIX ) );
-		sd_skybox.shaderSlot = shader_slot;
-
-		Shader::Handle shader_skybox = Shader::Build( sd_skybox );
-		if ( shader_skybox != Shader::SHADER_SKYBOX )
-		{
-			LogErr( "Error loading Skybox shader." );
-			return false;
-		}
-		Shader::Bind( shader_skybox );
-		Shader::SendInt( Shader::UNIFORM_TEXTURE0, Texture::TARGET0 );
 
 
 		inited = true;
 		return true;
 	}
-
+#endif
 	int GetCurrentShader() { return renderer->curr_GL_program; }
 	int GetCurrentMesh() { return renderer->curr_GL_vao; }
 	int GetCurrentTexture( Texture::Target t ) { return renderer->curr_GL_texture[t]; }
@@ -400,15 +403,15 @@ namespace Render
 
 	void StartTextRendering()
 	{
-		Shader::Bind( Shader::SHADER_2D_UI );
-		Mesh::Bind( renderer->text_vao );	// bind general text vao
+		//Shader::Bind( renderer->shaders[] );
+		//Mesh::Bind( renderer->text_vao );	// bind general text vao
 	}
 
 	void StartGBufferPass()
 	{
 		FBO::Bind( 0 );	// gBuffer is always the 1st created fbo
 		glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
-		Shader::Bind( Render::Shader::SHADER_GBUFFERPASS );
+		//Shader::Bind( Render::Shader::SHADER_GBUFFERPASS );
 	}
 
 	void StopGBufferPass()
@@ -417,89 +420,48 @@ namespace Render
 		//glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	}
 
-	void StartPolygonRendering()
+	void ClearBuffers()
 	{
 
 		// glClear(GL_ACCUM_BUFFER_BIT);
 		// glClearColor(0.0f, 0.0f, 0.0f, 0.f);
 
 		glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
-		// Clear the backbuffers if not in accumulating mode
-		if ( !renderer->GTMode || renderer->blendChange )
-		{
-			renderer->accumFrames = 1;
-			// glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
-			// glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-			// glBlendFunc(GL_ONE, GL_ONE);
-			// glEnable(GL_BLEND);
-		}
-		else
-		{
-			// add last frame's to the accum
-			// glAccum(GL_ACCUM, renderer->accumFrames / (float)(renderer->accumFrames+1));
-			// glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
-			// glClear(GL_DEPTH_BUFFER_BIT);
-			// glBlendFunc(GL_ONE, GL_ONE);
-			++renderer->accumFrames;
-		}
-		// Shader::Bind(Shader::SHADER_3D_MESH);
-		//Mesh::Bind(0);
 	}
 
-	void ToggleGTRaytracing()
+	void UpdateView( const mat4f &viewMatrix )
 	{
-		renderer->GTMode = !renderer->GTMode;
-		Shader::Bind( Shader::SHADER_3D_MESH );
-		Shader::SendInt( Shader::UNIFORM_GROUNDTRUTH, (int) renderer->GTMode );
-		ResetGTAccumulation();
-	}
-
-	void ResetGTAccumulation()
-	{
-		renderer->blendChange = true;
-		// glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA); // reset backbuffer accumulation for 1 frame
-	}
-
-	void AccumulateGT()
-	{
-		if ( renderer->GTMode && renderer->blendChange )
+		for ( size_t i = 0; i < renderer->shaders.size(); ++i )
 		{
-			renderer->blendChange = false;
-			// glBlendFunc(GL_ONE, GL_ONE);
-			// glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-		}
-		if ( renderer->GTMode )
-		{
-
-			// glAccum(GL_ACCUM, 1.f / (float)(renderer->accumFrames));
-			// glAccum(GL_RETURN, 1.f);
-		}
-
-		// glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	}
-
-	void UpdateView( const mat4f &viewMatrix, const vec3f &eyePos )
-	{
-		for ( int i = Shader::_SHADER_3D_PROJECTION_START; i < Shader::SHADER_SKYBOX; ++i )
-		{
-			Shader::Bind( i );
+			// force bind each shader in succession
+			glUseProgram( renderer->shaders[i].id );
 			Shader::SendMat4( Shader::UNIFORM_VIEWMATRIX, viewMatrix );
-			Shader::SendVec3( Shader::UNIFORM_EYEPOS, eyePos );
 		}
+		// force unbind to reset state
+		Shader::Bind( -1 );
 
 		// Update Skybox shader
-		Shader::Bind( Shader::SHADER_SKYBOX );
+		Render::Shader::Bind( Shader::SHADER_SKYBOX );
 		mat4f skyboxView( viewMatrix );
-		skyboxView[3].x = 0.f;
-		skyboxView[3].y = 0.f;
-		skyboxView[3].z = 0.f;
-		skyboxView[3].w = 1.f;
+		skyboxView[3] = vec4f( 0, 0, 0, 1 );
 		Shader::SendMat4( Shader::UNIFORM_VIEWMATRIX, skyboxView );
+	}
 
-		// view changed, reset blend mode for Raytracing
-		if ( renderer->GTMode )
+	void UpdateProjectionMatrix2D( const mat4f &proj )
+	{
+		for ( int i = 0; i < renderer->shaders_proj2d.size(); ++i )
 		{
-			ResetGTAccumulation();
+			Render::Shader::Bind( renderer->shaders_proj2d[i] );
+			Render::Shader::SendMat4( Render::Shader::UNIFORM_PROJMATRIX, proj );
+		}
+	}
+
+	void UpdateProjectionMatrix3D( const mat4f &proj )
+	{
+		for ( int i = 0; i < renderer->shaders_proj3d.size(); ++i )
+		{
+			Render::Shader::Bind( renderer->shaders_proj3d[i] );
+			Render::Shader::SendMat4( Render::Shader::UNIFORM_PROJMATRIX, proj );
 		}
 	}
 
