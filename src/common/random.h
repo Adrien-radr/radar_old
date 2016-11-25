@@ -17,25 +17,25 @@ namespace Random
 	}
 
 	template<>
-	__forceinline f32 Value<f32>()
+	FORCEINLINE f32 Value<f32>()
 	{
 		return Float();
 	}
 
 	template<>
-	__forceinline vec2f Value<vec2f>()
+	FORCEINLINE vec2f Value<vec2f>()
 	{
 		return Vec2f();
 	}
 
 	template<>
-	__forceinline vec3f Value<vec3f>()
+	FORCEINLINE vec3f Value<vec3f>()
 	{
 		return Vec3f();
 	}
 
 	template<>
-	__forceinline vec4f Value<vec4f>()
+	FORCEINLINE vec4f Value<vec4f>()
 	{
 		return Vec4f();
 	}

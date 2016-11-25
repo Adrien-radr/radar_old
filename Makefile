@@ -13,7 +13,7 @@ ZLIB_LIBS = $(shell pkg-config --libs zlib)
 IMGUI_INCLUDE = -Iext/imgui
 
 # Config
-COMMON_FLAGS = -Isrc -Iext $(IMGUI_INCLUDE) $(GLFW_INCLUDE) $(ASSIMP_INCLUDE) $(FREETYPE_INCLUDE) $(PNG_INCLUDE) $(ZLIB_INCLUDE) -DPNG_SKIP_SETJMP_CHECK -std=c++11 $(OPTFLAGS)
+COMMON_FLAGS = -Isrc -Iext -Iext/freetype $(IMGUI_INCLUDE) $(GLFW_INCLUDE) $(ASSIMP_INCLUDE) $(FREETYPE_INCLUDE) $(PNG_INCLUDE) $(ZLIB_INCLUDE) -DPNG_SKIP_SETJMP_CHECK -std=c++11 $(OPTFLAGS)
 DEBUG_FLAGS = -g -Wall -Wextra -Wno-unused-variable -Wno-unused-parameter -D_DEBUG $(COMMON_FLAGS)
 RELEASE_FLAGS = -O2 -D_NDEBUG $(COMMON_FLAGS)
 
@@ -47,7 +47,7 @@ TESTS = $(patsubst %.c,%,$(TEST_SRC))
 
 .PHONY: depend, tests, release, clean, install, check, external
 
-all: sample
+all: lib
 
 release: LIB_CFLAGS = $(RELEASE_FLAGS)
 release: all

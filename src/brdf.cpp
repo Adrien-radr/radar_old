@@ -1,4 +1,4 @@
-#include "BRDF.h"
+#include "brdf.h"
 #include <algorithm>
 
 namespace Render
@@ -10,8 +10,8 @@ namespace Render
 			f32 cosTheta = Dot( u1, u2 );
 			cosTheta = std::max( -0.9999f, std::min( 0.9999f, cosTheta ) );
 
-			f32 theta = std::acosf( cosTheta );
-			f32 r = ( Cross( u1, u2 ) ).z * theta / std::sinf( theta );
+			f32 theta = std::acos( cosTheta );
+			f32 r = ( Cross( u1, u2 ) ).z * theta / std::sin( theta );
 			return r;
 		}
 
@@ -71,8 +71,8 @@ namespace Render
 			f32 D = alpha2 / ( M_PI * denom * denom );
 
 			// G (Smith GGX - Height-correlated)
-			f32 lambda_GGXV = NdotL * std::sqrtf( ( -NdotV * alpha2 + NdotV ) * NdotV + alpha2 );
-			f32 lambda_GGXL = NdotV * std::sqrtf( ( -NdotL * alpha2 + NdotL ) * NdotL + alpha2 );
+			f32 lambda_GGXV = NdotL * std::sqrt( ( -NdotV * alpha2 + NdotV ) * NdotV + alpha2 );
+			f32 lambda_GGXL = NdotV * std::sqrt( ( -NdotL * alpha2 + NdotL ) * NdotL + alpha2 );
 			// f32 G = G_schlick_GGX(k, NdotL) * G_schlick_GGX(k, NdotV);
 
 			// optimized G(NdotL) * G(NdotV) / (4 NdotV NdotL)

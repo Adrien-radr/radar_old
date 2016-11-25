@@ -4,6 +4,7 @@
 
 #include <cmath>
 #include <limits>
+#include "common.h"
 
 /// Common functions & math
 #ifndef M_PI
@@ -158,7 +159,7 @@ template<typename T>
 float Len( const vec2<T> &v )
 {
 	const float dot = Dot( v, v );
-	return dot > 0.f ? std::sqrtf( dot ) : 0.f;
+	return dot > 0.f ? std::sqrt( dot ) : 0.f;
 }
 
 template<typename T>
@@ -180,44 +181,44 @@ template<typename T>
 class vec3
 {
 public:
-	__forceinline vec3() {}
-	__forceinline vec3( T v ) : x( v ), y( v ), z( v ) {}
-	__forceinline vec3( T ix, T iy, T iz ) : x( ix ), y( iy ), z( iz ) {}
-	__forceinline vec3( const vec3<T> &v )
+	FORCEINLINE vec3() {}
+	FORCEINLINE vec3( T v ) : x( v ), y( v ), z( v ) {}
+	FORCEINLINE vec3( T ix, T iy, T iz ) : x( ix ), y( iy ), z( iz ) {}
+	FORCEINLINE vec3( const vec3<T> &v )
 	{
 		( *this ) = v;
 	}
 
 	template<typename T2>
-	__forceinline vec3( const vec3<T2> &v )
+	FORCEINLINE vec3( const vec3<T2> &v )
 	{
 		x = (T) v.x;
 		y = (T) v.y;
 		z = (T) v.z;
 	}
 
-	__forceinline vec3<T> operator+( const vec3<T> &v ) const
+	FORCEINLINE vec3<T> operator+( const vec3<T> &v ) const
 	{
 		return vec3<T>( x + v.x, y + v.y, z + v.z );
 	}
 
-	__forceinline vec3<T> operator-( const vec3<T> &v ) const
+	FORCEINLINE vec3<T> operator-( const vec3<T> &v ) const
 	{
 		return vec3<T>( x - v.x, y - v.y, z - v.z );
 	}
 
-	__forceinline vec3<T> operator*( T v ) const
+	FORCEINLINE vec3<T> operator*( T v ) const
 	{
 		return vec3<T>( x * v, y * v, z * v );
 	}
 
-	__forceinline vec3<T> operator/( T v ) const
+	FORCEINLINE vec3<T> operator/( T v ) const
 	{
 		const T div = T( 1 ) / v;
 		return vec3<T>( x * div, y * div, z * div );
 	}
 
-	__forceinline vec3<T>& operator+=( const vec3<T> &v )
+	FORCEINLINE vec3<T>& operator+=( const vec3<T> &v )
 	{
 		x += v.x;
 		y += v.y;
@@ -225,7 +226,7 @@ public:
 		return *this;
 	}
 
-	__forceinline vec3<T>& operator-=( const vec3<T> &v )
+	FORCEINLINE vec3<T>& operator-=( const vec3<T> &v )
 	{
 		x -= v.x;
 		y -= v.y;
@@ -233,7 +234,7 @@ public:
 		return *this;
 	}
 
-	__forceinline vec3<T>& operator*=( T v )
+	FORCEINLINE vec3<T>& operator*=( T v )
 	{
 		x *= v;
 		y *= v;
@@ -241,7 +242,7 @@ public:
 		return *this;
 	}
 
-	__forceinline vec3<T>& operator*=( const vec3<T> &v )
+	FORCEINLINE vec3<T>& operator*=( const vec3<T> &v )
 	{
 		x *= v.x;
 		y *= v.y;
@@ -249,7 +250,7 @@ public:
 		return *this;
 	}
 
-	__forceinline vec3<T>& operator/=( T v )
+	FORCEINLINE vec3<T>& operator/=( T v )
 	{
 		const T div = T( 1 ) / v;
 		x *= div;
@@ -258,42 +259,42 @@ public:
 		return *this;
 	}
 
-	__forceinline bool operator==( const vec3<T> &v ) const
+	FORCEINLINE bool operator==( const vec3<T> &v ) const
 	{
 		return std::abs( float( x - v.x ) ) <= std::numeric_limits<T>::epsilon() &&
 			std::abs( float( y - v.y ) ) <= std::numeric_limits<T>::epsilon() &&
 			std::abs( float( z - v.z ) ) <= std::numeric_limits<T>::epsilon();
 	}
 
-	__forceinline bool operator!=( const vec3<T> &v ) const
+	FORCEINLINE bool operator!=( const vec3<T> &v ) const
 	{
 		return !( *this == v );
 	}
 
-	__forceinline void operator=( const vec3<T> &v )
+	FORCEINLINE void operator=( const vec3<T> &v )
 	{
 		x = v.x;
 		y = v.y;
 		z = v.z;
 	}
 
-	__forceinline vec3<T> operator-() const
+	FORCEINLINE vec3<T> operator-() const
 	{
 		return vec3<T>( -x, -y, -z );
 	}
 
-	__forceinline operator T*( )
+	FORCEINLINE operator T*( )
 	{
 		return &x;
 	}
 
-	__forceinline T& operator[]( int index )
+	FORCEINLINE T& operator[]( int index )
 	{
 		Assert( index < 3 );
 		return *( ( &x ) + index );
 	}
 
-	__forceinline const T& operator[]( int index ) const
+	FORCEINLINE const T& operator[]( int index ) const
 	{
 		Assert( index < 3 );
 		return *( ( &x ) + index );
@@ -305,13 +306,13 @@ public:
 };
 
 template<typename T>
-__forceinline float Dot( const vec3<T> &a, const vec3<T> &b )
+FORCEINLINE float Dot( const vec3<T> &a, const vec3<T> &b )
 {
 	return a.x*b.x + a.y*b.y + a.z*b.z;
 }
 
 template<typename T>
-__forceinline vec3<T> Cross( const vec3<T> &a, const vec3<T> &b )
+FORCEINLINE vec3<T> Cross( const vec3<T> &a, const vec3<T> &b )
 {
 	vec3<T> r;
 	r.x = a.y * b.z - a.z * b.y;
@@ -321,14 +322,14 @@ __forceinline vec3<T> Cross( const vec3<T> &a, const vec3<T> &b )
 }
 
 template<typename T>
-__forceinline float Len( const vec3<T> &v )
+FORCEINLINE float Len( const vec3<T> &v )
 {
 	const float dot = Dot( v, v );
-	return dot > 0.f ? std::sqrtf( dot ) : 0.f;
+	return dot > 0.f ? std::sqrt( dot ) : 0.f;
 }
 
 template<typename T>
-__forceinline vec3<T> Normalize( const vec3<T> &v )
+FORCEINLINE vec3<T> Normalize( const vec3<T> &v )
 {
 	const float len = Len( v );
 	if ( len > 0.f )
@@ -496,13 +497,13 @@ public:
 };
 
 template<typename T>
-__forceinline float Dot( const vec3<T> &a, const vec4<T> &b )
+FORCEINLINE float Dot( const vec3<T> &a, const vec4<T> &b )
 {
 	return a.x*b.x + a.y*b.y + a.z*b.z + a.w*b.w;
 }
 
 template<typename T>
-__forceinline vec4<T> Cross( const vec4<T> &a, const vec4<T> &b )
+FORCEINLINE vec4<T> Cross( const vec4<T> &a, const vec4<T> &b )
 {
 	vec4<T> r;
 	r.x = a.y * b.z - a.z * b.y;
@@ -513,16 +514,16 @@ __forceinline vec4<T> Cross( const vec4<T> &a, const vec4<T> &b )
 }
 
 template<typename T>
-__forceinline float Len( const vec4<T> &v )
+FORCEINLINE float Len( const vec4<T> &v )
 {
 	const float dot = Dot( v, v );
-	return dot > 0.f ? std::sqrtf( dot ) : 0.f;
+	return dot > 0.f ? std::sqrt( dot ) : 0.f;
 }
 
 template<typename T>
-__forceinline vec4<T> Normalize( const vec4<T> &v )
+FORCEINLINE vec4<T> Normalize( const vec4<T> &v )
 {
-	const float len = Len();
+	const float len = Len( v );
 	if ( len > 0.f )
 	{
 		float k = 1.f / len;
@@ -538,7 +539,7 @@ typedef vec4<int> vec4i;
 template<typename T>
 inline T BilinearLookup( const f32 *f32Texture, const vec2f &coord, const vec2i &texSize )
 {
-	const vec2i coordI( (int) std::floorf( texSize.y * coord.x ), (int) std::floorf( texSize.y * coord.y ) );
+	const vec2i coordI( (int) std::floor( texSize.y * coord.x ), (int) std::floor( texSize.y * coord.y ) );
 	const vec2f offset( coord.x - coordI.x, coord.y - coordI.y );
 
 	const T *texture = (T*) f32Texture;

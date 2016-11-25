@@ -2,9 +2,11 @@
 #include <random>
 #include <array>
 #include <algorithm>
+#include <functional>
 
 namespace Random
 {
+	// TODO : Have this per-thread when multithreading stuff
 	std::mt19937 twister;
 	std::uniform_real_distribution<float> rd( 0, 1 );
 

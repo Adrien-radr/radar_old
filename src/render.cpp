@@ -307,7 +307,7 @@ namespace Render
 
 	void UpdateProjectionMatrix2D( const mat4f &proj )
 	{
-		for ( int i = 0; i < renderer->shaders_proj2d.size(); ++i )
+		for ( u32 i = 0; i < renderer->shaders_proj2d.size(); ++i )
 		{
 			Render::Shader::Bind( renderer->shaders_proj2d[i] );
 			Render::Shader::SendMat4( Render::Shader::UNIFORM_PROJMATRIX, proj );
@@ -316,7 +316,7 @@ namespace Render
 
 	void UpdateProjectionMatrix3D( const mat4f &proj )
 	{
-		for ( int i = 0; i < renderer->shaders_proj3d.size(); ++i )
+		for ( u32 i = 0; i < renderer->shaders_proj3d.size(); ++i )
 		{
 			Render::Shader::Bind( renderer->shaders_proj3d[i] );
 			Render::Shader::SendMat4( Render::Shader::UNIFORM_PROJMATRIX, proj );

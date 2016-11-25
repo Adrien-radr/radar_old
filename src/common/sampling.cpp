@@ -15,12 +15,12 @@ void Sampling::SampleSphereRandom( std::vector<vec3f>& dirs, u32 count )
 		d.y = 2.f * uv.y - 1.f;
 
 		const f32 y2 = d.y * d.y;
-		const f32 sinTheta = std::sqrtf( std::max( 0.f, 1.f - y2 ) );
+		const f32 sinTheta = std::sqrt( std::max( 0.f, 1.f - y2 ) );
 
 		// phi
 		const f32 phi = 2.f * M_PI * uv.x;
-		d.x = sinTheta * std::cosf( phi );
-		d.z = sinTheta * std::sinf( phi );
+		d.x = sinTheta * std::cos( phi );
+		d.z = sinTheta * std::sin( phi );
 
 		dirs.push_back( d );
 	}
@@ -46,12 +46,12 @@ void Sampling::SampleHemisphereRandom( std::vector<vec3f>& dirs, u32 count )
 		d.y = uv.y;
 
 		const f32 y2 = d.y * d.y;
-		const f32 sinTheta = std::sqrtf( std::max( 0.f, 1.f - y2 ) );
+		const f32 sinTheta = std::sqrt( std::max( 0.f, 1.f - y2 ) );
 
 		// phi
 		const f32 phi = 2.f * M_PI * uv.x;
-		d.x = sinTheta * std::cosf( phi );
-		d.z = sinTheta * std::sinf( phi );
+		d.x = sinTheta * std::cos( phi );
+		d.z = sinTheta * std::sin( phi );
 
 		dirs.push_back( d );
 	}
@@ -88,14 +88,14 @@ void Sampling::SampleSphereBluenoise( std::vector<vec3f>& dirs, u32 count )
 	dirs.reserve( count );
 
 	float max_dist = 0.5;
-	int n = 0;
+	u32 n = 0;
 	while ( n < count )
 	{
 
 		// Vector to add
 		vec3f w;
 
-		int nb_try = 0;
+		u32 nb_try = 0;
 		while ( nb_try < maxTry )
 		{
 			vec2f randV = Random::Vec2f();

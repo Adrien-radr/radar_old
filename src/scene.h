@@ -80,7 +80,7 @@ namespace Object
 	struct Desc
 	{
 		Desc( Shader::Handle shader_h )//, Mesh::Handle mesh_h, Material::Handle mat_h = Material::DEFAULT_MATERIAL)
-			: shader( shader_h ), numSubmeshes( 0 ), position( 0 ), rotation( 0 ), scale( 1 )
+			: position( 0 ), rotation( 0 ), scale( 1 ), shader( shader_h ), numSubmeshes( 0 ) 
 		{
 			modelMatrix.Identity();
 		}

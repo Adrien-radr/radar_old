@@ -93,7 +93,7 @@ inline T CSV::ReadNextCell()
 {
 	if ( cellPos < cellCount )
 	{
-		return cells[celPos++];
+		return cells[cellPos++];
 	}
 	else
 	{

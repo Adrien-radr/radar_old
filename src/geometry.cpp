@@ -3,6 +3,8 @@
 
 #include <algorithm>
 #include <complex>
+#include <cstring>
+
 //#pragma optimize("", off)
 
 static bool even( int n )
@@ -60,15 +62,15 @@ f32 Polygon::SolidAngle() const
 		// Arvo solid angle : alpha + beta + gamma - pi
 		// Oosterom & Strackee 83 method
 		const vec3f tmp = Cross( A, B );
-		const f32 num = std::fabsf( Dot( tmp, A ) );
-		const f32 r1 = std::sqrtf( Dot( A, A ) );
-		const f32 r2 = std::sqrtf( Dot( B, B ) );
-		const f32 r3 = std::sqrtf( Dot( C, C ) );
+		const f32 num = std::fabs( Dot( tmp, A ) );
+		const f32 r1 = std::sqrt( Dot( A, A ) );
+		const f32 r2 = std::sqrt( Dot( B, B ) );
+		const f32 r3 = std::sqrt( Dot( C, C ) );
 
 		const f32 denom = r1 * r2 * r3 + Dot( A, B ) * r3 + Dot( A, C ) * r2 + Dot( B, C ) * r1;
 
 		// tan(phi/2) = num/denom
-		f32 halPhi = std::atan2f( num, denom );
+		f32 halPhi = std::atan2( num, denom );
 		if ( halPhi < 0.f ) halPhi += M_PI;
 
 		return 2.f * halPhi;
@@ -97,8 +99,8 @@ f32 Polygon::SolidAngle() const
 
 f32 Polygon::CosSumIntegralArvo( f32 x, f32 y, f32 c, int nMin, int nMax ) const
 {
-	const f32 sinx = std::sinf( x );
-	const f32 siny = std::sinf( y );
+	const f32 sinx = std::sin( x );
+	const f32 siny = std::sin( y );
 
 	int i = even( nMax ) ? 0 : 1;
 	f32 F = even( nMax ) ? y - x : siny - sinx;
@@ -109,7 +111,7 @@ f32 Polygon::CosSumIntegralArvo( f32 x, f32 y, f32 c, int nMin, int nMax ) const
 		if ( i >= nMin )
 			S += std::pow( c, i ) * F;
 
-		const f32 T = std::pow( std::cosf( y ), i + 1 ) * siny - std::pow( std::cosf( x ), i + 1 ) * sinx;
+		const f32 T = std::pow( std::cos( y ), i + 1 ) * siny - std::pow( std::cos( x ), i + 1 ) * sinx;
 		F = ( T + ( i + 1 )*F ) / ( i + 2 );
 		i += 2;
 	}
@@ -133,11 +135,11 @@ f32 Polygon::LineIntegralArvo( const vec3f & A, const vec3f & B, const vec3f & w
 
 	const f32 a = Dot( w, s );
 	const f32 b = Dot( w, t );
-	const f32 c = std::sqrtf( a*a + b*b );
+	const f32 c = std::sqrt( a*a + b*b );
 
 	const f32 cos_l = sDotB / Dot( B, B );
-	const f32 l = std::acosf( std::max( -1.f, std::min( 1.f, cos_l ) ) );
-	const f32 phi = sign( b ) * std::acosf( a / c );
+	const f32 l = std::acos( std::max( -1.f, std::min( 1.f, cos_l ) ) );
+	const f32 phi = sign( b ) * std::acos( a / c );
 
 	return CosSumIntegralArvo( -phi, l - phi, c, nMin, nMax );
 }
@@ -181,10 +183,10 @@ f32 Polygon::DoubleAxisMomentArvo( const vec3f & w, const vec3f & v, int order )
 
 void Polygon::CosSumIntegral( f32 x, f32 y, f32 c, int n, std::vector<f32> &R ) const
 {
-	const f32 sinx = std::sinf( x );
-	const f32 siny = std::sinf( y );
-	const f32 cosx = std::cosf( x );
-	const f32 cosy = std::cosf( y );
+	const f32 sinx = std::sin( x );
+	const f32 siny = std::sin( y );
+	const f32 cosx = std::cos( x );
+	const f32 cosy = std::cos( y );
 	const f32 cosxsq = cosx * cosx;
 	const f32 cosysq = cosy * cosy;
 
@@ -231,11 +233,11 @@ void Polygon::LineIntegral( const vec3f &A, const vec3f &B, const vec3f &w, int 
 
 	const f32 a = Dot( w, s );
 	const f32 b = Dot( w, t );
-	const f32 c = std::sqrtf( a*a + b*b );
+	const f32 c = std::sqrt( a*a + b*b );
 
 	const f32 cos_l = sDotB / Dot( B, B );
-	const f32 l = std::acosf( std::max( -1.f, std::min( 1.f, cos_l ) ) );
-	const f32 phi = sign( b ) * std::acosf( a / c );
+	const f32 l = std::acos( std::max( -1.f, std::min( 1.f, cos_l ) ) );
+	const f32 phi = sign( b ) * std::acos( a / c );
 
 	CosSumIntegral( -phi, l - phi, c, n, R );
 }
@@ -313,7 +315,7 @@ void Triangle::InitUnit( const vec3f &p0, const vec3f &p1, const vec3f &p2, cons
 	const vec3f d2 = q2 - q0;
 
 	const vec3f nrm = -Cross( d1, d2 );
-	const f32 nrmLen = std::sqrtf( Dot( nrm, nrm ) );
+	const f32 nrmLen = std::sqrt( Dot( nrm, nrm ) );
 	area = solidAngle = nrmLen * 0.5f;
 
 	// compute inset triangle's unit normal
@@ -344,7 +346,7 @@ void Triangle::InitWS( const vec3f &triNormal, const vec3f &p0, const vec3f &p1,
 
 	const vec3f bary = ( q0 + q1 + q2 ) * 0.3333333333333f;
 	const f32 rayLenSqr = Dot( bary, bary );
-	const f32 rayLen = std::sqrtf( rayLenSqr );
+	const f32 rayLen = std::sqrt( rayLenSqr );
 	solidAngle = -Dot( bary, unitNormal ) * ( area / ( rayLenSqr * rayLen ) );
 }
 
@@ -367,12 +369,12 @@ void Triangle::ComputeArea()
 	const vec3f v1 = q1 - q0, v2 = q2 - q0;
 	const vec3f n1 = Cross( v1, v2 );
 
-	area = std::fabsf( Dot( n1, unitNormal ) ) * 0.5f;
+	area = std::fabs( Dot( n1, unitNormal ) ) * 0.5f;
 }
 
 vec3f Triangle::SamplePoint( f32 u1, f32 u2 ) const
 {
-	const f32 su1 = std::sqrtf( u1 );
+	const f32 su1 = std::sqrt( u1 );
 	const vec2f bary( 1.f - su1, u2 * su1 );
 
 	return q0 * bary.x + q1 * bary.y + q2 * ( 1.f - bary.x - bary.y );
@@ -387,7 +389,7 @@ f32 Triangle::SampleDir( vec3f &rayDir, const f32 s, const f32 t ) const
 {
 	return SampleDir( rayDir, SamplePoint( s, t ) );
 	/*const f32 rayLenSqr = rayDir.Dot(rayDir);
-	const f32 rayLen = std::sqrtf(rayLenSqr);
+	const f32 rayLen = std::sqrt(rayLenSqr);
 	rayDir /= rayLen;
 
 	const f32 costheta = -unitNormal.Dot(rayDir);
@@ -399,7 +401,7 @@ f32 Triangle::SampleDir( vec3f &rayDir, const vec3f &pt ) const
 {
 	rayDir = pt;
 	const f32 rayLenSqr = Dot( rayDir, rayDir );
-	const f32 rayLen = std::sqrtf( rayLenSqr );
+	const f32 rayLen = std::sqrt( rayLenSqr );
 	rayDir /= rayLen;
 
 	const f32 costheta = -Dot( unitNormal, rayDir );
@@ -457,7 +459,7 @@ f32 Rectangle::SampleDir( vec3f & rayDir, const vec3f & pos, const f32 u1, const
 	const vec3f pk = SamplePoint( u1, u2 );
 	rayDir = pk - pos;
 	const f32 rayLenSq = Dot( rayDir, rayDir );
-	const f32 rayLen = std::sqrtf( rayLenSq );
+	const f32 rayLen = std::sqrt( rayLenSq );
 	rayDir /= rayLen;
 
 	const f32 costheta = -Dot( ez, rayDir );
@@ -477,10 +479,10 @@ f32 Rectangle::SolidAngle( const vec3f & integrationPos ) const
 	vec3f n2 = Normalize( Cross( q2, q3 ) );
 	vec3f n3 = Normalize( Cross( q3, q0 ) );
 
-	const f32 alpha = std::acosf( -Dot( n0, n1 ) );
-	const f32 beta = std::acosf( -Dot( n1, n2 ) );
-	const f32 gamma = std::acosf( -Dot( n2, n3 ) );
-	const f32 zeta = std::acosf( -Dot( n3, n0 ) );
+	const f32 alpha = std::acos( -Dot( n0, n1 ) );
+	const f32 beta = std::acos( -Dot( n1, n2 ) );
+	const f32 gamma = std::acos( -Dot( n2, n3 ) );
+	const f32 zeta = std::acos( -Dot( n3, n0 ) );
 
 	return alpha + beta + gamma + zeta - 2 * M_PI;
 }
@@ -540,7 +542,7 @@ f32 Rectangle::IntegrateAngularStratification( const vec3f & integrationPos, con
 	const u32 sampleCountY = sampleCountX;
 
 	// bottom left point
-	const vec3f a0 = position - ex * hx - ey * hy;
+	// const vec3f a0 = position - ex * hx - ey * hy;
 
 	const vec3f W1 = position - ex * hx;
 	const vec3f W2 = position + ex * hx;
@@ -557,26 +559,26 @@ f32 Rectangle::IntegrateAngularStratification( const vec3f & integrationPos, con
 	const f32 rheight = 2.f * hy;
 	const f32 rheight_2 = rheight * rheight;
 
-	const f32 lw1 = std::sqrtf( lw1_2 );
-	const f32 lw2 = std::sqrtf( lw2_2 );
-	const f32 lh1 = std::sqrtf( lh1_2 );
-	const f32 lh2 = std::sqrtf( lh2_2 );
+	const f32 lw1 = std::sqrt( lw1_2 );
+	const f32 lw2 = std::sqrt( lw2_2 );
+	const f32 lh1 = std::sqrt( lh1_2 );
+	const f32 lh2 = std::sqrt( lh2_2 );
 
 	const f32 cosx = -Dot( W1, ex ) / lw1;
-	const f32 sinx = std::sqrtf( 1.f - cosx * cosx );
+	const f32 sinx = std::sqrt( 1.f - cosx * cosx );
 	const f32 cosy = -Dot( H1, ey ) / lh1;
-	const f32 siny = std::sqrtf( 1.f - cosy * cosy );
+	const f32 siny = std::sqrt( 1.f - cosy * cosy );
 
 	const f32 dx = 1.f / sampleCountX;
 	const f32 dy = 1.f / sampleCountY;
 
-	const f32 theta = std::acosf( ( lw1_2 + lw2_2 - rwidth_2 ) * 0.5f / ( lw1 * lw2 ) );
-	const f32 gamma = std::acosf( ( lh1_2 + lh2_2 - rheight_2 ) * 0.5f / ( lh1 * lh2 ) );
+	const f32 theta = std::acos( ( lw1_2 + lw2_2 - rwidth_2 ) * 0.5f / ( lw1 * lw2 ) );
+	const f32 gamma = std::acos( ( lh1_2 + lh2_2 - rheight_2 ) * 0.5f / ( lh1 * lh2 ) );
 	const f32 theta_n = theta * dx;
 	const f32 gamma_n = gamma * dy;
 
-	const f32 tanW = std::tanf( theta_n );
-	const f32 tanH = std::tanf( gamma_n );
+	const f32 tanW = std::tan( theta_n );
+	const f32 tanH = std::tan( gamma_n );
 
 	const int nCoeff = nBand * nBand;
 	std::vector<f32> shtmp( nCoeff );
@@ -702,10 +704,10 @@ void SphericalRectangle::Init( const Rectangle &rect, const vec3f &org )
 	vec3f n2 = Normalize( Cross( v11, v01 ) );
 	vec3f n3 = Normalize( Cross( v01, v00 ) );
 
-	const f32 g0 = std::acosf( -Dot( n0, n1 ) );
-	const f32 g1 = std::acosf( -Dot( n1, n2 ) );
-	const f32 g2 = std::acosf( -Dot( n2, n3 ) );
-	const f32 g3 = std::acosf( -Dot( n3, n0 ) );
+	const f32 g0 = std::acos( -Dot( n0, n1 ) );
+	const f32 g1 = std::acos( -Dot( n1, n2 ) );
+	const f32 g2 = std::acos( -Dot( n2, n3 ) );
+	const f32 g3 = std::acos( -Dot( n3, n0 ) );
 
 	S = g0 + g1 + g2 + g3 - 2.f * M_PI;
 
@@ -720,22 +722,22 @@ vec3f SphericalRectangle::Sample( f32 u1, f32 u2 ) const
 {
 	// compute cu
 	const f32 phi_u = u1 * S + k;
-	const f32 fu = ( std::cosf( phi_u ) * b0 - b1 ) / std::sinf( phi_u );
+	const f32 fu = ( std::cos( phi_u ) * b0 - b1 ) / std::sin( phi_u );
 
-	f32 cu = sign( fu ) / std::sqrtf( fu * fu + b0sq );
+	f32 cu = sign( fu ) / std::sqrt( fu * fu + b0sq );
 	cu = std::max( -1.f, std::min( 1.f, cu ) );
 
 	// compute xu
-	f32 xu = -( cu * z0 ) / std::sqrtf( 1.f - cu * cu );
+	f32 xu = -( cu * z0 ) / std::sqrt( 1.f - cu * cu );
 	xu = std::max( x0, std::min( x1, xu ) ); // bound the result in spherical width
 
 												// compute yv
-	const f32 d = std::sqrtf( xu*xu + z0sq );
-	const f32 h0 = y0 / std::sqrtf( d*d + y0sq );
-	const f32 h1 = y1 / std::sqrtf( d*d + y1sq );
+	const f32 d = std::sqrt( xu*xu + z0sq );
+	const f32 h0 = y0 / std::sqrt( d*d + y0sq );
+	const f32 h1 = y1 / std::sqrt( d*d + y1sq );
 
 	const f32 hv = h0 + u2 * ( h1 - h0 ); const f32 hvsq = hv * hv;
-	const f32 yv = ( hvsq < ( 1.f - 1e-6f ) ) ? hv * d / std::sqrtf( 1.f - hvsq ) : y1;
+	const f32 yv = ( hvsq < ( 1.f - 1e-6f ) ) ? hv * d / std::sqrt( 1.f - hvsq ) : y1;
 
 	// transform to world coordinates
 	return o + x * xu + y * yv + z * z0;
@@ -782,7 +784,7 @@ void PlanarRectangle::InitBary( const Rectangle & rect, const vec3f & integratio
 	vec3f org = Normalize( bary - integrationPoint );
 
 	const f32 rayLenSqr = Dot( org, org );
-	const f32 rayLen = std::sqrtf( rayLenSqr );
+	const f32 rayLen = std::sqrt( rayLenSqr );
 	const vec3f nrm = org / rayLen;
 
 	// org is bary in relative coordinates
@@ -833,7 +835,7 @@ void PlanarRectangle::InitUnit( const Rectangle & rect, const vec3f & integratio
 
 	// project each point on the tangent plane at the barycenter
 	f32 rayLenSq = Dot( bary, bary );
-	f32 rayLen = std::sqrtf( rayLenSq );
+	f32 rayLen = std::sqrt( rayLenSq );
 	ez = bary / rayLen; // plane normal
 
 	// bary is in relative coordinates to the integration pt already
@@ -872,7 +874,7 @@ f32 PlanarRectangle::SampleDir( vec3f & rayDir, const f32 u1, const f32 u2 ) con
 	const vec3f pk = SamplePoint( u1, u2 );
 	rayDir = pk;
 	const f32 rayLenSq = Dot( rayDir, rayDir );
-	const f32 rayLen = std::sqrtf( rayLenSq );
+	const f32 rayLen = std::sqrt( rayLenSq );
 	rayDir /= rayLen;
 
 	const f32 costheta = Dot( ez, rayDir );

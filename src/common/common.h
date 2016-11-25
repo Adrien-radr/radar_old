@@ -16,6 +16,16 @@
 #endif
 
 
+#ifdef RADAR_WIN32
+#define FORCEINLINE __forceinline
+#else
+#ifdef RADAR_UNIX
+#define FORCEINLINE
+#else
+#define FORCEINLINE
+#endif
+#endif
+
 // Types
 #include <string>
 #include <cstdint>
