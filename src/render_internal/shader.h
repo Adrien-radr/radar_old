@@ -3,7 +3,7 @@
 
 // Renderer constants
 #define SHADER_MAX_UNIFORMS 64
-#define SHADER_MAX_ATTRIBUTES 6
+#define SHADER_MAX_ATTRIBUTES 7
 
 namespace Render
 {
@@ -89,7 +89,11 @@ namespace Render
 		/// Shader Descriptor for shader building.
 		struct Desc
 		{
-			Desc() : vertex_file( "" ), fragment_file( "" ), vertex_src( "" ), fragment_src( "" ), projType( PROJECTION_NONE ), shaderSlot( -1 ) {}
+			Desc() : vertex_file( "" ), fragment_file( "" ), vertex_src( "" ), fragment_src( "" ), 
+					 projType( PROJECTION_NONE ), shaderSlot( -1 ), attrib_idx(0) {}
+
+			void AddAttrib(const std::string &name, int loc);
+			void AddUniform(const std::string &name, Shader::Uniform u);
 
 			/// Shaders are loaded either from file or from text source directly
 			/// If loading from file, vertex_file & fragment_file must be set
@@ -150,6 +154,9 @@ namespace Render
 			ProjectionType projType;
 
 			int shaderSlot;
+
+		private:
+			u32 attrib_idx;
 		};
 
 		/// Shader Handle.

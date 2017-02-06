@@ -102,9 +102,18 @@ namespace Render
 			}
 		}
 
+		void Desc::SetAdditionalData(f32 *arr, u32 format, int elements, int instances)
+		{
+		    additional = arr;
+		    additional_fmt = format;
+		    additional_elt = elements;
+		    additional_n = instances;
+		}
+
 		Handle Build( const Desc &desc )
 		{
 			f32 *vp = nullptr, *vn = nullptr, *vt = nullptr, *vc = nullptr, *vtan = nullptr, *vbit = nullptr;
+			void *vadd1 = nullptr;
 			u32 *idx = nullptr;
 
 			int free_index;
@@ -135,6 +144,12 @@ namespace Render
 					{
 						vn = desc.normals;
 					}
+
+					if ( desc.additional )
+					{
+					    vadd1 = desc.additional;
+					}
+
 					if ( desc.tangents )
 					{
 						vtan = desc.tangents;
@@ -181,7 +196,7 @@ namespace Render
 					vp, GL_STATIC_DRAW );
 
 				// add it to the vao
-				glVertexAttribPointer( 0, 3, GL_FLOAT, GL_FALSE, 0, (GLubyte*) NULL );
+				glVertexAttribPointer( 0, 3, GL_FLOAT, GL_FALSE, 0, (GLvoid*) NULL );
 			}
 
 			// Check for indices
@@ -207,7 +222,7 @@ namespace Render
 					vn, GL_STATIC_DRAW );
 
 				// add it to vao
-				glVertexAttribPointer( 1, 3, GL_FLOAT, GL_FALSE, 0, (GLubyte*) NULL );
+				glVertexAttribPointer( 1, 3, GL_FLOAT, GL_FALSE, 0, (GLvoid*) NULL );
 			}
 
 			// check for texcoords
@@ -223,7 +238,7 @@ namespace Render
 					vt, GL_STATIC_DRAW );
 
 				// add it to vao
-				glVertexAttribPointer( 2, 2, GL_FLOAT, GL_FALSE, 0, (GLubyte*) NULL );
+				glVertexAttribPointer( 2, 2, GL_FLOAT, GL_FALSE, 0, (GLvoid*) NULL );
 			}
 
 			// check for tangents, should exist if normals exist
@@ -242,7 +257,7 @@ namespace Render
 				glBufferData( GL_ARRAY_BUFFER, mesh.vertices_n * sizeof( vec3f ),
 					vtan, GL_STATIC_DRAW );
 
-				glVertexAttribPointer( 3, 3, GL_FLOAT, GL_FALSE, 0, (GLubyte*) NULL );
+				glVertexAttribPointer( 3, 3, GL_FLOAT, GL_FALSE, 0, (GLvoid*) NULL );
 			}
 
 			// check for tangents, should exist if normals exist
@@ -261,7 +276,7 @@ namespace Render
 				glBufferData( GL_ARRAY_BUFFER, mesh.vertices_n * sizeof( vec3f ),
 					vbit, GL_STATIC_DRAW );
 
-				glVertexAttribPointer( 4, 3, GL_FLOAT, GL_FALSE, 0, (GLubyte*) NULL );
+				glVertexAttribPointer( 4, 3, GL_FLOAT, GL_FALSE, 0, (GLvoid*) NULL );
 			}
 
 			// check for colors
@@ -277,7 +292,24 @@ namespace Render
 					vc, GL_STATIC_DRAW );
 
 				// add it to vao
-				glVertexAttribPointer( 5, 4, GL_FLOAT, GL_FALSE, 0, (GLubyte*) NULL );
+				glVertexAttribPointer( 5, 4, GL_FLOAT, GL_FALSE, 0, (GLvoid*) NULL );
+			}
+
+			// check for additional data
+			if ( vadd1 )
+			{
+			    mesh.attrib_flags |= MESH_ADD1;
+			    mesh.instances_n = desc.additional_n;
+
+			    glEnableVertexAttribArray(6);
+
+			    glGenBuffers(1, &mesh.vbo[6]);
+			    glBindBuffer(GL_ARRAY_BUFFER, mesh.vbo[6]);
+			    glBufferData(GL_ARRAY_BUFFER, desc.additional_n * desc.additional_elt * sizeof(float), 
+					vadd1, GL_STATIC_DRAW);
+
+			    glVertexAttribPointer(6, desc.additional_elt, desc.additional_fmt, GL_FALSE, 0, (GLvoid *)NULL);
+			    glVertexAttribDivisor(6, 1);
 			}
 
 			if ( deallocTangents )
@@ -305,13 +337,13 @@ namespace Render
 			if ( Exists( h ) )
 			{
 				_internal::Data &mesh = renderer->meshes[h];
-				glDeleteBuffers( 6, mesh.vbo );
+				glDeleteBuffers( 7, mesh.vbo );
 				glDeleteBuffers( 1, &mesh.ibo );
 				glDeleteVertexArrays( 1, &mesh.vao );
 				mesh.attrib_flags = MESH_POSITIONS;
 				mesh.vertices_n = 0;
 				mesh.indices_n = 0;
-
+				mesh.instances_n = 1;
 
 				// Remove it as a loaded resource
 				for ( u32 i = 0; i < renderer->mesh_resources.size(); ++i )
@@ -355,6 +387,16 @@ namespace Render
 			//}
 		}
 
+		void RenderInstanced( Handle h )
+		{
+			if( Exists( h ) )
+			{
+			    const _internal::Data &md = renderer->meshes[h];
+
+			    Bind(h);
+			    glDrawElementsInstanced(GL_TRIANGLES, md.indices_n, GL_UNSIGNED_INT, 0, md.instances_n);
+			}
+		}
 
 		bool Exists( Handle h )
 		{

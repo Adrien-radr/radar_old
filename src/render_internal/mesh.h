@@ -88,7 +88,8 @@ namespace Render
 			MESH_TANGENT = 8,
 			MESH_BINORMAL = 16,
 			MESH_COLORS = 32,
-			MESH_INDICES = 64
+			MESH_INDICES = 64,
+			MESH_ADD1 = 128
 		};
 
 		enum AnimType
@@ -122,9 +123,11 @@ namespace Render
 				f32 *tangent_arr = nullptr, f32 *bitangent_arr = nullptr, f32 *col_arr = nullptr ) :
 				name( resource_name ), empty_mesh( empty_mesh ), vertices_n( vcount ), indices_n( icount ),
 				indices( idx_arr ), positions( pos_arr ), normals( normal_arr ), texcoords( texcoord_arr ),
-				tangents( tangent_arr ), bitangents( bitangent_arr ), colors( col_arr )
+				tangents( tangent_arr ), bitangents( bitangent_arr ), colors( col_arr ), additional(nullptr),
+				additional_elt(0), additional_fmt(0), additional_n(1)
 			{}
 
+			void SetAdditionalData(f32 *arr, u32 format, int elements, int instances);
 
 			std::string name;	//!< name of the mesh for resource managment
 			bool empty_mesh;
@@ -134,12 +137,18 @@ namespace Render
 
 			u32 *indices;
 
-			f32 *positions;     //!< format vec3
-			f32 *normals;       //!< format vec3
-			f32 *texcoords;     //!< format vec2
-			f32 *tangents;		//!< format vec3
-			f32 *bitangents;	//!< format vec3
-			f32 *colors;        //!< format vec4
+			f32 *positions;     //!< format vec3, attrib0
+			f32 *normals;       //!< format vec3, attrib1
+			f32 *texcoords;     //!< format vec2, attrib2
+			f32 *tangents;		//!< format vec3, attrib3
+			f32 *bitangents;	//!< format vec3, attrib4
+			f32 *colors;        //!< format vec4, attrib5
+
+			// additional data
+			f32 *additional;	//!< custom format, attrib6
+			int additional_elt;	//!< nb of elements for above
+			u32 additional_fmt;	//!< format type for above
+			int additional_n;   //!< nb of instances for instancing 
 		};
 
 		/// Mesh Handle.
@@ -176,6 +185,8 @@ namespace Render
 		/// The given animation state is used to transmit bone-matrix data to the shader
 		/// before drawing the mesh. If NULL, an identity bonematrix is used
 		void Render( Handle h );
+
+		void RenderInstanced( Handle h );
 
 		/// Sets the current played animation of state. Reset it at the beginning of 1st frame
 		// void SetAnimation(Handle h, AnimState &state, AnimType type);
@@ -237,24 +248,27 @@ namespace Render
 		{
 			struct Data
 			{
-				Data() : vao( 0 ), indices_n( 0 ), attrib_flags( MESH_POSITIONS ), center( 0 ), radius( 0 )
+				Data() : vao( 0 ), vertices_n( 0 ), indices_n( 0 ), instances_n( 1 ),
+						 attrib_flags( MESH_POSITIONS ), center( 0 ), radius( 0 )
 				{
-					vbo[0] = vbo[1] = vbo[2] = vbo[3] = vbo[4] = vbo[5] = 0;
+					vbo[0] = vbo[1] = vbo[2] = vbo[3] = vbo[4] = vbo[5] = vbo[6] = 0;
 					ibo = 0;
 				}
 
 				// Model
-				u32 vao;                //!< GL VAO ID
-				u32 vbo[6];             //!< 0: positions, 1: normals, 2: texcoords,
-										//!< 3: tangent, 4: binormal, 5: colors
-				u32 ibo;				//!< Element buffer
+				u32 vao;                	//!< GL VAO ID
+				u32 vbo[7];             	//!< 0: positions, 1: normals, 2: texcoords,
+											//!< 3: tangent, 4: binormal, 5: colors
+											//!< 6: additional_1
+				u32 ibo;					//!< Element buffer
 
-				u32			vertices_n;      //!< Number of vertices the mesh has
+				u32			vertices_n;     //!< Number of vertices the mesh has
 				u32			indices_n;		//!< Number of indices it has
-				int			attrib_flags;	 //!< OR'ed enum defining which vertex attribs it has
+				u32 		instances_n;	//!< Number of instances for additional data
+				int 		attrib_flags; 	//!< OR'ed enum defining which vertex attribs it has
 
-				vec3f		center;	//!< Mesh center of mass (from all vertices)
-				float		radius;	//!< Bounding sphere radius
+				vec3f		center;			//!< Mesh center of mass (from all vertices)
+				float		radius;			//!< Bounding sphere radius
 
 				// Animations
 				//u32         animation_n;        //!< Number of loaded animations

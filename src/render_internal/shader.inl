@@ -67,6 +67,24 @@ namespace Render
 
 	namespace Shader
 	{
+
+		void Desc::AddAttrib(const std::string &name, int loc)
+		{
+			if(attrib_idx < SHADER_MAX_ATTRIBUTES && loc < SHADER_MAX_ATTRIBUTES)
+			{
+			    attribs[attrib_idx++] = Attrib(name, loc);
+			}
+			else
+			{
+			    LogErr("Tried to set attribute '", name, "' at invalid location ", loc);
+			}
+		}
+
+		void Desc::AddUniform(const std::string &name, Shader::Uniform u)
+		{
+		    uniforms.push_back(Uniform(name, u));
+		}
+
 		u32 BuildShader( const char *src, int type )
 		{
 			GLuint shader = glCreateShader( type );
@@ -262,7 +280,7 @@ namespace Render
 			}
 			else
 			{
-				LogErr( "Shader built without a set Projection Matrix Type. This won't draw anything." );
+				// LogErr( "Shader built without a set Projection Matrix Type. This won't draw anything." );
 			}
 
 			return slot;

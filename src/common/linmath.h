@@ -300,6 +300,14 @@ public:
 		return *( ( &x ) + index );
 	}
 
+	std::string ToString() const
+	{
+	    std::stringstream ss;
+	    ss << x << "," << y << "," << z;
+
+	    return ss.str();
+	}
+
 	T x;
 	T y;
 	T z;
@@ -488,6 +496,14 @@ public:
 	{
 		Assert( index < 4 );
 		return *( ( &x ) + index );
+	}
+
+	std::string ToString() const
+	{
+	    std::stringstream ss;
+	    ss << x << "," << y << "," << z << "," << w;
+
+	    return ss.str();
 	}
 
 	T x;
@@ -1146,6 +1162,17 @@ public:
 
 		R *= Tr;
 		return R;
+	}
+
+	std::string ToString() const
+	{
+	    std::stringstream ss;
+	    ss << M[0][0] << "," << M[0][1] << "," << M[0][2] << "," << M[0][3] << std::endl
+	       << M[1][0] << "," << M[1][1] << "," << M[1][2] << "," << M[1][3] << std::endl
+	       << M[2][0] << "," << M[2][1] << "," << M[2][2] << "," << M[2][3] << std::endl
+	       << M[3][0] << "," << M[3][1] << "," << M[3][2] << "," << M[3][3];
+
+	    return ss.str();
 	}
 
 	vec4<T> M[4];

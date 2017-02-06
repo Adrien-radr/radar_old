@@ -20,7 +20,7 @@
 #define FORCEINLINE __forceinline
 #else
 #ifdef RADAR_UNIX
-#define FORCEINLINE
+#define FORCEINLINE inline
 #else
 #define FORCEINLINE
 #endif

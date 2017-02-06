@@ -309,8 +309,8 @@ namespace Render
 	{
 		for ( u32 i = 0; i < renderer->shaders_proj2d.size(); ++i )
 		{
-			Render::Shader::Bind( renderer->shaders_proj2d[i] );
-			Render::Shader::SendMat4( Render::Shader::UNIFORM_PROJMATRIX, proj );
+		    Render::Shader::Bind(renderer->shaders_proj2d[i]);
+		    Render::Shader::SendMat4(Render::Shader::UNIFORM_PROJMATRIX, proj);
 		}
 	}
 

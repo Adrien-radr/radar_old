@@ -601,9 +601,9 @@ void Device::UpdateProjection()
 	projection_matrix_3d = mat4f::Perspective( fov, windowSize[0] / (f32) windowSize[1],
 		.1f, 1000.f );
 
-	projection_matrix_2d = mat4f::Ortho( 0, (f32) windowSize.x,
-		(f32) windowSize.y, 0,
-		0.f, 100.f );
+	projection_matrix_2d = mat4f::Ortho(0, (f32)windowSize.x,
+					    (f32)windowSize.y, 0,
+					    0.f, 100.f);
 
 	Render::UpdateProjectionMatrix3D( projection_matrix_3d );
 	Render::UpdateProjectionMatrix2D( projection_matrix_2d );
@@ -613,6 +613,9 @@ void Device::UpdateProjection()
 
 void Device::Run()
 {
+	// Update Projection once for all user created shaders
+	UpdateProjection();
+
 	f64 dt, t, last_t = glfwGetTime();
 
 	while ( !glfwWindowShouldClose( window ) )
