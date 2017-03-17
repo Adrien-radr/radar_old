@@ -4,18 +4,16 @@
 #include <fstream>
 #include <sstream>
 
-class Resource
-{
-public:
+namespace Resource {
 	/// Check if the extension of file_path is equal to given ext
-	static bool CheckExtension( const std::string &file_path, const std::string &ext );
+	bool CheckExtension( const std::string &file_path, const std::string &ext );
 
 
 	/// Open and read a file into a buffer. 
 	/// buffer should be NULL when given, it is allocated in the function
 	/// user of function should free the buffer when done with it
-	static bool ReadFile( std::string &buf, const std::string &file_path );
-};
+	bool ReadFile( std::string &buf, const std::string &file_path );
+}
 
 
 /// Handler for a JSON File used by cJSON. Used to facilitate access

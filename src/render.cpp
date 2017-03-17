@@ -2,7 +2,6 @@
 #include "device.h"
 #include "common/resource.h"
 #include "common/SHEval.h"
-#include "GL/glew.h"
 #include "json/cJSON.h"
 
 #include <algorithm>

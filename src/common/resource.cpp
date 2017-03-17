@@ -3,29 +3,31 @@
 
 #include <iomanip>
 
-bool Resource::CheckExtension( const std::string &file_path, const std::string &ext )
-{
-	size_t pos = file_path.find_last_of( '.' );
-	if ( pos != std::string::npos )
+namespace Resource {
+	bool CheckExtension( const std::string &file_path, const std::string &ext )
 	{
-		return file_path.substr( pos + 1 ).find( ext ) != std::string::npos;
+		size_t pos = file_path.find_last_of( '.' );
+		if ( pos != std::string::npos )
+		{
+			return file_path.substr( pos + 1 ).find( ext ) != std::string::npos;
+		}
+		return false;
 	}
-	return false;
-}
 
-bool Resource::ReadFile( std::string &buf, const std::string &file_path )
-{
-	std::ifstream ifile( file_path );
-	if ( ifile )
+	bool ReadFile( std::string &buf, const std::string &file_path )
 	{
-		ifile.seekg( 0, std::ios::end );
-		buf.resize( ifile.tellg() );
-		ifile.seekg( 0, std::ios::beg );
-		ifile.read( &buf[0], buf.size() );
-		ifile.close();
-		return true;
+		std::ifstream ifile( file_path );
+		if ( ifile )
+		{
+			ifile.seekg( 0, std::ios::end );
+			buf.resize( ifile.tellg() );
+			ifile.seekg( 0, std::ios::beg );
+			ifile.read( &buf[0], buf.size() );
+			ifile.close();
+			return true;
+		}
+		return false;
 	}
-	return false;
 }
 
 bool Json::Open( const std::string &file_path )

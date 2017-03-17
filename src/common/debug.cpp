@@ -11,6 +11,15 @@ std::string Log::log_name = "Radar_engine.log";
 std::stringstream Log::log_ss = std::stringstream();
 std::ofstream Log::log_file = std::ofstream();
 
+#if 0
+#ifdef RADAR_WIN32
+void Sleep
+#else
+#ifdef RADAR_UNIX
+#endif
+#endif
+#endif
+
 void get_date_time( char *buffer, u32 bsize, const char *fmt )
 {
 	time_t ti = time( NULL );

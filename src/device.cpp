@@ -616,6 +616,9 @@ void Device::Run()
 	// Update Projection once for all user created shaders
 	UpdateProjection();
 
+    int gameRefreshHz = 60;
+    f32 targetSecondsPerFrame = 1.f / gameRefreshHz;
+
 	f64 dt, t, last_t = glfwGetTime();
 
 	while ( !glfwWindowShouldClose( window ) )
@@ -626,6 +629,20 @@ void Device::Run()
 		// Time management
 		t = glfwGetTime();
 		dt = t - last_t;
+
+        if (dt < targetSecondsPerFrame)
+        {
+            while (dt < targetSecondsPerFrame)
+            {
+                t = glfwGetTime();
+                dt = t - last_t;
+            }
+        }
+        else
+        {
+            LogInfo("Missed frame rate!");
+        }
+
 		last_t = t;
 		engineTime += dt;
 
